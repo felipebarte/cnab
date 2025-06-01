@@ -1,0 +1,1148 @@
+openapi: 3.0.3
+info:
+  title: API CNAB 400/240 Itaú Parser
+  description: |
+    API completa para processamento de arquivos CNAB 400 e CNAB 240 do Itaú e outros bancos.
+    
+    **Principais funcionalidades:**
+    - ✅ Processamento completo de arquivos CNAB 400 e 240
+    - ✅ Suporte a PIX (CNAB 240)
+    - ✅ Validação estrutural avançada por banco
+    - ✅ Detecção automática de formato
+    - ✅ Extração de códigos de barras e linhas digitáveis
+    - ✅ Webhooks configuráveis
+    - ✅ Upload de arquivos
+    - ✅ Processamento via texto/JSON
+    
+    **Bancos suportados:** Itaú (341), Bradesco (237), Santander (033), Banco do Brasil (001), Caixa (104)
+  version: 1.0.0
+  contact:
+    name: Felipe
+    email: felipe@email.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Servidor de desenvolvimento local
+  - url: https://api.cnab.exemplo.com/v1
+    description: Servidor de produção
+
+tags:
+  - name: Geral
+    description: Endpoints gerais da API
+  - name: CNAB 400
+    description: Endpoints específicos para CNAB 400 (compatibilidade)
+  - name: CNAB 240
+    description: Endpoints específicos para CNAB 240 (novo formato)
+  - name: Unificados
+    description: Endpoints com detecção automática de formato
+  - name: Health
+    description: Endpoints de monitoramento de saúde
+
+paths:
+  # =====================================
+  # ENDPOINTS GERAIS
+  # =====================================
+  /:
+    get:
+      tags:
+        - Geral
+      summary: Bem-vindo à API
+      description: Endpoint de boas-vindas com informações básicas da API
+      responses:
+        200:
+          description: Mensagem de boas-vindas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WelcomeResponse'
+
+  /status:
+    get:
+      tags:
+        - Geral
+      summary: Status da API
+      description: Retorna o status atual da API e suas dependências
+      responses:
+        200:
+          description: Status da API
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+
+  # =====================================
+  # ENDPOINTS CNAB 240
+  # =====================================
+  /cnab240/info:
+    get:
+      tags:
+        - CNAB 240
+      summary: Informações da API CNAB 240
+      description: Retorna informações detalhadas sobre a API CNAB 240, recursos disponíveis e bancos suportados
+      responses:
+        200:
+          description: Informações da API CNAB 240
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CNAB240InfoResponse'
+
+  /cnab240/formatos:
+    get:
+      tags:
+        - CNAB 240
+      summary: Listar bancos suportados CNAB 240
+      description: Lista todos os bancos suportados para processamento CNAB 240
+      responses:
+        200:
+          description: Lista de bancos suportados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CNAB240FormatosResponse'
+
+  /cnab240/formatos/{banco}:
+    get:
+      tags:
+        - CNAB 240
+      summary: Informações de formato específico do banco
+      description: Retorna informações detalhadas sobre o formato CNAB 240 para um banco específico
+      parameters:
+        - in: path
+          name: banco
+          required: true
+          schema:
+            type: string
+            example: "341"
+          description: Código do banco (ex. 341 para Itaú)
+      responses:
+        200:
+          description: Informações do formato do banco
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CNAB240FormatoBancoResponse'
+        404:
+          description: Banco não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /cnab240/processar:
+    post:
+      tags:
+        - CNAB 240
+      summary: Processar arquivo CNAB 240 (texto)
+      description: Processa conteúdo CNAB 240 enviado como texto/string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CNAB240ProcessarRequest'
+      responses:
+        200:
+          description: Arquivo processado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CNAB240ProcessarResponse'
+        400:
+          description: Erro de validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        413:
+          description: Arquivo muito grande
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /cnab240/processar/upload:
+    post:
+      tags:
+        - CNAB 240
+      summary: Upload de arquivo CNAB 240
+      description: Processa arquivo CNAB 240 via upload
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                arquivo:
+                  type: string
+                  format: binary
+                  description: Arquivo CNAB 240 (.rem, .ret, .txt)
+                opcoes:
+                  type: string
+                  description: Opções de processamento em formato JSON
+                  example: '{"validarEstrutura": true, "extrairPix": true}'
+              required:
+                - arquivo
+      responses:
+        200:
+          description: Arquivo processado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CNAB240ProcessarResponse'
+        400:
+          description: Erro de validação ou formato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /cnab240/validar:
+    post:
+      tags:
+        - CNAB 240
+      summary: Validar arquivo CNAB 240
+      description: Valida a estrutura de um arquivo CNAB 240 sem processá-lo completamente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conteudo:
+                  type: string
+                  description: Conteúdo do arquivo CNAB 240
+              required:
+                - conteudo
+      responses:
+        200:
+          description: Resultado da validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CNAB240ValidarResponse'
+
+  /cnab240/processar-webhook:
+    post:
+      tags:
+        - CNAB 240
+      summary: Processar CNAB 240 e enviar para webhook (texto)
+      description: Processa arquivo CNAB 240 e envia os dados para um webhook externo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conteudo:
+                  type: string
+                  description: Conteúdo do arquivo CNAB 240
+                webhookUrl:
+                  type: string
+                  format: uri
+                  description: URL do webhook (opcional, usa configuração padrão se não fornecida)
+                opcoes:
+                  $ref: '#/components/schemas/ProcessarOpcoes'
+              required:
+                - conteudo
+      responses:
+        200:
+          description: Arquivo processado e webhook enviado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CNAB240ProcessarResponse'
+                  - type: object
+                    properties:
+                      webhook:
+                        $ref: '#/components/schemas/WebhookResponse'
+
+  /cnab240/processar-webhook/upload:
+    post:
+      tags:
+        - CNAB 240
+      summary: Upload CNAB 240 e enviar para webhook
+      description: Faz upload de arquivo CNAB 240 e envia os dados para webhook
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                arquivo:
+                  type: string
+                  format: binary
+                webhookUrl:
+                  type: string
+                  format: uri
+                opcoes:
+                  type: string
+                  description: Opções como JSON string
+              required:
+                - arquivo
+      responses:
+        200:
+          description: Arquivo processado e webhook enviado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CNAB240ProcessarResponse'
+                  - type: object
+                    properties:
+                      webhook:
+                        $ref: '#/components/schemas/WebhookResponse'
+
+  # =====================================
+  # ENDPOINTS CNAB 400
+  # =====================================
+  /cnab/info:
+    get:
+      tags:
+        - CNAB 400
+      summary: Informações da API CNAB 400
+      description: Retorna informações sobre a API CNAB 400 (mantido para compatibilidade)
+      responses:
+        200:
+          description: Informações da API CNAB 400
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CNAB400InfoResponse'
+
+  /cnab/processar:
+    post:
+      tags:
+        - CNAB 400
+      summary: Processar arquivo CNAB 400 (texto)
+      description: Processa conteúdo CNAB 400 enviado como texto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conteudo:
+                  type: string
+                  description: Conteúdo do arquivo CNAB 400 (400 caracteres por linha)
+              required:
+                - conteudo
+      responses:
+        200:
+          description: Arquivo processado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CNAB400ProcessarResponse'
+
+  /cnab/upload:
+    post:
+      tags:
+        - CNAB 400
+      summary: Upload de arquivo CNAB 400
+      description: Faz upload e processa arquivo CNAB 400
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                arquivo:
+                  type: string
+                  format: binary
+                  description: Arquivo CNAB 400
+              required:
+                - arquivo
+      responses:
+        200:
+          description: Arquivo processado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CNAB400ProcessarResponse'
+                  - type: object
+                    properties:
+                      arquivo:
+                        $ref: '#/components/schemas/ArquivoInfo'
+
+  /cnab/processar-webhook:
+    post:
+      tags:
+        - CNAB 400
+      summary: Processar CNAB 400 e enviar para webhook
+      description: Processa arquivo CNAB 400 e envia para webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conteudo:
+                  type: string
+                  description: Conteúdo do arquivo CNAB 400
+                webhookUrl:
+                  type: string
+                  format: uri
+                  description: URL do webhook (opcional)
+              required:
+                - conteudo
+      responses:
+        200:
+          description: Processado e enviado para webhook
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CNAB400ProcessarResponse'
+                  - type: object
+                    properties:
+                      webhook:
+                        $ref: '#/components/schemas/WebhookResponse'
+
+  /cnab/processar-webhook/upload:
+    post:
+      tags:
+        - CNAB 400
+      summary: Upload CNAB 400 e enviar para webhook
+      description: Upload de arquivo CNAB 400 e envio para webhook
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                arquivo:
+                  type: string
+                  format: binary
+                webhookUrl:
+                  type: string
+                  format: uri
+              required:
+                - arquivo
+      responses:
+        200:
+          description: Processado e enviado para webhook
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CNAB400ProcessarResponse'
+                  - type: object
+                    properties:
+                      webhook:
+                        $ref: '#/components/schemas/WebhookResponse'
+
+  /cnab/codigos-barras:
+    post:
+      tags:
+        - CNAB 400
+      summary: Extrair códigos de barras
+      description: Extrai códigos de barras de arquivo CNAB 400
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conteudo:
+                  type: string
+                  description: Conteúdo do arquivo CNAB 400
+              required:
+                - conteudo
+      responses:
+        200:
+          description: Códigos de barras extraídos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sucesso:
+                    type: boolean
+                  codigosBarras:
+                    type: array
+                    items:
+                      type: string
+
+  /cnab/linhas-digitaveis:
+    post:
+      tags:
+        - CNAB 400
+      summary: Extrair linhas digitáveis
+      description: Extrai linhas digitáveis de arquivo CNAB 400
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conteudo:
+                  type: string
+                  description: Conteúdo do arquivo CNAB 400
+              required:
+                - conteudo
+      responses:
+        200:
+          description: Linhas digitáveis extraídas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sucesso:
+                    type: boolean
+                  linhasDigitaveis:
+                    type: array
+                    items:
+                      type: string
+
+  /cnab/validar:
+    post:
+      tags:
+        - CNAB 400
+      summary: Validar arquivo CNAB 400
+      description: Valida estrutura de arquivo CNAB 400
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conteudo:
+                  type: string
+                  description: Conteúdo do arquivo CNAB 400
+              required:
+                - conteudo
+      responses:
+        200:
+          description: Resultado da validação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sucesso:
+                    type: boolean
+                  valido:
+                    type: boolean
+                  erros:
+                    type: array
+                    items:
+                      type: string
+
+  # =====================================
+  # ENDPOINTS UNIFICADOS
+  # =====================================
+  /cnab/processar-auto/upload:
+    post:
+      tags:
+        - Unificados
+      summary: Processar com detecção automática (upload)
+      description: Detecta automaticamente se o arquivo é CNAB 240 ou 400 e processa adequadamente
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                arquivo:
+                  type: string
+                  format: binary
+                  description: Arquivo CNAB (240 ou 400)
+              required:
+                - arquivo
+      responses:
+        200:
+          description: Arquivo processado com detecção automática
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedProcessarResponse'
+
+  /cnab/processar-auto:
+    post:
+      tags:
+        - Unificados
+      summary: Processar com detecção automática (texto)
+      description: Detecta formato e processa arquivo CNAB via texto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conteudo:
+                  type: string
+                  description: Conteúdo do arquivo CNAB
+              required:
+                - conteudo
+      responses:
+        200:
+          description: Arquivo processado com detecção automática
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedProcessarResponse'
+
+  /cnab/detectar-formato:
+    post:
+      tags:
+        - Unificados
+      summary: Detectar formato apenas
+      description: Detecta se o arquivo é CNAB 240 ou 400 sem processar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conteudo:
+                  type: string
+                  description: Primeiras linhas do arquivo para detecção
+              required:
+                - conteudo
+      responses:
+        200:
+          description: Formato detectado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetectarFormatoResponse'
+
+  # =====================================
+  # ENDPOINTS HEALTH
+  # =====================================
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check da API
+      description: Verifica se a API está funcionando corretamente
+      responses:
+        200:
+          description: API funcionando normalmente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+# =====================================
+# COMPONENTES REUTILIZÁVEIS
+# =====================================
+components:
+  schemas:
+    # Respostas gerais
+    WelcomeResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        mensagem:
+          type: string
+        api:
+          type: string
+        versao:
+          type: string
+
+    StatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [online, degraded, offline]
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+        version:
+          type: string
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        timestamp:
+          type: string
+          format: date-time
+        checks:
+          type: object
+          properties:
+            database:
+              type: string
+            webhook:
+              type: string
+            memory:
+              type: object
+              properties:
+                used:
+                  type: number
+                free:
+                  type: number
+
+    ErrorResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+          example: false
+        erro:
+          type: string
+        codigo:
+          type: string
+        detalhes:
+          type: object
+        operationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    # CNAB 240 Schemas
+    CNAB240InfoResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        informacoes:
+          type: object
+          properties:
+            nome:
+              type: string
+            versao:
+              type: string
+            formato:
+              type: string
+            especificacao:
+              type: string
+            descricao:
+              type: string
+            recursos:
+              type: object
+            endpoints:
+              type: array
+              items:
+                type: object
+            bancosSuportados:
+              type: number
+            caracteristicas:
+              type: object
+
+    CNAB240FormatosResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        dados:
+          type: object
+          properties:
+            totalBancos:
+              type: number
+            bancosSuportados:
+              type: array
+              items:
+                type: object
+                properties:
+                  codigo:
+                    type: string
+                  nome:
+                    type: string
+                  versaoLayout:
+                    type: string
+                  operacoesSuportadas:
+                    type: number
+                  suportaPix:
+                    type: boolean
+                  tiposChavePix:
+                    type: number
+            estatisticas:
+              type: object
+            formato:
+              type: string
+
+    CNAB240FormatoBancoResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        banco:
+          type: string
+        formato:
+          type: object
+          properties:
+            banco:
+              type: object
+            operacoesSuportadas:
+              type: array
+              items:
+                type: string
+            codigosOperacao:
+              type: object
+            caracteristicas:
+              type: object
+
+    CNAB240ProcessarRequest:
+      type: object
+      properties:
+        conteudo:
+          type: string
+          description: Conteúdo do arquivo CNAB 240 (240 caracteres por linha)
+        opcoes:
+          $ref: '#/components/schemas/ProcessarOpcoes'
+      required:
+        - conteudo
+
+    ProcessarOpcoes:
+      type: object
+      properties:
+        validarEstrutura:
+          type: boolean
+          default: true
+          description: Se deve validar a estrutura do arquivo
+        extrairPix:
+          type: boolean
+          default: true
+          description: Se deve extrair informações PIX (CNAB 240)
+        incluirDetalhesSegmentos:
+          type: boolean
+          default: true
+          description: Se deve incluir detalhes dos segmentos
+
+    CNAB240ProcessarResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        dados:
+          type: object
+          properties:
+            sucesso:
+              type: boolean
+            dadosEstruturados:
+              type: object
+              properties:
+                arquivo:
+                  $ref: '#/components/schemas/ArquivoHeader'
+                lotes:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Lote'
+            validacao:
+              $ref: '#/components/schemas/Validacao'
+            informacoesArquivo:
+              $ref: '#/components/schemas/InformacoesArquivo'
+
+    CNAB240ValidarResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        valido:
+          type: boolean
+        erros:
+          type: array
+          items:
+            type: string
+        avisos:
+          type: array
+          items:
+            type: string
+        informacoesBasicas:
+          type: object
+          properties:
+            banco:
+              type: string
+            codigoBanco:
+              type: string
+            totalLinhas:
+              type: number
+            totalLotes:
+              type: number
+            formato:
+              type: string
+
+    # CNAB 400 Schemas
+    CNAB400InfoResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        api:
+          type: string
+        versao:
+          type: string
+        banco:
+          type: string
+        formato:
+          type: string
+        funcionalidades:
+          type: array
+          items:
+            type: string
+        endpoints:
+          type: object
+
+    CNAB400ProcessarResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        dados:
+          type: object
+          properties:
+            sucesso:
+              type: boolean
+            dados:
+              type: array
+              items:
+                $ref: '#/components/schemas/RegistroCNAB400'
+            totalRegistros:
+              type: number
+            dataProcessamento:
+              type: string
+              format: date-time
+        validacao:
+          type: object
+          properties:
+            valido:
+              type: boolean
+            totalLinhas:
+              type: number
+            formato:
+              type: string
+
+    # Unified/Auto Detection Schemas
+    UnifiedProcessarResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        formatoDetectado:
+          $ref: '#/components/schemas/FormatoDetectado'
+        dados:
+          type: object
+          description: Dados processados conforme o formato detectado
+
+    DetectarFormatoResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        formato:
+          $ref: '#/components/schemas/FormatoDetectado'
+
+    FormatoDetectado:
+      type: object
+      properties:
+        codigo:
+          type: string
+          enum: [CNAB_240, CNAB_400]
+        nome:
+          type: string
+        confianca:
+          type: number
+          minimum: 0
+          maximum: 100
+        indicadores:
+          type: array
+          items:
+            type: string
+        caracteristicas:
+          type: object
+
+    # Schemas auxiliares
+    ArquivoInfo:
+      type: object
+      properties:
+        nome:
+          type: string
+        tamanho:
+          type: number
+        formato:
+          type: string
+
+    ArquivoHeader:
+      type: object
+      properties:
+        header:
+          type: object
+          properties:
+            codigoBanco:
+              type: string
+            nomeEmpresa:
+              type: string
+            dataGeracao:
+              type: string
+            horaGeracao:
+              type: string
+        trailer:
+          type: object
+          properties:
+            quantidadeLotes:
+              type: number
+            quantidadeRegistros:
+              type: number
+
+    Lote:
+      type: object
+      properties:
+        sequencia:
+          type: number
+        header:
+          type: object
+        detalhes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetalheTransacao'
+        trailer:
+          type: object
+
+    DetalheTransacao:
+      type: object
+      properties:
+        segmentoA:
+          type: object
+          properties:
+            nomeFavorecido:
+              type: string
+            bancoFavorecido:
+              type: string
+            agenciaFavorecido:
+              type: string
+            contaFavorecido:
+              type: string
+            valorPagamento:
+              type: string
+        segmentoB:
+          type: object
+          properties:
+            subtipo:
+              type: string
+            chavePix:
+              type: string
+            tipoChave:
+              type: string
+            dadosPix:
+              type: object
+              properties:
+                endToEnd:
+                  type: string
+                identificadorTxid:
+                  type: string
+
+    RegistroCNAB400:
+      type: object
+      properties:
+        sequencia:
+          type: number
+        tipo:
+          type: string
+        nossoNumero:
+          type: string
+        codigoBarras:
+          type: string
+        linhaDigitavel:
+          type: string
+        valor:
+          type: number
+        vencimento:
+          type: string
+          format: date-time
+        pagador:
+          type: object
+          properties:
+            nome:
+              type: string
+            documento:
+              type: string
+            endereco:
+              type: string
+        recebedor:
+          type: object
+          properties:
+            nome:
+              type: string
+            documento:
+              type: string
+
+    Validacao:
+      type: object
+      properties:
+        valido:
+          type: boolean
+        estrutura:
+          type: string
+        integridade:
+          type: string
+        banco:
+          type: string
+
+    InformacoesArquivo:
+      type: object
+      properties:
+        formato:
+          type: string
+        banco:
+          type: string
+        nomeBanco:
+          type: string
+        totalLinhas:
+          type: number
+        versaoLayout:
+          type: string
+
+    WebhookResponse:
+      type: object
+      properties:
+        enviado:
+          type: boolean
+        tentativas:
+          type: number
+        tempoResposta:
+          type: number
+        operationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        response:
+          type: object
+          properties:
+            status:
+              type: number
+            statusText:
+              type: string
+            headers:
+              type: object
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Chave da API (se configurada)
+
+# Configurações de segurança globais (se aplicável)
+security:
+  - ApiKeyAuth: [] 

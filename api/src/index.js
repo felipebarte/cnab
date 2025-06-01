@@ -11,6 +11,9 @@ import ErrorHandler from './utils/errorHandler.js';
 // Configuração de variáveis de ambiente
 dotenv.config();
 
+// Importação do Swagger
+import { setupSwagger } from './config/swagger.js';
+
 // Importação das rotas
 import healthRoutes from './routes/health.js';
 import apiRoutes from './routes/api.js';
@@ -71,6 +74,9 @@ app.use((req, res, next) => {
 // Parsing de JSON
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Configuração do Swagger (antes das rotas da API)
+setupSwagger(app);
 
 // Rotas
 app.use('/health', healthRoutes);
