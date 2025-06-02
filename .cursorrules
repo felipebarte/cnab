@@ -1,0 +1,60 @@
+# Cursor Rules - Gerenciamento de Servidor Ativo
+
+## 🚫 REGRA CRÍTICA: NUNCA CRIAR NOVOS SERVIDORES
+
+### Verificação Obrigatória Antes de Qualquer Comando de Servidor
+
+**SEMPRE** execute estas verificações antes de sugerir qualquer comando de servidor:
+
+1. **Verificar processos ativos:**
+   ```bash
+   ps aux | grep -E "(node|npm|yarn|bun|pnpm|vite|next|react-scripts)" | grep -v grep
+   ```
+
+2. **Verificar portas em uso:**
+   ```bash
+   netstat -tlnp | grep -E ":(3000|3001|5173|5174|8080|8000|4000)"
+   ```
+
+3. **Verificar servidores de desenvolvimento:**
+   ```bash
+   lsof -i :3000 -i :5173 -i :8080 -i :4000
+   ```
+
+### Comportamento Obrigatório
+
+- ❌ **NUNCA** execute `npm start`, `npm run dev`, `yarn dev`, `bun dev`, ou similar se um servidor já estiver rodando
+- ❌ **NUNCA** sugira iniciar um novo servidor sem verificar processos ativos
+- ✅ **SEMPRE** informe ao usuário sobre servidores ativos encontrados
+- ✅ **SEMPRE** pergunte se o usuário deseja parar o servidor atual antes de iniciar um novo
+- ✅ **SEMPRE** ofereça comandos para parar servidores ativos (kill, Ctrl+C, etc.)
+
+### Comandos de Verificação Recomendados
+
+```bash
+# Verificar todos os processos Node.js
+ps aux | grep node
+
+# Verificar portas específicas do projeto
+lsof -i :5173  # Vite
+lsof -i :3000  # React/Next.js
+
+# Matar processo específico se necessário
+kill -9 <PID>
+```
+
+### Exceções Permitidas
+
+- Iniciar servidor apenas se nenhum processo ativo for encontrado
+- Reiniciar servidor após confirmação explícita do usuário para parar o atual
+- Usar portas diferentes apenas com justificativa técnica válida
+
+### Mensagem Padrão ao Detectar Servidor Ativo
+
+"⚠️ **SERVIDOR ATIVO DETECTADO!** 
+Encontrei um servidor já rodando neste projeto. Para evitar conflitos:
+1. Primeiro pare o servidor atual (Ctrl+C ou kill)
+2. Depois posso ajudar a iniciar um novo se necessário
+3. Ou podemos trabalhar com o servidor atual
+
+Deseja que eu ajude a gerenciar o servidor ativo?" 

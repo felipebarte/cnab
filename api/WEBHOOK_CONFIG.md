@@ -200,7 +200,7 @@ WEBHOOK_URL=https://seu-ngrok-url.ngrok.io/webhook
 
 ### 3. Teste com curl
 ```bash
-curl -X POST http://localhost:3000/api/v1/cnab/processar-webhook \
+curl -X POST http://localhost:8080/api/v1/cnab/processar-webhook \
   -H "Content-Type: application/json" \
   -d '{
     "conteudo": "seu conteúdo CNAB aqui...",

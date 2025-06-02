@@ -232,6 +232,74 @@ describe('CNAB240Controller - Endpoints da API', () => {
     });
   });
 
+  describe('POST /api/v1/cnab240/validar-simples', () => {
+    it('deve validar arquivo CNAB 240 com validação simples (padrão CNAB 400)', async () => {
+      const arquivoCompleto = gerarArquivoCNABCompleto({
+        quantidadeLotes: 1,
+        incluirSegmentos: true
+      });
+
+      const response = await request(app)
+        .post('/api/v1/cnab240/validar-simples')
+        .send({ conteudo: arquivoCompleto })
+        .expect(200);
+
+      expect(response.body.sucesso).toBe(true);
+      expect(response.body.validacao).toBeDefined();
+      expect(response.body.validacao.valido).toBe(true);
+      expect(response.body.validacao.formato).toBe('CNAB 240');
+      expect(response.body.validacao.totalLinhas).toBeGreaterThan(0);
+    });
+
+    it('deve rejeitar arquivo com linhas de tamanho incorreto', async () => {
+      const arquivoInvalido = 'linha muito curta\noutra linha curta\n';
+
+      const response = await request(app)
+        .post('/api/v1/cnab240/validar-simples')
+        .send({ conteudo: arquivoInvalido })
+        .expect(200);
+
+      expect(response.body.sucesso).toBe(true);
+      expect(response.body.validacao.valido).toBe(false);
+      expect(response.body.validacao.erro).toContain('linha(s) com tamanho inválido');
+      expect(response.body.validacao.erro).toContain('CNAB 240 deve ter 240 caracteres por linha');
+    });
+
+    it('deve retornar erro quando conteúdo não é fornecido', async () => {
+      const response = await request(app)
+        .post('/api/v1/cnab240/validar-simples')
+        .send({})
+        .expect(400);
+
+      expect(response.body.sucesso).toBe(false);
+      expect(response.body.erro).toContain('obrigatório');
+      expect(response.body.codigo).toBe('CONTEUDO_OBRIGATORIO');
+    });
+
+    it('deve rejeitar conteúdo vazio', async () => {
+      const response = await request(app)
+        .post('/api/v1/cnab240/validar-simples')
+        .send({ conteudo: '' })
+        .expect(200);
+
+      expect(response.body.sucesso).toBe(true);
+      expect(response.body.validacao.valido).toBe(false);
+      expect(response.body.validacao.erro).toContain('Arquivo CNAB não contém linhas válidas');
+    });
+
+    it('deve retornar resultado mesmo quando há erro interno', async () => {
+      // Teste com conteúdo que pode causar erro
+      const response = await request(app)
+        .post('/api/v1/cnab240/validar-simples')
+        .send({ conteudo: null })
+        .expect(200);
+
+      expect(response.body.sucesso).toBe(true);
+      expect(response.body.validacao.valido).toBe(false);
+      expect(response.body.validacao.erro).toContain('Conteúdo do arquivo é obrigatório');
+    });
+  });
+
   describe('Validação de entrada comum', () => {
     it('deve incluir operationId em todas as respostas', async () => {
       const response = await request(app)

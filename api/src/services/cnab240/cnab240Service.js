@@ -641,6 +641,61 @@ class Cnab240Service {
 
     return mapeamento[subtipoCode] || 'DESCONHECIDO';
   }
+
+  /**
+   * Valida arquivo CNAB 240 de forma simples (seguindo padrão CNAB 400)
+   * Verifica apenas se as linhas têm exatamente 240 caracteres
+   * @param {string} cnabContent - Conteúdo do arquivo CNAB como string
+   * @returns {Object} Resultado da validação simples
+   */
+  static validarArquivoCnab240(cnabContent) {
+    try {
+      if (cnabContent === null || cnabContent === undefined || typeof cnabContent !== 'string') {
+        return {
+          valido: false,
+          erro: 'Conteúdo do arquivo é obrigatório e deve ser uma string',
+        };
+      }
+
+      // Tratar string vazia ou só com espaços
+      if (cnabContent.trim() === '') {
+        return {
+          valido: false,
+          erro: 'Arquivo CNAB não contém linhas válidas',
+        };
+      }
+
+      const linhas = cnabContent.split('\n').filter(linha => linha.trim() !== '');
+
+      if (linhas.length === 0) {
+        return {
+          valido: false,
+          erro: 'Arquivo CNAB não contém linhas válidas',
+        };
+      }
+
+      // Verifica se as linhas têm o tamanho esperado para CNAB 240 (240 caracteres)
+      const linhasInvalidas = linhas.filter(linha => linha.length !== 240);
+
+      if (linhasInvalidas.length > 0) {
+        return {
+          valido: false,
+          erro: `Arquivo contém ${linhasInvalidas.length} linha(s) com tamanho inválido. CNAB 240 deve ter 240 caracteres por linha`,
+        };
+      }
+
+      return {
+        valido: true,
+        totalLinhas: linhas.length,
+        formato: 'CNAB 240',
+      };
+    } catch (error) {
+      return {
+        valido: false,
+        erro: `Erro na validação: ${error.message}`,
+      };
+    }
+  }
 }
 
 export default Cnab240Service; 

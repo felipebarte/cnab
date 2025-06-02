@@ -53,6 +53,14 @@ router.post('/processar/upload', uploadMiddleware, Cnab240Controller.processarAr
 router.post('/validar', Cnab240Controller.validarArquivo);
 
 /**
+ * @route POST /cnab240/validar-simples
+ * @desc Valida arquivo CNAB 240 de forma simples (seguindo padrão CNAB 400)
+ * Verifica apenas se as linhas têm exatamente 240 caracteres
+ * @body { conteudo: string }
+ */
+router.post('/validar-simples', Cnab240Controller.validarArquivoSimples);
+
+/**
  * @route POST /cnab240/processar-webhook
  * @desc Processa arquivo CNAB 240 e envia dados para webhook (via texto)
  * @body { conteudo: string, webhookUrl?: string, opcoes?: object }

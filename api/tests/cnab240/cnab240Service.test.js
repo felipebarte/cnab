@@ -319,4 +319,93 @@ describe('CNAB240Service - Serviço Principal', () => {
       expect(resultado.opcoes).toEqual(opcoes);
     });
   });
+
+  describe('Validação simples (padrão CNAB 400)', () => {
+    it('deve validar arquivo com linhas de 240 caracteres como válido', () => {
+      const cnabValido = [
+        gerarHeaderArquivo(),
+        gerarHeaderLote(),
+        gerarTrailerLote(),
+        gerarTrailerArquivo()
+      ].join('\n');
+
+      const resultado = Cnab240Service.validarArquivoCnab240(cnabValido);
+
+      expect(resultado.valido).toBe(true);
+      expect(resultado.totalLinhas).toBe(4);
+      expect(resultado.formato).toBe('CNAB 240');
+    });
+
+    it('deve rejeitar conteúdo vazio', () => {
+      const resultado = Cnab240Service.validarArquivoCnab240('');
+
+      expect(resultado.valido).toBe(false);
+      expect(resultado.erro).toContain('Arquivo CNAB não contém linhas válidas');
+    });
+
+    it('deve rejeitar conteúdo não string', () => {
+      const resultado = Cnab240Service.validarArquivoCnab240(null);
+
+      expect(resultado.valido).toBe(false);
+      expect(resultado.erro).toContain('Conteúdo do arquivo é obrigatório e deve ser uma string');
+    });
+
+    it('deve rejeitar arquivo com linhas de tamanho incorreto', () => {
+      const linhaInvalida = '341000010000100001A' + ' '.repeat(200); // Linha com 219 caracteres
+      const conteudo = [
+        gerarHeaderArquivo(),
+        linhaInvalida,
+        gerarTrailerArquivo()
+      ].join('\n');
+
+      const resultado = Cnab240Service.validarArquivoCnab240(conteudo);
+
+      expect(resultado.valido).toBe(false);
+      expect(resultado.erro).toContain('linha(s) com tamanho inválido');
+      expect(resultado.erro).toContain('CNAB 240 deve ter 240 caracteres por linha');
+    });
+
+    it('deve identificar múltiplas linhas inválidas', () => {
+      const linha1 = 'linha muito curta';
+      const linha2 = 'outra linha curta';
+      const conteudo = [
+        linha1,
+        gerarHeaderLote(),
+        linha2,
+        gerarTrailerArquivo()
+      ].join('\n');
+
+      const resultado = Cnab240Service.validarArquivoCnab240(conteudo);
+
+      expect(resultado.valido).toBe(false);
+      expect(resultado.erro).toContain('2 linha(s) com tamanho inválido');
+    });
+
+    it('deve tratar erro interno graciosamente', () => {
+      // Simular erro interno passando objeto que não tem método split
+      const conteudoInvalido = { split: undefined };
+
+      const resultado = Cnab240Service.validarArquivoCnab240(conteudoInvalido);
+
+      expect(resultado.valido).toBe(false);
+      expect(resultado.erro).toContain('Conteúdo do arquivo é obrigatório e deve ser uma string');
+    });
+
+    it('deve ignorar linhas vazias ou só com espaços', () => {
+      const conteudo = [
+        gerarHeaderArquivo(),
+        '',
+        '   ',
+        gerarHeaderLote(),
+        gerarTrailerLote(),
+        '  \t  ',
+        gerarTrailerArquivo()
+      ].join('\n');
+
+      const resultado = Cnab240Service.validarArquivoCnab240(conteudo);
+
+      expect(resultado.valido).toBe(true);
+      expect(resultado.totalLinhas).toBe(4); // Deve ignorar as linhas vazias
+    });
+  });
 }); 

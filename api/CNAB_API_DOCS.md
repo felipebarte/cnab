@@ -4,7 +4,7 @@ Esta API permite processar arquivos CNAB 400 e **CNAB 240** do Itaú e outros ba
 
 ## Base URL
 ```
-http://localhost:3000/api/v1/cnab
+http://localhost:8080/api/v1/cnab
 ```
 
 ## 🆕 **Novidades CNAB 240**
@@ -1010,7 +1010,7 @@ X-Operation-Id: op-1642252800000-abc123
 ### Usando curl para upload de arquivo:
 ```bash
 curl -X POST \
-  http://localhost:3000/api/v1/cnab/upload \
+  http://localhost:8080/api/v1/cnab/upload \
   -H 'Content-Type: multipart/form-data' \
   -F 'arquivo=@/caminho/para/arquivo.rem'
 ```
@@ -1018,7 +1018,7 @@ curl -X POST \
 ### Usando curl para processar conteúdo:
 ```bash
 curl -X POST \
-  http://localhost:3000/api/v1/cnab/processar \
+  http://localhost:8080/api/v1/cnab/processar \
   -H 'Content-Type: application/json' \
   -d '{
     "conteudo": "sua_linha_cnab_400_caracteres_aqui..."
@@ -1028,7 +1028,7 @@ curl -X POST \
 ### Usando curl para extrair códigos de barras:
 ```bash
 curl -X POST \
-  http://localhost:3000/api/v1/cnab/codigos-barras \
+  http://localhost:8080/api/v1/cnab/codigos-barras \
   -H 'Content-Type: application/json' \
   -d '{
     "conteudo": "sua_linha_cnab_400_caracteres_aqui..."
@@ -1038,7 +1038,7 @@ curl -X POST \
 ### Usando curl para processar e enviar para webhook (texto):
 ```bash
 curl -X POST \
-  http://localhost:3000/api/v1/cnab/processar-webhook \
+  http://localhost:8080/api/v1/cnab/processar-webhook \
   -H 'Content-Type: application/json' \
   -d '{
     "conteudo": "sua_linha_cnab_400_caracteres_aqui...",
@@ -1049,7 +1049,7 @@ curl -X POST \
 ### Usando curl para processar e enviar para webhook (upload):
 ```bash
 curl -X POST \
-  http://localhost:3000/api/v1/cnab/processar-webhook/upload \
+  http://localhost:8080/api/v1/cnab/processar-webhook/upload \
   -H 'Content-Type: multipart/form-data' \
   -F 'arquivo=@/caminho/para/arquivo.rem' \
   -F 'webhookUrl=https://meu-webhook.com/cnab'
@@ -1058,7 +1058,7 @@ curl -X POST \
 ### Exemplo usando JavaScript/fetch:
 ```javascript
 // Processar CNAB e enviar para webhook
-const response = await fetch('http://localhost:3000/api/v1/cnab/processar-webhook', {
+const response = await fetch('http://localhost:8080/api/v1/cnab/processar-webhook', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',

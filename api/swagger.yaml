@@ -7,12 +7,17 @@ info:
     **Principais funcionalidades:**
     - ✅ Processamento completo de arquivos CNAB 400 e 240
     - ✅ Suporte a PIX (CNAB 240)
-    - ✅ Validação estrutural avançada por banco
+    - ✅ Validação estrutural avançada por banco (robusta)
+    - ✅ **NOVA**: Validação simples CNAB 240 (padrão CNAB 400)
     - ✅ Detecção automática de formato
     - ✅ Extração de códigos de barras e linhas digitáveis
     - ✅ Webhooks configuráveis
     - ✅ Upload de arquivos
     - ✅ Processamento via texto/JSON
+    
+    **Tipos de Validação CNAB 240:**
+    - **Robusta** (`/validar`): 5 camadas de validação (estrutura, integridade, negócio, banco, operação)
+    - **Simples** (`/validar-simples`): Verifica apenas tamanho das linhas (240 chars) - Compatível com CNAB 400
     
     **Bancos suportados:** Itaú (341), Bradesco (237), Santander (033), Banco do Brasil (001), Caixa (104)
   version: 1.0.0
@@ -24,7 +29,7 @@ info:
     url: https://opensource.org/licenses/MIT
 
 servers:
-  - url: http://localhost:3000/api/v1
+  - url: http://localhost:8080/api/v1
     description: Servidor de desenvolvimento local
   - url: https://api.cnab.exemplo.com/v1
     description: Servidor de produção
@@ -205,8 +210,8 @@ paths:
     post:
       tags:
         - CNAB 240
-      summary: Validar arquivo CNAB 240
-      description: Valida a estrutura de um arquivo CNAB 240 sem processá-lo completamente
+      summary: Validar arquivo CNAB 240 (robusta)
+      description: Valida a estrutura de um arquivo CNAB 240 sem processá-lo completamente. Executa validação completa com 5 camadas (estrutura, integridade, negócio, banco, operação)
       requestBody:
         required: true
         content:
@@ -226,6 +231,91 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CNAB240ValidarResponse'
+
+  /cnab240/validar-simples:
+    post:
+      tags:
+        - CNAB 240
+      summary: Validar arquivo CNAB 240 (simples - padrão CNAB 400)
+      description: |
+        Valida arquivo CNAB 240 seguindo **exatamente o mesmo padrão** da validação do CNAB 400.
+        
+        **Características:**
+        - ✅ Verifica apenas se as linhas têm exatamente 240 caracteres
+        - ✅ Performance otimizada (~1-5ms vs ~50-200ms da validação robusta)
+        - ✅ Compatível com sistemas de migração CNAB 400 → 240
+        - ✅ Ideal para pré-filtro de arquivos em lote
+        - ✅ Sem validação de estrutura hierárquica ou regras de negócio
+        
+        **Quando usar:**
+        - Verificação rápida de formato antes de upload
+        - Validação em tempo real durante digitação
+        - APIs que precisam de resposta imediata
+        - Pré-filtro para processamento em batch
+        - Compatibilidade com sistemas legados CNAB 400
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conteudo:
+                  type: string
+                  description: Conteúdo do arquivo CNAB 240
+                  example: |
+                    341000010000100001A010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                    341000020000200002B020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+              required:
+                - conteudo
+      responses:
+        200:
+          description: Resultado da validação simples
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CNAB240ValidarSimplesResponse'
+              examples:
+                arquivo_valido:
+                  summary: Arquivo válido
+                  value:
+                    sucesso: true
+                    validacao:
+                      valido: true
+                      formato: "CNAB 240"
+                      totalLinhas: 4
+                      tamanhoEsperado: 240
+                      mensagem: "Arquivo CNAB 240 válido (linhas com 240 caracteres)"
+                arquivo_invalido:
+                  summary: Arquivo inválido
+                  value:
+                    sucesso: true
+                    validacao:
+                      valido: false
+                      formato: "CNAB 240"
+                      totalLinhas: 2
+                      tamanhoEsperado: 240
+                      linhasInvalidas: [
+                        {
+                          numero: 1,
+                          tamanho: 119,
+                          esperado: 240
+                        }
+                      ]
+                      erro: "Encontradas 1 linha(s) com tamanho inválido"
+        400:
+          description: Erro na requisição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                conteudo_obrigatorio:
+                  summary: Conteúdo obrigatório
+                  value:
+                    sucesso: false
+                    erro: "Campo \"conteudo\" é obrigatório"
+                    codigo: "CONTEUDO_OBRIGATORIO"
 
   /cnab240/processar-webhook:
     post:
@@ -882,6 +972,69 @@ components:
             formato:
               type: string
 
+    CNAB240ValidarSimplesResponse:
+      type: object
+      description: Resposta da validação simples CNAB 240 (padrão CNAB 400)
+      properties:
+        sucesso:
+          type: boolean
+          description: Indica se a requisição foi processada com sucesso
+          example: true
+        validacao:
+          type: object
+          description: Resultado da validação simples
+          properties:
+            valido:
+              type: boolean
+              description: Indica se o arquivo é válido (todas as linhas têm 240 caracteres)
+              example: true
+            formato:
+              type: string
+              description: Formato do arquivo detectado
+              example: "CNAB 240"
+            totalLinhas:
+              type: number
+              description: Total de linhas válidas encontradas no arquivo
+              example: 4
+            tamanhoEsperado:
+              type: number
+              description: Tamanho esperado para cada linha (sempre 240 para CNAB 240)
+              example: 240
+            mensagem:
+              type: string
+              description: Mensagem descritiva do resultado da validação
+              example: "Arquivo CNAB 240 válido (linhas com 240 caracteres)"
+            linhasInvalidas:
+              type: array
+              description: Lista de linhas que não têm o tamanho correto (presente apenas quando válido=false)
+              items:
+                type: object
+                properties:
+                  numero:
+                    type: number
+                    description: Número da linha inválida
+                    example: 1
+                  tamanho:
+                    type: number  
+                    description: Tamanho atual da linha
+                    example: 119
+                  esperado:
+                    type: number
+                    description: Tamanho esperado (240)
+                    example: 240
+            erro:
+              type: string
+              description: Mensagem de erro detalhada (presente apenas quando válido=false)
+              example: "Encontradas 1 linha(s) com tamanho inválido"
+          required:
+            - valido
+            - formato
+            - totalLinhas
+            - tamanhoEsperado
+      required:
+        - sucesso
+        - validacao
+
     # CNAB 400 Schemas
     CNAB400InfoResponse:
       type: object
@@ -968,8 +1121,6 @@ components:
           type: array
           items:
             type: string
-        caracteristicas:
-          type: object
 
     # Schemas auxiliares
     ArquivoInfo:

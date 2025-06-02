@@ -47,12 +47,12 @@ LOG_LEVEL=info
 ### **1. Webhook Automático (CNAB 240/400)**
 ```bash
 # Upload com detecção automática
-curl -X POST http://localhost:3000/api/v1/cnab/webhook-auto/upload \
+curl -X POST http://localhost:8080/api/v1/cnab/webhook-auto/upload \
   -F "arquivo=@arquivo.txt" \
   -F "webhookUrl=https://seu-webhook.com/endpoint"
 
 # Texto com detecção automática  
-curl -X POST http://localhost:3000/api/v1/cnab/webhook-auto \
+curl -X POST http://localhost:8080/api/v1/cnab/webhook-auto \
   -H "Content-Type: application/json" \
   -d '{
     "conteudo": "conteúdo CNAB...",
@@ -63,12 +63,12 @@ curl -X POST http://localhost:3000/api/v1/cnab/webhook-auto \
 ### **2. Webhook CNAB 240 Específico**
 ```bash
 # Upload CNAB 240
-curl -X POST http://localhost:3000/api/v1/cnab240/processar-webhook \
+curl -X POST http://localhost:8080/api/v1/cnab240/processar-webhook \
   -F "arquivo=@arquivo240.txt" \
   -F "webhookUrl=https://seu-webhook.com/endpoint"
 
 # Texto CNAB 240
-curl -X POST http://localhost:3000/api/v1/cnab240/processar-webhook \
+curl -X POST http://localhost:8080/api/v1/cnab240/processar-webhook \
   -H "Content-Type: application/json" \
   -d '{
     "conteudo": "conteúdo CNAB 240...",
@@ -78,7 +78,7 @@ curl -X POST http://localhost:3000/api/v1/cnab240/processar-webhook \
 
 ### **3. Webhook CNAB 400 (Legado)**
 ```bash
-curl -X POST http://localhost:3000/api/v1/cnab/processar-webhook \
+curl -X POST http://localhost:8080/api/v1/cnab/processar-webhook \
   -H "Content-Type: application/json" \
   -d '{
     "conteudo": "conteúdo CNAB 400...",
@@ -165,7 +165,7 @@ X-Operation-Id: op_1748787933811_sern9m12w
 ```bash
 # 1. Acesse https://webhook.site e copie sua URL única
 # 2. Teste o endpoint:
-curl -X POST http://localhost:3000/api/v1/cnab/webhook-auto/upload \
+curl -X POST http://localhost:8080/api/v1/cnab/webhook-auto/upload \
   -F "arquivo=@api/examples/pix85015.txt" \
   -F "webhookUrl=https://webhook.site/SEU-UUID-AQUI"
 ```

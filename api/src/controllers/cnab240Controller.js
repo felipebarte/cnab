@@ -801,6 +801,39 @@ export class Cnab240Controller {
       });
     }
   }
+
+  /**
+   * POST /api/v1/cnab240/validar-simples
+   * Valida arquivo CNAB 240 de forma simples (seguindo padrão CNAB 400)
+   * Verifica apenas o tamanho das linhas (240 caracteres)
+   */
+  static async validarArquivoSimples(req, res) {
+    try {
+      const { conteudo } = req.body;
+
+      if (!conteudo) {
+        return res.status(400).json({
+          sucesso: false,
+          erro: 'Campo "conteudo" é obrigatório',
+          codigo: 'CONTEUDO_OBRIGATORIO',
+        });
+      }
+
+      const validacao = Cnab240Service.validarArquivoCnab240(conteudo);
+
+      return res.status(200).json({
+        sucesso: true,
+        validacao,
+      });
+    } catch (error) {
+      console.error('Erro ao validar arquivo CNAB 240:', error);
+      return res.status(500).json({
+        sucesso: false,
+        erro: error.message,
+        codigo: 'ERRO_VALIDACAO',
+      });
+    }
+  }
 }
 
 export default Cnab240Controller; 

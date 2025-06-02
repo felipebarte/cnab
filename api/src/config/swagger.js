@@ -29,7 +29,7 @@ try {
     },
     servers: [
       {
-        url: 'http://localhost:3000/api/v1',
+        url: 'http://localhost:8080/api/v1',
         description: 'Servidor de desenvolvimento',
       },
     ],
@@ -183,9 +183,9 @@ export const setupSwagger = (app) => {
     });
 
     console.log('📚 Swagger configurado com sucesso!');
-    console.log('🔗 Documentação disponível em: http://localhost:3000/api-docs');
-    console.log('📄 Especificação JSON: http://localhost:3000/api-docs/swagger.json');
-    console.log('📄 Especificação YAML: http://localhost:3000/api-docs/swagger.yaml');
+    console.log('🔗 Documentação disponível em: http://localhost:8080/api-docs');
+    console.log('📄 Especificação JSON: http://localhost:8080/api-docs/swagger.json');
+    console.log('📄 Especificação YAML: http://localhost:8080/api-docs/swagger.yaml');
 
   } catch (error) {
     console.error('❌ Erro ao configurar Swagger:', error);

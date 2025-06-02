@@ -19,11 +19,11 @@ import healthRoutes from './routes/health.js';
 import apiRoutes from './routes/api.js';
 
 // Middlewares personalizados
-import { errorHandler } from './middleware/errorHandler.js';
+//import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Configuração de rate limiting
 const limiter = rateLimit({
@@ -40,7 +40,7 @@ app.use(helmet());
 // Configuração CORS
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
     credentials: true,
   })
 );
@@ -94,7 +94,7 @@ const server = app.listen(PORT, () => {
   console.log(`📝 Ambiente: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 URL: http://localhost:${PORT}`);
 
-  Logger.info(`🚀 Servidor CNAB API iniciado`, {
+  Logger.info('🚀 Servidor CNAB API iniciado', {
     port: PORT,
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
