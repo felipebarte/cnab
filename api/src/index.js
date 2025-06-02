@@ -38,10 +38,31 @@ const limiter = rateLimit({
 app.use(helmet());
 
 // Configuração CORS
+const allowedOrigins = [
+  'http://localhost:3000',  // Frontend React (porta padrão)
+  'http://localhost:3001',  // Frontend React (porta alternativa)
+  'http://localhost:5173',  // Vite dev server (porta padrão)
+  'http://localhost:5174',  // Vite dev server (porta alternativa)
+  'http://localhost:8080',  // Backend (para testes internos)
+];
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+    origin: function (origin, callback) {
+      // Permitir requisições sem origin (ex: aplicativos mobile, Postman)
+      if (!origin) return callback(null, true);
+
+      // Verificar se a origin está na lista permitida
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.warn(`🚨 CORS: Origin '${origin}' não permitida`);
+        callback(new Error('CORS: Origin não permitida'));
+      }
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   })
 );
 
