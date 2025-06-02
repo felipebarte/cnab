@@ -4,18 +4,27 @@ import cnabRoutes from './cnabRoutes.js';
 import cnab240Routes from './cnab240Routes.js';
 import cnabUnifiedRoutes from './cnabUnifiedRoutes.js';
 import universalRoutes from './universal/universalRoutes.js';
+import compatibilityRoutes from './compatibilityRoutes.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from '../config/swaggerSpec.js';
-import statusRoutes from './statusRoutes.js';
-import healthRoutes from './healthRoutes.js';
+
+// Importar middleware de compatibilidade
+import { fullBackwardsCompatibilityMiddleware } from '../middleware/backwardsCompatibilityMiddleware.js';
 
 const router = express.Router();
+
+// ✨ APLICAR MIDDLEWARE DE BACKWARDS COMPATIBILITY ✨
+// Aplicado globalmente para interceptar todos os endpoints legacy
+router.use(fullBackwardsCompatibilityMiddleware);
 
 // Rotas principais
 router.get('/', getWelcome);
 router.get('/status', getStatus);
 
-// Rotas específicas por recursos
+// 📋 ROTAS DE COMPATIBILIDADE (prioritárias)
+router.use('/compatibility', compatibilityRoutes);
+
+// Rotas específicas por recursos (LEGACY - com compatibilidade automática)
 router.use('/cnab', cnabRoutes);
 router.use('/cnab240', cnab240Routes);
 
@@ -34,15 +43,5 @@ router.use((req, res, next) => {
   console.log(`[API] ${req.method} ${req.path} - ${new Date().toISOString()}`);
   next();
 });
-
-// Rotas da API
-router.use('/status', statusRoutes);
-router.use('/health', healthRoutes);
-
-// Aqui você pode adicionar mais rotas organizadas por recursos
-// Exemplo:
-// router.use('/users', userRoutes);
-// router.use('/products', productRoutes);
-// router.use('/auth', authRoutes);
 
 export default router;
