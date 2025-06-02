@@ -45,7 +45,7 @@ Criar um sistema CNAB universal que utilize o repositório `@banco-br/cnab_yaml`
 - Estruturar dados para integração com APIs externas
 
 ### RF003 - Integração com API Externa
-- Enviar lotes de pagamento para APIs externas
+- Enviar lotes de pagamento para APIs SWAP Financial
 - Implementar retry logic e error handling
 - Logging completo de integrações
 
