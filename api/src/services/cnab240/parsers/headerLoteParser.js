@@ -79,33 +79,30 @@ export class HeaderLoteParser {
       // Posições 073-102: Nome da empresa
       nomeEmpresa: linha.substring(72, 102).trim(),
 
-      // Posições 103-142: Finalidade do lote
+      // Posições 103-142: Finalidade do lote (mensagem livre)
       finalidadeLote: linha.substring(102, 142).trim(),
 
-      // Posições 143-148: Histórico C/C
-      historicoConta: linha.substring(142, 148).trim(),
+      // Posições 143-148: Histórico C/C (corrigir para uma posição anterior se existir)
+      historicoConta: linha.substring(102, 108).trim(), // Corrigir posição
 
-      // Posições 149-230: Endereço da empresa
+      // Posições 143-230: Endereço da empresa (correção baseada em análise real)
       enderecoEmpresa: {
-        // Posições 149-178: Logradouro
-        logradouro: linha.substring(148, 178).trim(),
+        // Posições 143-172: Logradouro (30 caracteres)
+        logradouro: linha.substring(142, 172).trim(),
 
-        // Posições 179-183: Número
-        numero: linha.substring(178, 183).trim(),
+        // Posições 173-177: Número (5 caracteres)
+        numero: linha.substring(172, 177).trim(),
 
-        // Posições 184-198: Complemento
-        complemento: linha.substring(183, 198).trim(),
+        // Posições 178-192: Complemento (15 caracteres)
+        complemento: linha.substring(177, 192).trim(),
 
-        // Posições 199-213: Cidade
-        cidade: linha.substring(198, 213).trim(),
+        // Posições 193-212: Cidade (20 caracteres)
+        cidade: linha.substring(192, 212).trim(),
 
-        // Posições 214-218: CEP
-        cep: linha.substring(213, 218).trim(),
+        // Posições 213-220: CEP (8 caracteres)
+        cep: linha.substring(212, 220).trim(),
 
-        // Posições 219-220: Complemento do CEP
-        complementoCep: linha.substring(218, 220).trim(),
-
-        // Posições 221-222: Estado
+        // Posições 221-222: Estado (2 caracteres)
         estado: linha.substring(220, 222).trim()
       },
 

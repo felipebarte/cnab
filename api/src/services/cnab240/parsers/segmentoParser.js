@@ -120,11 +120,11 @@ export class SegmentoParser {
   }
 
   /**
-   * Processa uma linha de segmento J CNAB 240 (títulos de cobrança)
+   * Identifica o subtipo do Segmento J baseado no conteúdo
    * @param {string} linha - Linha de 240 caracteres
-   * @returns {Object} Dados do segmento J parseados
+   * @returns {string} Subtipo identificado (J01, J02, etc.)
    */
-  static parseSegmentoJ(linha) {
+  static identifyJSubtype(linha) {
     if (!linha || linha.length !== 240) {
       throw new Error('Linha de segmento J deve ter 240 caracteres');
     }
@@ -133,6 +133,46 @@ export class SegmentoParser {
     const segmento = linha[13];
     if (segmento !== 'J') {
       throw new Error(`Segmento esperado: J, encontrado: ${segmento}`);
+    }
+
+    // Analisar o conteúdo para determinar o tipo:
+    // Posições 15-19: Se começar com "0003" seguido de números = J01 (dados de cobrança)
+    // Posições 15-19: Se começar com "0005" seguido de CNPJ = J02 (dados da empresa)
+    const inicioSegmento = linha.substring(14, 19);
+
+    if (inicioSegmento.startsWith('0003')) {
+      // Tipo J01: Dados principais de cobrança/título
+      return 'J01';
+    } else if (inicioSegmento.startsWith('0005')) {
+      // Tipo J02: Dados complementares da empresa pagadora
+      return 'J02';
+    }
+
+    // Fallback: tentar detectar pela presença de código de barras vs CNPJ
+    const primeiros20Chars = linha.substring(14, 34);
+
+    // Se contém apenas dígitos nos primeiros 20 caracteres, provavelmente é J01 (código de barras)
+    if (/^\d{20}$/.test(primeiros20Chars)) {
+      return 'J01';
+    }
+
+    // Se contém caracteres alfanuméricos misturados, provavelmente é J02 (CNPJ + nome)
+    if (/\d{14}/.test(primeiros20Chars)) {
+      return 'J02';
+    }
+
+    // Padrão: assumir J01 se não conseguir determinar
+    return 'J01';
+  }
+
+  /**
+   * Processa uma linha de segmento J01 CNAB 240 (dados principais de títulos de cobrança)
+   * @param {string} linha - Linha de 240 caracteres
+   * @returns {Object} Dados do segmento J01 parseados
+   */
+  static parseSegmentoJ01(linha) {
+    if (!linha || linha.length !== 240) {
+      throw new Error('Linha de segmento J01 deve ter 240 caracteres');
     }
 
     const dados = {
@@ -151,45 +191,138 @@ export class SegmentoParser {
       // Posição 014: Código do segmento (J)
       segmento: linha[13],
 
-      // Posições 015-059: Código de barras
-      codigoBarras: linha.substring(14, 59).trim(),
+      // Posições 015-059: Código de barras (45 posições, mas realmente são 44 dígitos + 1 prefixo)
+      // Baseado na análise real: inicia na posição 018 e vai até 061 (44 dígitos)
+      codigoBarras: linha.substring(17, 61).trim(),
 
-      // Posições 060-089: Nome do beneficiário/favorecido
-      nomeFavorecido: linha.substring(59, 89).trim(),
+      // Posições 062-091: Nome do beneficiário/favorecido (30 posições)
+      // Análise real confirmada: posições 62-91 (exatamente 30 caracteres)
+      nomeFavorecido: linha.substring(61, 91).trim(),
 
-      // Posições 090-097: Data do vencimento (DDMMAAAA)
-      dataVencimento: linha.substring(89, 97),
+      // Posições 092-099: Data do vencimento (DDMMAAAA) - 8 posições
+      // Análise real confirmada: posições 92-99 
+      dataVencimento: linha.substring(91, 99),
 
-      // Posições 098-112: Valor do título
-      valorTitulo: linha.substring(97, 112).trim(),
+      // Posições 100-114: Valor do título (15 posições)
+      // Análise real: após a data vencimento
+      valorTitulo: linha.substring(100, 115).trim(),
 
-      // Posições 113-127: Desconto/abatimento
-      valorDesconto: linha.substring(112, 127).trim(),
+      // Posições 115-129: Desconto/abatimento
+      valorDesconto: linha.substring(115, 130).trim(),
 
-      // Posições 128-142: Acréscimo/mora
-      valorAcrescimo: linha.substring(127, 142).trim(),
+      // Posições 130-144: Acréscimo/mora
+      valorAcrescimo: linha.substring(130, 145).trim(),
 
-      // Posições 143-150: Data do pagamento (DDMMAAAA)
-      dataPagamento: linha.substring(142, 150),
+      // Posições 145-152: Data do pagamento (DDMMAAAA)
+      dataPagamento: linha.substring(145, 153),
 
-      // Posições 151-165: Valor pago
-      valorPago: linha.substring(150, 165).trim(),
+      // Posições 153-167: Valor pago
+      valorPago: linha.substring(153, 168).trim(),
 
-      // Posições 166-180: Quantidade da moeda
-      quantidadeMoeda: linha.substring(165, 180).trim(),
+      // Posições 168-182: Quantidade da moeda
+      quantidadeMoeda: linha.substring(168, 183).trim(),
 
-      // Posições 181-200: Referência do sacado
-      referenciaSacado: linha.substring(180, 200).trim(),
+      // Posições 183-202: Referência do sacado
+      referenciaSacado: linha.substring(183, 203).trim(),
 
-      // Posições 201-240: Nosso número/controle
-      nossoNumero: linha.substring(200, 240).trim()
+      // Posições 203-240: Nosso número/controle
+      nossoNumero: linha.substring(203, 240).trim(),
+
+      // Metadados do subtipo
+      subtipoJ: 'J01',
+      descricaoSubtipo: 'Dados principais de cobrança/título'
     };
 
     return dados;
   }
 
   /**
-   * Processa uma linha de segmento O CNAB 240 (pagamento de tributos)
+   * Processa uma linha de segmento J02 CNAB 240 (dados complementares da empresa)
+   * @param {string} linha - Linha de 240 caracteres
+   * @returns {Object} Dados do segmento J02 parseados
+   */
+  static parseSegmentoJ02(linha) {
+    if (!linha || linha.length !== 240) {
+      throw new Error('Linha de segmento J02 deve ter 240 caracteres');
+    }
+
+    const dados = {
+      // Posições 001-003: Código do banco
+      codigoBanco: linha.substring(0, 3).trim(),
+
+      // Posições 004-007: Lote de serviço
+      lote: linha.substring(3, 7).trim(),
+
+      // Posição 008: Tipo de registro (3)
+      tipoRegistro: linha[7],
+
+      // Posições 009-013: Número sequencial do registro
+      numeroSequencial: linha.substring(8, 13).trim(),
+
+      // Posição 014: Código do segmento (J)
+      segmento: linha[13],
+
+      // Posições 015-018: Indicador de subtipo (ex: "0005")
+      indicadorSubtipo: linha.substring(14, 18),
+
+      // Posições 019-032: CNPJ/CPF da empresa pagadora (assumindo 14 dígitos para CNPJ)
+      cnpjEmpresa: linha.substring(18, 32).trim(),
+
+      // Posições 033-063: Nome da empresa pagadora
+      nomeEmpresa: linha.substring(32, 62).trim(),
+
+      // Posições 064-077: CNPJ/CPF do favorecido
+      cnpjFavorecido: linha.substring(63, 77).trim(),
+
+      // Posições 078-148: Nome do favorecido/beneficiário
+      nomeFavorecido: linha.substring(77, 147).trim(),
+
+      // Posições 149-168: Informações adicionais/complementares
+      informacoesAdicionais: linha.substring(148, 168).trim(),
+
+      // Posições 169-240: Dados livres/uso específico
+      dadosLivres: linha.substring(168, 240).trim(),
+
+      // Metadados do subtipo
+      subtipoJ: 'J02',
+      descricaoSubtipo: 'Dados complementares da empresa pagadora'
+    };
+
+    return dados;
+  }
+
+  /**
+   * Processa uma linha de segmento J CNAB 240 (títulos de cobrança) - VERSÃO ORIGINAL
+   * @param {string} linha - Linha de 240 caracteres
+   * @returns {Object} Dados do segmento J parseados
+   */
+  static parseSegmentoJ(linha) {
+    if (!linha || linha.length !== 240) {
+      throw new Error('Linha de segmento J deve ter 240 caracteres');
+    }
+
+    // Verificar se é realmente segmento J
+    const segmento = linha[13];
+    if (segmento !== 'J') {
+      throw new Error(`Segmento esperado: J, encontrado: ${segmento}`);
+    }
+
+    // Detectar o subtipo e usar o parser apropriado
+    const subtipo = this.identifyJSubtype(linha);
+
+    switch (subtipo) {
+      case 'J01':
+        return this.parseSegmentoJ01(linha);
+      case 'J02':
+        return this.parseSegmentoJ02(linha);
+      default:
+        // Fallback: usar parser J01 como padrão
+        return this.parseSegmentoJ01(linha);
+    }
+  }
+
+  /**
+   * Parser específico para Segmento O CNAB 240 (Pagamento de tributos)
    * @param {string} linha - Linha de 240 caracteres
    * @returns {Object} Dados do segmento O parseados
    */
@@ -220,38 +353,54 @@ export class SegmentoParser {
       // Posição 014: Código do segmento (O)
       segmento: linha[13],
 
-      // Posições 015-062: Código de barras do tributo
-      codigoBarras: linha.substring(14, 62).trim(),
+      // Posições 015-017: Código de movimento
+      codigoMovimento: linha.substring(14, 17).trim(),
 
-      // Posições 063-092: Nome da concessionária/órgão
-      nomeConcessionaria: linha.substring(62, 92).trim(),
+      // Posições 018-062: Código de barras (45 posições)
+      codigoBarras: linha.substring(17, 62).trim(),
 
-      // Posições 093-100: Data de vencimento (DDMMAAAA)
-      dataVencimento: linha.substring(92, 100),
+      // Posições 063-065: Identificação adicional (ex: "991")
+      identificacaoComplementar: linha.substring(62, 65).trim(),
 
-      // Posições 101-115: Valor do documento
-      valorDocumento: linha.substring(100, 115).trim(),
+      // Posições 066-095: Nome da concessionária/órgão/favorecido (30 posições)
+      nomeConcessionaria: linha.substring(65, 95).trim(),
 
-      // Posições 116-130: Desconto/abatimento
-      valorDesconto: linha.substring(115, 130).trim(),
+      // Posições 096-103: Data de vencimento (DDMMAAAA)
+      dataVencimento: linha.substring(95, 103).trim(),
 
-      // Posições 131-145: Multa/juros
-      valorMulta: linha.substring(130, 145).trim(),
+      // Posições 104-118: Valor do documento (15 posições, com 2 decimais)
+      valorDocumento: linha.substring(103, 118).trim(),
 
-      // Posições 146-153: Data do pagamento (DDMMAAAA)
-      dataPagamento: linha.substring(145, 153),
+      // Posições 119-133: Desconto/abatimento (15 posições, com 2 decimais)
+      valorDesconto: linha.substring(118, 133).trim(),
 
-      // Posições 154-168: Valor pago
-      valorPago: linha.substring(153, 168).trim(),
+      // Posições 134-148: Valor pago (15 posições, com 2 decimais)
+      valorPago: linha.substring(133, 148).trim(),
 
-      // Posições 169-188: Referência/identificação
-      referencia: linha.substring(168, 188).trim(),
+      // Posições 149-156: Data do pagamento (DDMMAAAA)
+      dataPagamento: linha.substring(148, 156).trim(),
 
-      // Posições 189-228: Informações complementares
-      informacoesComplementares: linha.substring(188, 228).trim(),
+      // Posições 157-171: Valor real efetivado (15 posições, com 2 decimais)
+      valorEfetivado: linha.substring(156, 171).trim(),
 
-      // Posições 229-240: Uso exclusivo FEBRABAN/CNAB
-      usoFEBRABAN: linha.substring(228, 240).trim()
+      // Posições 172-191: Referência/nosso número (20 posições)
+      referencia: linha.substring(171, 191).trim(),
+
+      // Posições 192-228: Informações complementares (37 posições)
+      informacoesComplementares: linha.substring(191, 228).trim(),
+
+      // Posições 229-240: Uso exclusivo FEBRABAN/CNAB (12 posições)
+      usoFEBRABAN: linha.substring(228, 240).trim(),
+
+      // Metadados
+      _metadata: {
+        tipo: '3',
+        descricao: 'Segmento O - Pagamento de Tributos/Concessionárias',
+        categoria: 'pagamento',
+        segmento: 'O',
+        parser: 'SegmentoParser.parseSegmentoO',
+        linhaOriginal: linha
+      }
     };
 
     return dados;

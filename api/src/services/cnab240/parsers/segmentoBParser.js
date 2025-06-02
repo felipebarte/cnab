@@ -3,18 +3,19 @@
  * 
  * Especificação FEBRABAN - posições exatas dos campos
  * Subtipos B01 (Telefone), B02 (Email), B03 (CNPJ/CPF), B04 (UUID)
+ * + Segmento B Tradicional (endereço complementar)
  */
 
 import { SegmentoB240 } from '../../../models/cnab240/index.js';
 
 /**
- * Parser para Segmento B CNAB 240 - Dados complementares PIX
+ * Parser para Segmento B CNAB 240 - Dados complementares PIX ou endereço tradicional
  */
 export class SegmentoBParser {
   /**
    * Identifica o subtipo do Segmento B baseado no conteúdo
    * @param {string} linha - Linha de 240 caracteres
-   * @returns {string} Subtipo identificado (B01, B02, B03, B04)
+   * @returns {string} Subtipo identificado (B01, B02, B03, B04, TRADICIONAL)
    */
   static identifySubtype(linha) {
     if (!linha || linha.length !== 240) {
@@ -29,8 +30,15 @@ export class SegmentoBParser {
 
     // Posições 015-017: Subtipo explícito (quando presente)
     const subtipoExplicito = linha.substring(14, 17).trim();
+
+    // Se há subtipo explícito PIX
     if (['B01', 'B02', 'B03', 'B04'].includes(subtipoExplicito)) {
       return subtipoExplicito;
+    }
+
+    // Se posições 15-17 estão em branco ou com espaços, é segmento B tradicional (endereço)
+    if (!subtipoExplicito || subtipoExplicito === '' || subtipoExplicito === '   ') {
+      return 'TRADICIONAL';
     }
 
     // Inferir subtipo baseado no conteúdo da chave PIX
@@ -48,35 +56,38 @@ export class SegmentoBParser {
 
   /**
    * Infere o subtipo baseado no conteúdo da chave PIX
-   * @param {string} content - Conteúdo da chave
-   * @returns {string} Subtipo inferido
+   * @param {string} conteudo - Conteúdo da chave PIX
+   * @returns {string} Subtipo inferido (B01, B02, B03, B04, TRADICIONAL)
    */
-  static inferSubtypeFromContent(content) {
-    if (!content) return 'B03'; // Default para CNPJ/CPF
-
-    // UUID pattern (formato: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
-    if (/^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(content)) {
-      return 'B04';
+  static inferSubtypeFromContent(conteudo) {
+    if (!conteudo || conteudo.trim() === '') {
+      return 'TRADICIONAL'; // Sem chave PIX = endereço tradicional
     }
 
-    // Email pattern
-    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(content)) {
-      return 'B02';
+    const chaveLimpa = conteudo.trim();
+
+    // Verificar se é telefone (+55...)
+    if (/^\+55\d{10,11}$/.test(chaveLimpa) || /^55\d{10,11}$/.test(chaveLimpa)) {
+      return 'B01'; // Telefone
     }
 
-    // Telefone pattern (formato: +5511999999999 ou 11999999999)
-    if (/^(\+55)?[1-9][0-9]{10}$/.test(content.replace(/\D/g, ''))) {
-      return 'B01';
+    // Verificar se é email
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(chaveLimpa)) {
+      return 'B02'; // Email
     }
 
-    // CNPJ (14 dígitos) ou CPF (11 dígitos)
-    const numeros = content.replace(/\D/g, '');
-    if (numeros.length === 11 || numeros.length === 14) {
-      return 'B03';
+    // Verificar se é CPF (11 dígitos) ou CNPJ (14 dígitos)
+    if (/^\d{11}$/.test(chaveLimpa) || /^\d{14}$/.test(chaveLimpa)) {
+      return 'B03'; // CPF/CNPJ
     }
 
-    // Default
-    return 'B03';
+    // Verificar se é UUID (formato xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chaveLimpa)) {
+      return 'B04'; // UUID
+    }
+
+    // Se não se encaixa em padrão PIX, assumir que é endereço tradicional
+    return 'TRADICIONAL';
   }
 
   /**
@@ -129,6 +140,8 @@ export class SegmentoBParser {
         return this.parseB03(linha, dadosComuns);
       case 'B04':
         return this.parseB04(linha, dadosComuns);
+      case 'TRADICIONAL':
+        return this.parseTradicional(linha, dadosComuns);
       default:
         return this.parseGenerico(linha, dadosComuns);
     }
@@ -227,7 +240,7 @@ export class SegmentoBParser {
   }
 
   /**
-   * Parser específico para B04 - UUID (Chave Aleatória)
+   * Parser específico para B04 - UUID
    * @param {string} linha - Linha de 240 caracteres
    * @param {Object} dadosComuns - Dados básicos já extraídos
    * @returns {Object} Dados específicos do B04
@@ -239,9 +252,9 @@ export class SegmentoBParser {
       indicadorSubtipo: linha.substring(14, 17).trim(),
 
       // Posições 018-099: UUID da chave PIX
-      uuid: linha.substring(17, 99).trim(),
+      uuidChave: linha.substring(17, 99).trim(),
 
-      // Posições 100-198: Chave PIX extraída (pode ser o mesmo UUID)
+      // Posições 100-198: Chave PIX extraída
       chavePix: linha.substring(99, 198).trim(),
 
       // Posições 199-240: Uso exclusivo FEBRABAN/CNAB
@@ -249,6 +262,66 @@ export class SegmentoBParser {
 
       // Tipo de chave identificado
       tipoChave: 'uuid'
+    };
+  }
+
+  /**
+   * Parser específico para Segmento B Tradicional - Endereço/Dados Complementares
+   * @param {string} linha - Linha de 240 caracteres
+   * @param {Object} dadosComuns - Dados básicos já extraídos
+   * @returns {Object} Dados específicos do segmento B tradicional
+   */
+  static parseTradicional(linha, dadosComuns) {
+    return {
+      ...dadosComuns,
+      // Posições 015-017: Espaços ou indicador vazio
+      indicadorSubtipo: linha.substring(14, 17).trim(),
+
+      // Posições 018: Tipo de inscrição (1=CPF, 2=CNPJ)
+      tipoInscricao: linha[17],
+
+      // Posições 019-032: Número da inscrição (CPF ou CNPJ)
+      numeroInscricao: linha.substring(18, 32).trim(),
+
+      // Endereço completo (posições 033-127)
+      endereco: {
+        // Posições 033-062: Logradouro
+        logradouro: linha.substring(32, 62).trim(),
+
+        // Posições 063-067: Número
+        numero: linha.substring(62, 67).trim(),
+
+        // Posições 068-082: Complemento
+        complemento: linha.substring(67, 82).trim(),
+
+        // Posições 083-097: Bairro
+        bairro: linha.substring(82, 97).trim(),
+
+        // Posições 098-117: Cidade
+        cidade: linha.substring(97, 117).trim(),
+
+        // Posições 118-122: CEP
+        cep: linha.substring(117, 122).trim(),
+
+        // Posições 123-125: Complemento do CEP
+        complementoCep: linha.substring(122, 125).trim(),
+
+        // Posições 126-127: Estado
+        estado: linha.substring(125, 127).trim()
+      },
+
+      // Posições 128-198: Informações complementares ou dados adicionais
+      informacoesComplementares: linha.substring(127, 198).trim(),
+
+      // Posições 199-240: Uso exclusivo FEBRABAN/CNAB
+      usoFEBRABAN: linha.substring(198, 240).trim(),
+
+      // Tipo: endereço tradicional
+      tipoSegmentoB: 'endereco_tradicional',
+
+      // Não é PIX
+      chavePix: null,
+      tipoChave: null
     };
   }
 
@@ -314,6 +387,9 @@ export class SegmentoBParser {
           break;
         case 'B04':
           this.validateB04(dados, erros);
+          break;
+        case 'TRADICIONAL':
+          this.validateTradicional(dados, erros);
           break;
       }
 
@@ -395,14 +471,58 @@ export class SegmentoBParser {
    * @param {Array} erros - Array de erros
    */
   static validateB04(dados, erros) {
-    if (!dados.uuid) {
+    if (!dados.uuidChave) {
       erros.push('UUID é obrigatório para subtipo B04');
       return;
     }
 
-    const uuidRegex = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i;
-    if (!uuidRegex.test(dados.uuid)) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(dados.uuidChave)) {
       erros.push('Formato de UUID inválido');
+    }
+  }
+
+  /**
+   * Validações específicas para Segmento B Tradicional
+   * @param {Object} dados - Dados parseados
+   * @param {Array} erros - Array de erros
+   */
+  static validateTradicional(dados, erros) {
+    if (!dados.endereco || !dados.endereco.logradouro) {
+      erros.push('Endereço é obrigatório para subtipo TRADICIONAL');
+      return;
+    }
+
+    if (dados.endereco.logradouro.length < 33 || dados.endereco.logradouro.length > 62) {
+      erros.push('Logradouro deve ter entre 33 e 62 caracteres');
+    }
+
+    if (dados.endereco.numero.length < 1 || dados.endereco.numero.length > 5) {
+      erros.push('Número deve ter entre 1 e 5 dígitos');
+    }
+
+    if (dados.endereco.complemento.length > 15) {
+      erros.push('Complemento deve ter no máximo 15 caracteres');
+    }
+
+    if (dados.endereco.bairro.length < 1 || dados.endereco.bairro.length > 15) {
+      erros.push('Bairro deve ter entre 1 e 15 caracteres');
+    }
+
+    if (dados.endereco.cidade.length < 1 || dados.endereco.cidade.length > 20) {
+      erros.push('Cidade deve ter entre 1 e 20 caracteres');
+    }
+
+    if (dados.endereco.cep.length !== 5) {
+      erros.push('CEP deve ter 5 dígitos');
+    }
+
+    if (dados.endereco.complementoCep.length > 3) {
+      erros.push('Complemento do CEP deve ter no máximo 3 caracteres');
+    }
+
+    if (dados.endereco.estado.length !== 2) {
+      erros.push('Estado deve ter 2 dígitos');
     }
   }
 
@@ -434,7 +554,10 @@ export class SegmentoBParser {
         resumo.chave = dados.numeroInscricao || '';
         break;
       case 'B04':
-        resumo.chave = dados.uuid || '';
+        resumo.chave = dados.uuidChave || '';
+        break;
+      case 'TRADICIONAL':
+        resumo.chave = dados.endereco ? `${dados.endereco.logradouro}, ${dados.endereco.numero} - ${dados.endereco.cidade}, ${dados.endereco.estado} - ${dados.endereco.cep}` : '';
         break;
       default:
         resumo.chave = dados.chavePix || '';
