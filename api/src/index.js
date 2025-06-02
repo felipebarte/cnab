@@ -37,13 +37,20 @@ const limiter = rateLimit({
 // Middleware de segurança
 app.use(helmet());
 
-// Configuração CORS
+// Configuração CORS - Atualizada para incluir containers Docker
 const allowedOrigins = [
+  // Desenvolvimento local
   'http://localhost:3000',  // Frontend React (porta padrão)
   'http://localhost:3001',  // Frontend React (porta alternativa)
   'http://localhost:5173',  // Vite dev server (porta padrão)
   'http://localhost:5174',  // Vite dev server (porta alternativa)
   'http://localhost:8080',  // Backend (para testes internos)
+  
+  // Docker containers
+  'http://frontend:80',     // Container frontend interno
+  'http://cnab-frontend:80', // Container frontend por nome
+  'http://127.0.0.1:3000',  // Docker host local
+  'http://0.0.0.0:3000',    // Docker bind all interfaces
 ];
 
 app.use(
