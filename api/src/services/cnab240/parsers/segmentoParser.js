@@ -265,23 +265,29 @@ export class SegmentoParser {
       // Posições 015-018: Indicador de subtipo (ex: "0005")
       indicadorSubtipo: linha.substring(14, 18),
 
-      // Posições 019-032: CNPJ/CPF da empresa pagadora (assumindo 14 dígitos para CNPJ)
+      // Posições 019-032: CNPJ/CPF da empresa pagadora (14 dígitos para CNPJ)
       cnpjEmpresa: linha.substring(18, 32).trim(),
 
-      // Posições 033-063: Nome da empresa pagadora
-      nomeEmpresa: linha.substring(32, 62).trim(),
+      // Posições 033-035: Campo intermediário/código adicional
+      codigoIntermediario: linha.substring(32, 35).trim(),
 
-      // Posições 064-077: CNPJ/CPF do favorecido
-      cnpjFavorecido: linha.substring(63, 77).trim(),
+      // Posições 036-075: Nome da empresa pagadora (40 posições, excluindo "20" do próximo campo)
+      nomeEmpresa: linha.substring(35, 75).trim(),
 
-      // Posições 078-148: Nome do favorecido/beneficiário
-      nomeFavorecido: linha.substring(77, 147).trim(),
+      // Posições 076-077: Campo adicional (parece ser tipo de inscrição "20" = CNPJ)
+      tipoInscricaoFavorecido: linha.substring(75, 77).trim(),
 
-      // Posições 149-168: Informações adicionais/complementares
-      informacoesAdicionais: linha.substring(148, 168).trim(),
+      // Posições 078-091: CNPJ/CPF do favorecido (14 dígitos)
+      cnpjFavorecido: linha.substring(77, 91).trim(),
 
-      // Posições 169-240: Dados livres/uso específico
-      dadosLivres: linha.substring(168, 240).trim(),
+      // Posições 092-147: Nome do favorecido/beneficiário (aproximadamente 55 posições)
+      nomeFavorecido: linha.substring(91, 147).trim(),
+
+      // Posições 148-167: Informações adicionais/complementares (20 posições)
+      informacoesAdicionais: linha.substring(147, 167).trim(),
+
+      // Posições 168-240: Dados livres/uso específico (restante da linha)
+      dadosLivres: linha.substring(167, 240).trim(),
 
       // Metadados do subtipo
       subtipoJ: 'J02',
