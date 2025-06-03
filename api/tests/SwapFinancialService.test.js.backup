@@ -1,0 +1,461 @@
+import { jest, expect, describe, test, beforeEach, afterEach } from '@jest/globals';
+import SwapFinancialService from '../src/services/external/SwapFinancialService.js';
+
+// Mock do módulo de métricas
+jest.mock('../src/utils/metrics.js', () => ({
+  Timer: jest.fn().mockImplementation(() => ({
+    end: jest.fn()
+  })),
+  metricsCollector: {
+    incrementCounter: jest.fn(),
+    setGauge: jest.fn()
+  }
+}));
+
+// Mock do ExternalAPIService
+jest.mock('../src/services/external/ExternalAPIService.js', () => {
+  return jest.fn().mockImplementation(() => ({
+    httpClient: {
+      defaults: {
+        baseURL: '',
+        headers: {}
+      }
+    },
+    makeRequest: jest.fn(),
+    log: jest.fn()
+  }));
+});
+
+describe('SwapFinancialService', () => {
+  let swapService;
+  let mockConfig;
+
+  beforeEach(() => {
+    mockConfig = {
+      environment: 'staging',
+      clientId: 'test_client_id',
+      clientSecret: 'test_client_secret',
+      apiKey: 'test_api_key',
+      timeout: 10000
+    };
+
+    swapService = new SwapFinancialService(mockConfig);
+
+    // Limpar todos os mocks antes de cada teste
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    if (swapService.clearTokenCache) {
+      swapService.clearTokenCache();
+    }
+  });
+
+  describe('Constructor', () => {
+    test('deve inicializar com configuração correta', () => {
+      expect(swapService.environment).toBe('staging');
+      expect(swapService.clientId).toBe('test_client_id');
+      expect(swapService.clientSecret).toBe('test_client_secret');
+      expect(swapService.apiKey).toBe('test_api_key');
+      expect(swapService.circuitBreakerState).toBe('closed');
+      expect(swapService.failureCount).toBe(0);
+    });
+
+    test('deve usar ambiente de produção por padrão', () => {
+      const defaultService = new SwapFinancialService({
+        clientId: 'test',
+        clientSecret: 'test',
+        apiKey: 'test'
+      });
+
+      expect(defaultService.environment).toBe('production');
+      expect(defaultService.baseURL).toBe('https://api-prod.contaswap.io');
+    });
+
+    test('deve configurar URL correta para staging', () => {
+      expect(swapService.baseURL).toBe('https://api-stag.contaswap.io');
+    });
+  });
+
+  describe('getAccessToken', () => {
+    test('deve retornar token válido do cache', async () => {
+      // Configurar token válido no cache
+      const futureTime = Date.now() + 3600000; // 1 hora no futuro
+      swapService.tokenCache = {
+        accessToken: 'cached_token_123',
+        expiresAt: futureTime
+      };
+
+      const token = await swapService.getAccessToken();
+
+      expect(token).toBe('cached_token_123');
+      expect(swapService.makeRequest).not.toHaveBeenCalled();
+    });
+
+    test('deve solicitar novo token quando cache está vazio', async () => {
+      const mockTokenResponse = {
+        data: {
+          access_token: 'new_access_token',
+          refresh_token: 'refresh_token',
+          expires_in: 3600,
+          refresh_expires_in: 7200,
+          token_type: 'Bearer'
+        }
+      };
+
+      swapService.makeRequest = jest.fn().mockResolvedValue(mockTokenResponse);
+
+      const token = await swapService.getAccessToken();
+
+      expect(token).toBe('new_access_token');
+      expect(swapService.makeRequest).toHaveBeenCalledWith({
+        method: 'POST',
+        url: '/auth/test_client_id/token',
+        data: {
+          grant_type: 'client_credentials',
+          client_id: 'test_client_id',
+          client_secret: 'test_client_secret'
+        },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'test_api_key'
+        }
+      });
+    });
+
+    test('deve renovar token expirado usando refresh token', async () => {
+      // Configurar token expirado com refresh token válido
+      const pastTime = Date.now() - 1000; // 1 segundo no passado
+      const futureTime = Date.now() + 3600000; // 1 hora no futuro
+
+      swapService.tokenCache = {
+        accessToken: 'expired_token',
+        refreshToken: 'valid_refresh_token',
+        expiresAt: pastTime,
+        refreshExpiresAt: futureTime
+      };
+
+      const mockRefreshResponse = {
+        data: {
+          access_token: 'refreshed_access_token',
+          expires_in: 3600,
+          token_type: 'Bearer'
+        }
+      };
+
+      swapService.makeRequest = jest.fn().mockResolvedValue(mockRefreshResponse);
+
+      const token = await swapService.getAccessToken();
+
+      expect(token).toBe('refreshed_access_token');
+      expect(swapService.makeRequest).toHaveBeenCalledWith({
+        method: 'POST',
+        url: '/auth/test_client_id/token',
+        data: {
+          grant_type: 'refresh_token',
+          refresh_token: 'valid_refresh_token',
+          client_id: 'test_client_id',
+          client_secret: 'test_client_secret'
+        },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'test_api_key'
+        }
+      });
+    });
+
+    test('deve falhar graciosamente quando autenticação falha', async () => {
+      swapService.makeRequest = jest.fn().mockRejectedValue(new Error('Authentication failed'));
+
+      await expect(swapService.getAccessToken()).rejects.toThrow('Authentication failed: Authentication failed');
+    });
+  });
+
+  describe('checkBoleto', () => {
+    beforeEach(() => {
+      // Mock de token válido para todos os testes de checkBoleto
+      swapService.getAccessToken = jest.fn().mockResolvedValue('test_access_token');
+    });
+
+    test('deve verificar boleto com sucesso', async () => {
+      const testBarcode = '12345678901234567890123456789012345678901234567';
+      const mockBoletoResponse = {
+        data: {
+          id: 'bol_123456789',
+          amount: 150.75,
+          due_date: '2024-12-31',
+          status: 'PENDING',
+          payee: {
+            name: 'Empresa Teste LTDA',
+            document: '12.345.678/0001-90'
+          },
+          discount_amount: 0,
+          fine_amount: 5.25,
+          interest_amount: 2.10
+        }
+      };
+
+      swapService.makeRequest = jest.fn().mockResolvedValue(mockBoletoResponse);
+
+      const result = await swapService.checkBoleto(testBarcode);
+
+      expect(result).toBeDefined();
+      expect(result.id).toBe(mockBoletoResponse.data.id);
+      expect(result.amount).toBe(mockBoletoResponse.data.amount);
+      expect(result.canPayToday).toBeDefined();
+      expect(result.isInPaymentWindow).toBeDefined();
+      expect(swapService.makeRequest).toHaveBeenCalledWith({
+        method: 'POST',
+        url: '/ledger/payments/boletos',
+        data: { barcode: testBarcode },
+        headers: {
+          'Authorization': 'Bearer test_access_token',
+          'Content-Type': 'application/json'
+        }
+      });
+    });
+
+    test('deve falhar com código de barras inválido', async () => {
+      const invalidBarcode = '123invalid';
+
+      await expect(swapService.checkBoleto(invalidBarcode))
+        .rejects.toThrow('Invalid barcode format. Must be 47-48 digits');
+
+      expect(swapService.makeRequest).not.toHaveBeenCalled();
+    });
+
+    test('deve falhar com código de barras vazio', async () => {
+      await expect(swapService.checkBoleto(''))
+        .rejects.toThrow('Barcode is required');
+
+      expect(swapService.makeRequest).not.toHaveBeenCalled();
+    });
+
+    test('deve falhar com código de barras null', async () => {
+      await expect(swapService.checkBoleto(null))
+        .rejects.toThrow('Barcode is required');
+
+      expect(swapService.makeRequest).not.toHaveBeenCalled();
+    });
+
+    test('deve tratar erro de boleto não encontrado', async () => {
+      const testBarcode = '12345678901234567890123456789012345678901234567';
+      const notFoundError = new Error('Boleto not found');
+      notFoundError.response = {
+        status: 404,
+        data: { message: 'Boleto not found' }
+      };
+
+      swapService.makeRequest = jest.fn().mockRejectedValue(notFoundError);
+
+      await expect(swapService.checkBoleto(testBarcode))
+        .rejects.toThrow('Boleto not found');
+    });
+  });
+
+  describe('Circuit Breaker', () => {
+    test('deve inicializar com circuit breaker fechado', () => {
+      expect(swapService.circuitBreakerState).toBe('closed');
+      expect(swapService.failureCount).toBe(0);
+      expect(swapService.lastFailureTime).toBe(null);
+    });
+
+    test('deve verificar estado do circuit breaker', () => {
+      // Teste com circuit breaker fechado
+      expect(swapService.checkCircuitBreaker()).toBe(true);
+
+      // Teste com circuit breaker aberto
+      swapService.circuitBreakerState = 'open';
+      swapService.lastFailureTime = Date.now();
+      expect(swapService.checkCircuitBreaker()).toBe(false);
+
+      // Teste com circuit breaker half-open após timeout
+      swapService.lastFailureTime = Date.now() - (swapService.circuitBreakerTimeout + 1000);
+      expect(swapService.checkCircuitBreaker()).toBe(true);
+      expect(swapService.circuitBreakerState).toBe('half-open');
+    });
+
+    test('deve tratar falhas do circuit breaker', () => {
+      // Simular falhas até atingir o threshold
+      for (let i = 0; i < swapService.circuitBreakerThreshold; i++) {
+        swapService.handleCircuitBreakerFailure();
+      }
+
+      expect(swapService.circuitBreakerState).toBe('open');
+      expect(swapService.failureCount).toBe(swapService.circuitBreakerThreshold);
+      expect(swapService.lastFailureTime).toBeDefined();
+    });
+
+    test('deve resetar circuit breaker após sucesso', () => {
+      // Configurar circuit breaker com falhas
+      swapService.failureCount = 3;
+      swapService.circuitBreakerState = 'half-open';
+
+      swapService.resetCircuitBreaker();
+
+      expect(swapService.circuitBreakerState).toBe('closed');
+      expect(swapService.failureCount).toBe(0);
+      expect(swapService.lastFailureTime).toBe(null);
+    });
+  });
+
+  describe('Health Check', () => {
+    test('deve retornar status healthy quando tudo está funcionando', async () => {
+      // Configurar token válido
+      swapService.tokenCache = {
+        accessToken: 'valid_token',
+        expiresAt: Date.now() + 3600000
+      };
+
+      const health = await swapService.healthCheck();
+
+      expect(health.status).toBe('healthy');
+      expect(health.service).toBe('SwapFinancial');
+      expect(health.environment).toBe('staging');
+      expect(health.circuitBreaker).toBe('closed');
+      expect(health.tokenValid).toBe(true);
+      expect(health.timestamp).toBeDefined();
+    });
+
+    test('deve retornar status com problemas quando token é inválido', async () => {
+      // Configurar token expirado
+      swapService.tokenCache = {
+        accessToken: 'expired_token',
+        expiresAt: Date.now() - 1000
+      };
+
+      const health = await swapService.healthCheck();
+
+      expect(health.tokenValid).toBe(false);
+    });
+
+    test('deve retornar status com circuit breaker aberto', async () => {
+      swapService.circuitBreakerState = 'open';
+
+      const health = await swapService.healthCheck();
+
+      expect(health.circuitBreaker).toBe('open');
+    });
+  });
+
+  describe('Utility Methods', () => {
+    test('isTokenValid deve verificar validade do token corretamente', () => {
+      // Token válido
+      swapService.tokenCache = {
+        accessToken: 'valid_token',
+        expiresAt: Date.now() + 3600000
+      };
+      expect(swapService.isTokenValid()).toBe(true);
+
+      // Token expirado
+      swapService.tokenCache = {
+        accessToken: 'expired_token',
+        expiresAt: Date.now() - 1000
+      };
+      expect(swapService.isTokenValid()).toBe(false);
+
+      // Sem token
+      swapService.tokenCache = {};
+      expect(swapService.isTokenValid()).toBe(false);
+    });
+
+    test('maskBarcode deve mascarar código de barras para logs', () => {
+      const barcode = '12345678901234567890123456789012345678901234567';
+      const masked = swapService.maskBarcode(barcode);
+
+      expect(masked).toBe('123456************************************234567');
+      expect(masked.length).toBe(barcode.length);
+    });
+
+    test('clearTokenCache deve limpar cache de tokens', () => {
+      // Configurar cache com dados
+      swapService.tokenCache = {
+        accessToken: 'token',
+        refreshToken: 'refresh',
+        expiresAt: Date.now() + 3600000,
+        refreshExpiresAt: Date.now() + 7200000
+      };
+
+      swapService.clearTokenCache();
+
+      expect(swapService.tokenCache.accessToken).toBe(null);
+      expect(swapService.tokenCache.refreshToken).toBe(null);
+      expect(swapService.tokenCache.expiresAt).toBe(null);
+      expect(swapService.tokenCache.refreshExpiresAt).toBe(null);
+    });
+  });
+
+  describe('Configuration Management', () => {
+    test('validateConfiguration deve verificar configuração obrigatória', () => {
+      // Este teste assume que o método validateConfiguration existe
+      // Se não existir, o teste falhará e poderemos ajustar
+      try {
+        swapService.validateConfiguration();
+        expect(true).toBe(true); // Se não lançar exceção, está validado
+      } catch (error) {
+        expect(error.message).toContain('required');
+      }
+    });
+
+    test('getConfiguration deve retornar configuração segura', () => {
+      const config = swapService.getConfiguration();
+
+      expect(config).toBeDefined();
+      expect(config.environment).toBe('staging');
+      expect(config.baseURL).toBe('https://api-stag.contaswap.io');
+      // Não deve expor dados sensíveis
+      expect(config.clientSecret).toBeUndefined();
+      expect(config.apiKey).toBeUndefined();
+    });
+  });
+
+  describe('Data Enrichment', () => {
+    test('enrichBoletoData deve enriquecer dados do boleto', () => {
+      const rawBoletoData = {
+        id: 'bol_123',
+        amount: 100.00,
+        due_date: '2024-12-31',
+        status: 'PENDING',
+        discount_amount: 10.00,
+        fine_amount: 5.00,
+        interest_amount: 2.50
+      };
+
+      const enriched = swapService.enrichBoletoData(rawBoletoData);
+
+      expect(enriched.hasDiscount).toBe(true);
+      expect(enriched.hasFine).toBe(true);
+      expect(enriched.hasInterest).toBe(true);
+      expect(enriched.environment).toBe('staging');
+      expect(enriched.canPayToday).toBeDefined();
+      expect(enriched.isInPaymentWindow).toBeDefined();
+      expect(enriched.paymentWindow).toBeDefined();
+    });
+
+    test('canPayToday deve verificar se boleto pode ser pago hoje', () => {
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      // Boleto com vencimento hoje
+      expect(swapService.canPayToday({ due_date: today })).toBe(true);
+
+      // Boleto com vencimento amanhã
+      expect(swapService.canPayToday({ due_date: tomorrow })).toBe(true);
+
+      // Boleto vencido (pode ter multa, mas ainda pode ser pago)
+      expect(swapService.canPayToday({ due_date: yesterday })).toBe(true);
+    });
+
+    test('isInPaymentWindow deve verificar janela de pagamento', () => {
+      const today = new Date().toISOString().split('T')[0];
+      const futureBeyondWindow = new Date(Date.now() + 32 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      // Boleto dentro da janela
+      expect(swapService.isInPaymentWindow({ due_date: today })).toBe(true);
+
+      // Boleto fora da janela (mais de 30 dias no futuro)
+      expect(swapService.isInPaymentWindow({ due_date: futureBeyondWindow })).toBe(false);
+    });
+  });
+}); 

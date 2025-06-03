@@ -8,21 +8,63 @@
 import Cnab240BaseParser from './cnab240BaseParser.js';
 import { CNAB240Parser } from './parsers/index.js';
 import { BANCOS_240, UTILS_VALIDACAO } from '../../config/bancos240.js';
+import crypto from 'crypto';
+
+// Importar modelos MySQL para persistência
+import {
+  Operation,
+  File,
+  Cnab240File,
+  sequelize,
+  createOperationWithFile,
+  processCnab240File,
+  getDatabaseStats,
+  checkDatabaseHealth
+} from '../../models/index.js';
 
 /**
  * Serviço principal para processamento de arquivos CNAB 240
  */
 class Cnab240Service {
   /**
-   * Processa um arquivo CNAB 240 completo
+   * Processa um arquivo CNAB 240 completo com persistência no banco
    * @param {string} cnabContent - Conteúdo do arquivo CNAB como string
    * @param {Object} options - Opções de processamento
-   * @returns {Object} Dados estruturados do arquivo CNAB 240
+   * @returns {Object} Dados estruturados do arquivo CNAB 240 com informações de persistência
    */
   static async processar(cnabContent, options = {}) {
+    // Gerar operation ID único
+    const operationId = options.operationId || crypto.randomUUID();
+
+    // Inicializar transação
+    const transaction = await sequelize.transaction();
+
     try {
       if (!cnabContent || typeof cnabContent !== 'string') {
         throw new Error('Conteúdo do arquivo CNAB é obrigatório e deve ser uma string');
+      }
+
+      // Log início da operação
+      console.log(`[CNAB240] Iniciando processamento - Operation ID: ${operationId}`);
+
+      // Gerar hash do arquivo para verificação de duplicatas
+      const fileHash = crypto.createHash('sha256').update(cnabContent).digest('hex');
+
+      // Verificar se arquivo já foi processado
+      const existingFile = await File.findByHash(fileHash);
+      if (existingFile && !options.forceReprocess) {
+        await transaction.rollback();
+
+        console.log(`[CNAB240] Arquivo já processado - Hash: ${fileHash}`);
+        return {
+          sucesso: true,
+          mensagem: 'Arquivo já foi processado anteriormente',
+          duplicado: true,
+          operationId,
+          arquivoId: existingFile.id,
+          dataProcessamentoOriginal: existingFile.created_at,
+          hash: fileHash
+        };
       }
 
       // Validação inicial do arquivo
@@ -30,6 +72,29 @@ class Cnab240Service {
       if (!validacaoInicial.valido) {
         throw new Error(`Arquivo CNAB 240 inválido: ${validacaoInicial.erros.join(', ')}`);
       }
+
+      // Criar operação no banco
+      const operation = await Operation.create({
+        operation_id: operationId,
+        operation_type: 'cnab240',
+        status: 'processing',
+        request_data: {
+          file_size: cnabContent.length,
+          options: options,
+          started_at: new Date().toISOString()
+        }
+      }, { transaction });
+
+      // Criar registro do arquivo
+      const file = await File.create({
+        operation_id: operationId,
+        file_hash: fileHash,
+        file_name: options.fileName || 'cnab240_file.txt',
+        file_size: cnabContent.length,
+        file_type: 'cnab240',
+        content_preview: File.generatePreview(cnabContent, 3),
+        validation_status: 'valid'
+      }, { transaction });
 
       // Processamento linha por linha
       const linhas = cnabContent.split('\n')
@@ -54,6 +119,34 @@ class Cnab240Service {
       const somatorias = this.calcularSomatorias(dadosProcessados);
       const resumoProcessamento = this.gerarResumoProcessamento(dadosProcessados, somatorias);
 
+      // Extrair dados para persistência CNAB 240
+      const cnab240Data = this.extrairDadosParaPersistencia(dadosProcessados, configuracaoBanco, somatorias);
+
+      // Salvar dados CNAB 240 no banco
+      const cnab240File = await Cnab240File.create({
+        ...cnab240Data,
+        operation_id: operationId,
+        file_id: file.id
+      }, { transaction });
+
+      // Atualizar operação como sucesso
+      await operation.update({
+        status: 'success',
+        response_data: {
+          file_id: file.id,
+          cnab240_file_id: cnab240File.id,
+          total_lotes: somatorias.totalLotes,
+          total_registros: somatorias.totalRegistros,
+          valor_total: somatorias.valorTotalGeral,
+          completed_at: new Date().toISOString()
+        }
+      }, { transaction });
+
+      // Commit da transação
+      await transaction.commit();
+
+      console.log(`[CNAB240] Processamento concluído com sucesso - Operation ID: ${operationId}`);
+
       return {
         sucesso: true,
         dadosEstruturados: dadosCompletos,
@@ -68,16 +161,191 @@ class Cnab240Service {
           nomeBanco: configuracaoBanco?.nome || 'Banco não identificado',
           versaoLayout: configuracaoBanco?.versaoLayout || 'Não identificada'
         },
+        // Dados de persistência
+        persistencia: {
+          operationId,
+          fileId: file.id,
+          cnab240FileId: cnab240File.id,
+          hash: fileHash,
+          saved_at: new Date().toISOString()
+        },
         dataProcessamento: new Date().toISOString(),
         opcoes: options
       };
 
     } catch (error) {
+      // Rollback da transação em caso de erro
+      await transaction.rollback();
+
+      // Tentar atualizar operação como erro (se foi criada)
+      try {
+        const existingOperation = await Operation.findByOperationId(operationId);
+        if (existingOperation) {
+          await existingOperation.markAsError({
+            error_message: error.message,
+            error_stack: error.stack,
+            failed_at: new Date().toISOString()
+          });
+        }
+      } catch (updateError) {
+        console.error('Erro ao atualizar operação com falha:', updateError);
+      }
+
       console.error('Erro ao processar arquivo CNAB 240:', error);
       return {
         sucesso: false,
         erro: error.message,
+        operationId,
         dataProcessamento: new Date().toISOString()
+      };
+    }
+  }
+
+  /**
+   * Extrai dados do CNAB 240 para persistência no banco
+   * @param {Object} dadosProcessados - Dados processados do CNAB
+   * @param {Object} configuracaoBanco - Configuração do banco
+   * @param {Object} somatorias - Somatórias calculadas
+   * @returns {Object} Dados formatados para persistência
+   */
+  static extrairDadosParaPersistencia(dadosProcessados, configuracaoBanco, somatorias) {
+    const headerArquivo = dadosProcessados.headerArquivo;
+    const trailerArquivo = dadosProcessados.trailerArquivo;
+
+    return {
+      // Dados do banco e arquivo
+      banco_codigo: configuracaoBanco?.codigo || headerArquivo?.codigoBanco,
+      banco_nome: configuracaoBanco?.nome || 'Banco não identificado',
+      arquivo_sequencia: headerArquivo?.numeroSequencialArquivo || null,
+      data_geracao: this.parseDateCnab240(headerArquivo?.dataGeracao),
+      hora_geracao: this.parseTimeCnab240(headerArquivo?.horaGeracao),
+      versao_layout: configuracaoBanco?.versaoLayout || headerArquivo?.versaoLayout,
+      densidade: headerArquivo?.densidade,
+
+      // Dados da empresa
+      empresa_tipo_pessoa: headerArquivo?.tipoInscricaoEmpresa === '1' ? '1' : '2',
+      empresa_documento: headerArquivo?.numeroInscricaoEmpresa,
+      empresa_nome: headerArquivo?.nomeEmpresa,
+      empresa_codigo: headerArquivo?.codigoConvenio,
+
+      // Totalizadores
+      total_lotes: somatorias.totalLotes,
+      total_registros: somatorias.totalRegistros,
+      valor_total: somatorias.valorTotalGeral,
+
+      // Dados completos
+      header_dados: {
+        ...headerArquivo,
+        configuracao_banco: configuracaoBanco,
+        parsed_at: new Date().toISOString()
+      },
+      trailer_dados: {
+        ...trailerArquivo,
+        parsed_at: new Date().toISOString()
+      }
+    };
+  }
+
+  /**
+   * Converte data CNAB 240 (DDMMAAAA) para formato Date
+   * @param {string} dateString - Data no formato CNAB
+   * @returns {Date|null} Data convertida ou null
+   */
+  static parseDateCnab240(dateString) {
+    if (!dateString || dateString.length !== 8) return null;
+
+    const day = dateString.substring(0, 2);
+    const month = dateString.substring(2, 4);
+    const year = dateString.substring(4, 8);
+
+    try {
+      return new Date(`${year}-${month}-${day}`);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Converte hora CNAB 240 (HHMMSS) para formato TIME
+   * @param {string} timeString - Hora no formato CNAB
+   * @returns {string|null} Hora convertida ou null
+   */
+  static parseTimeCnab240(timeString) {
+    if (!timeString || timeString.length !== 6) return null;
+
+    const hour = timeString.substring(0, 2);
+    const minute = timeString.substring(2, 4);
+    const second = timeString.substring(4, 6);
+
+    try {
+      return `${hour}:${minute}:${second}`;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Busca dados de arquivo CNAB 240 processado por hash
+   * @param {string} fileHash - Hash SHA-256 do arquivo
+   * @returns {Object|null} Dados do arquivo ou null se não encontrado
+   */
+  static async buscarPorHash(fileHash) {
+    try {
+      const file = await File.findByHash(fileHash);
+      if (!file) return null;
+
+      const cnab240File = await Cnab240File.findByFile(file.id);
+      if (!cnab240File) return null;
+
+      return {
+        file: file.getFormattedData ? file.getFormattedData() : file,
+        cnab240: cnab240File.getFormattedData ? cnab240File.getFormattedData() : cnab240File,
+        operation: file.operation
+      };
+    } catch (error) {
+      console.error('Erro ao buscar arquivo por hash:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Busca arquivos CNAB 240 por período
+   * @param {Date} startDate - Data inicial
+   * @param {Date} endDate - Data final
+   * @param {number} limit - Limite de resultados
+   * @returns {Array} Lista de arquivos processados
+   */
+  static async buscarPorPeriodo(startDate, endDate, limit = 100) {
+    try {
+      return await Cnab240File.findByDateRange(startDate, endDate, limit);
+    } catch (error) {
+      console.error('Erro ao buscar arquivos por período:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtém estatísticas do banco de dados
+   * @returns {Object} Estatísticas do sistema
+   */
+  static async obterEstatisticas() {
+    try {
+      const [dbStats, healthCheck] = await Promise.all([
+        getDatabaseStats(),
+        checkDatabaseHealth()
+      ]);
+
+      return {
+        database: dbStats,
+        health: healthCheck,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Erro ao obter estatísticas:', error);
+      return {
+        database: { error: error.message },
+        health: { status: 'unhealthy', message: error.message },
+        timestamp: new Date().toISOString()
       };
     }
   }

@@ -5,8 +5,8 @@ import { dirname, join } from 'path';
 import fs from 'fs';
 import YAML from 'js-yaml';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Compatibilidade com Jest e Node.js
+const __dirname = process.cwd() + '/src/config';
 
 // Caminho para o arquivo swagger.yaml (corrigido)
 const swaggerPath = join(__dirname, '../../swagger.yaml');

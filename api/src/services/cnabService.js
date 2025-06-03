@@ -1,4 +1,5 @@
 import cnab400ItauParser from 'cnab400-itau-parser';
+import { File, CnabHeader, CnabRecord, getDatabaseStats, checkDatabaseHealth } from '../models/index.js';
 
 /**
  * Serviço para processar arquivos CNAB 400 do Itaú
@@ -822,6 +823,65 @@ class CnabService {
       valido: true,
       erros: []
     };
+  }
+
+  /**
+   * Busca arquivo CNAB 400 por hash SHA-256
+   * @param {string} fileHash - Hash SHA-256 do arquivo
+   * @returns {Object|null} Dados do arquivo ou null se não encontrado
+   */
+  static async buscarPorHash(fileHash) {
+    try {
+      const file = await File.findByHash(fileHash);
+      if (!file) return null;
+
+      const cnabHeader = await CnabHeader.findOne({
+        where: { file_id: file.id },
+        include: [
+          {
+            model: CnabRecord,
+            as: 'records',
+            limit: 100 // Limitar registros para evitar sobrecarga
+          }
+        ]
+      });
+
+      return {
+        file: file.getFormattedData ? file.getFormattedData() : file,
+        header: cnabHeader?.getFormattedData ? cnabHeader.getFormattedData() : cnabHeader,
+        registros: cnabHeader?.records?.map(r => r.getFormattedData ? r.getFormattedData() : r) || [],
+        operation: file.operation
+      };
+    } catch (error) {
+      console.error('Erro ao buscar arquivo por hash:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtém estatísticas do banco de dados
+   * @returns {Object} Estatísticas do sistema
+   */
+  static async obterEstatisticas() {
+    try {
+      const [dbStats, healthCheck] = await Promise.all([
+        getDatabaseStats(),
+        checkDatabaseHealth()
+      ]);
+
+      return {
+        database: dbStats,
+        health: healthCheck,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Erro ao obter estatísticas:', error);
+      return {
+        database: { error: error.message },
+        health: { status: 'unhealthy', message: error.message },
+        timestamp: new Date().toISOString()
+      };
+    }
   }
 }
 

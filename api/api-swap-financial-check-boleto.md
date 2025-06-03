@@ -12,7 +12,7 @@ curl --location 'https://api-prod.contaswap.io/ledger/payments/boletos' \
 --header 'Authorization: Bearer <access_token>' \
 --header 'Content-Type: application/json' \
 --data '{
-  "barcore": "65590000020044250000522980944007184030000018000"
+  "barcode": "65590000020044250000522980944007184030000018000"
 }'
 
 Response:

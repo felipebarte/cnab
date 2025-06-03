@@ -18,8 +18,9 @@ import { setupSwagger } from './config/swagger.js';
 import healthRoutes from './routes/health.js';
 import apiRoutes from './routes/api.js';
 
-// Middlewares personalizados
-//import { errorHandler } from './middleware/errorHandler.js';
+// Middlewares personalizados - Sistema de Métricas e Tratamento de Erros
+import { metricsMiddleware } from './utils/metrics.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 
 const app = express();
@@ -45,7 +46,7 @@ const allowedOrigins = [
   'http://localhost:5173',  // Vite dev server (porta padrão)
   'http://localhost:5174',  // Vite dev server (porta alternativa)
   'http://localhost:8080',  // Backend (para testes internos)
-  
+
   // Docker containers
   'http://frontend:80',     // Container frontend interno
   'http://cnab-frontend:80', // Container frontend por nome
@@ -82,6 +83,9 @@ app.use(morgan('combined'));
 // Rate limiting
 app.use(limiter);
 
+// 📊 MIDDLEWARE DE MÉTRICAS - Deve vir antes das rotas
+app.use(metricsMiddleware);
+
 // Middleware de logging para requisições
 app.use((req, res, next) => {
   const operationId = Logger.generateOperationId();
@@ -110,17 +114,18 @@ setupSwagger(app);
 app.use('/health', healthRoutes);
 app.use('/api/v1', apiRoutes);
 
-// Middleware de erro 404
-app.use(notFound);
+// 🚫 MIDDLEWARE DE ERRO 404 - Sistema Atualizado
+app.use(notFoundHandler);
 
-// Middleware global de tratamento de erros
-app.use(ErrorHandler.globalErrorHandler);
+// 🚨 MIDDLEWARE GLOBAL DE TRATAMENTO DE ERROS - Sistema Robusto  
+app.use(errorHandler);
 
 // Inicialização do servidor
 const server = app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   console.log(`📝 Ambiente: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 URL: http://localhost:${PORT}`);
+  console.log(`📊 Métricas: http://localhost:${PORT}/api/v1/metrics`);
 
   Logger.info('🚀 Servidor CNAB API iniciado', {
     port: PORT,
@@ -133,6 +138,8 @@ const server = app.listen(PORT, () => {
     webhookEnabled: process.env.WEBHOOK_ENABLED !== 'false',
     webhookUrl: process.env.WEBHOOK_URL ? process.env.WEBHOOK_URL.substring(0, 50) + '...' : 'Não configurada',
     logLevel: process.env.LOG_LEVEL || 'info',
+    metricsEnabled: true,
+    errorHandlingEnabled: true,
     component: 'config',
   });
 });

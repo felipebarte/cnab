@@ -12,6 +12,17 @@ import Logger from '../utils/logger.js';
 import ErrorHandler from '../utils/errorHandler.js';
 import multer from 'multer';
 
+// Importar modelos para consultas históricas
+import {
+  Operation,
+  File,
+  Cnab240File,
+  getDatabaseStats,
+  checkDatabaseHealth,
+  sequelize,
+  Op
+} from '../models/index.js';
+
 // Configuração do multer para upload de arquivos CNAB 240
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -724,7 +735,9 @@ export class Cnab240Controller {
           formatos: 'Consulta de formatos por banco',
           webhook: 'Envio de dados processados para webhook',
           upload: 'Suporte a upload de arquivos',
-          pix: 'Processamento de transações PIX (Segmentos B)'
+          pix: 'Processamento de transações PIX (Segmentos B)',
+          persistencia: 'Histórico completo de processamentos no MySQL',
+          consultas: 'APIs de consulta histórica e estatísticas'
         },
         endpoints: [
           {
@@ -762,6 +775,30 @@ export class Cnab240Controller {
             rota: '/api/v1/cnab240/processar-webhook',
             descricao: 'Processa e envia para webhook',
             parametros: ['conteudo', 'webhookUrl?', 'opcoes?']
+          },
+          {
+            metodo: 'GET',
+            rota: '/api/v1/cnab240/historico',
+            descricao: 'Lista histórico de processamentos CNAB 240',
+            parametros: ['page?', 'limit?', 'startDate?', 'endDate?', 'status?', 'banco?']
+          },
+          {
+            metodo: 'GET',
+            rota: '/api/v1/cnab240/historico/:hash',
+            descricao: 'Busca arquivo processado por hash SHA-256',
+            parametros: ['hash']
+          },
+          {
+            metodo: 'GET',
+            rota: '/api/v1/cnab240/estatisticas',
+            descricao: 'Estatísticas do banco de dados',
+            parametros: []
+          },
+          {
+            metodo: 'GET',
+            rota: '/api/v1/cnab240/operacoes/:operationId',
+            descricao: 'Detalhes de operação específica',
+            parametros: ['operationId']
           }
         ],
         bancosSuportados: Object.keys(BANCOS_240).length,
@@ -773,7 +810,18 @@ export class Cnab240Controller {
           suportePix: true,
           validacaoCompleta: true,
           webhook: true,
-          upload: true
+          upload: true,
+          persistencia: {
+            ativo: true,
+            banco: 'MySQL',
+            features: [
+              'Histórico completo de processamentos',
+              'Deduplicação automática por hash',
+              'Auditoria de operações',
+              'Consultas por período e filtros',
+              'Dados de lotes e segmentos persistidos'
+            ]
+          }
         },
         operationId,
         dataConsulta: new Date().toISOString()
@@ -798,6 +846,375 @@ export class Cnab240Controller {
         codigo: structuredError.codigo,
         operationId,
         timestamp: structuredError.timestamp,
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/cnab240/historico
+   * Lista histórico de arquivos CNAB 240 processados com paginação e filtros
+   */
+  static async listarHistorico(req, res) {
+    const operationId = req.operationId || Logger.generateOperationId();
+    const logger = Logger.createCnabLogger(operationId, 'cnab240-historico');
+
+    try {
+      const {
+        page = 1,
+        limit = 50,
+        startDate,
+        endDate,
+        status,
+        banco
+      } = req.query;
+
+      logger.start({
+        page: parseInt(page),
+        limit: parseInt(limit),
+        startDate,
+        endDate,
+        status,
+        banco,
+        formato: 'CNAB 240'
+      });
+
+      // Validar parâmetros
+      const pageNum = Math.max(1, parseInt(page));
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+      const offset = (pageNum - 1) * limitNum;
+
+      // Construir filtros
+      const whereConditions = {
+        file_type: 'cnab240'
+      };
+
+      if (startDate || endDate) {
+        whereConditions.created_at = {};
+        if (startDate) whereConditions.created_at[Op.gte] = new Date(startDate);
+        if (endDate) whereConditions.created_at[Op.lte] = new Date(endDate);
+      }
+
+      // Buscar arquivos com informações relacionadas
+      const { count, rows: files } = await File.findAndCountAll({
+        where: whereConditions,
+        include: [
+          {
+            model: Operation,
+            as: 'operation',
+            where: status ? { status } : {},
+            required: true
+          },
+          {
+            model: Cnab240File,
+            as: 'cnab240File',
+            required: false,
+            where: banco ? { banco_codigo: banco } : {}
+          }
+        ],
+        order: [['created_at', 'DESC']],
+        limit: limitNum,
+        offset: offset,
+        distinct: true
+      });
+
+      // Formatar resposta
+      const historico = files.map((file) => {
+        const cnab240File = file.cnab240File;
+
+        return {
+          operationId: file.operation.operation_id,
+          fileId: file.id,
+          fileName: file.file_name,
+          fileHash: file.file_hash,
+          fileSize: file.file_size,
+          processedAt: file.created_at,
+          status: file.operation.status,
+          banco: {
+            codigo: cnab240File?.banco_codigo || null,
+            nome: cnab240File?.banco_nome || null
+          },
+          empresa: {
+            documento: cnab240File?.empresa_documento || null,
+            nome: cnab240File?.empresa_nome || null,
+            codigo: cnab240File?.empresa_codigo || null
+          },
+          totals: {
+            lotes: cnab240File?.total_lotes || 0,
+            registros: cnab240File?.total_registros || 0,
+            valorTotal: cnab240File?.valor_total || 0
+          },
+          arquivo: {
+            sequencia: cnab240File?.arquivo_sequencia || null,
+            dataGeracao: cnab240File?.data_geracao || null,
+            horaGeracao: cnab240File?.hora_geracao || null,
+            versaoLayout: cnab240File?.versao_layout || null
+          },
+          validationStatus: file.validation_status
+        };
+      });
+
+      logger.processed({
+        totalCount: count,
+        returnedCount: historico.length,
+        page: pageNum,
+        totalPages: Math.ceil(count / limitNum)
+      });
+
+      return res.status(200).json({
+        sucesso: true,
+        dados: historico,
+        paginacao: {
+          page: pageNum,
+          limit: limitNum,
+          total: count,
+          totalPages: Math.ceil(count / limitNum),
+          hasNext: pageNum < Math.ceil(count / limitNum),
+          hasPrev: pageNum > 1
+        },
+        filtros: {
+          startDate,
+          endDate,
+          status,
+          banco
+        },
+        formato: 'CNAB 240',
+        operationId
+      });
+
+    } catch (error) {
+      logger.error(error, 'cnab240-historico');
+
+      const structuredError = ErrorHandler.createError(
+        'ERRO_CONSULTA_HISTORICO_CNAB240',
+        error.message,
+        { operation: 'listar_historico', formato: 'CNAB 240' },
+        error
+      );
+
+      return res.status(structuredError.status).json({
+        sucesso: false,
+        erro: structuredError.mensagem,
+        codigo: structuredError.codigo,
+        formato: 'CNAB 240',
+        operationId
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/cnab240/historico/:hash
+   * Busca arquivo CNAB 240 processado por hash SHA-256
+   */
+  static async buscarPorHash(req, res) {
+    const operationId = req.operationId || Logger.generateOperationId();
+    const logger = Logger.createCnabLogger(operationId, 'cnab240-buscar-hash');
+
+    try {
+      const { hash } = req.params;
+
+      if (!hash || hash.length !== 64) {
+        const error = ErrorHandler.createError(
+          'HASH_INVALIDO',
+          'Hash SHA-256 inválido. Deve ter 64 caracteres hexadecimais.'
+        );
+
+        return res.status(error.status).json({
+          sucesso: false,
+          erro: error.mensagem,
+          codigo: error.codigo,
+          formato: 'CNAB 240',
+          operationId
+        });
+      }
+
+      logger.start({ hash, formato: 'CNAB 240' });
+
+      // Buscar dados utilizando o service
+      const resultado = await Cnab240Service.buscarPorHash(hash);
+
+      if (!resultado) {
+        return res.status(404).json({
+          sucesso: false,
+          erro: 'Arquivo CNAB 240 não encontrado',
+          codigo: 'ARQUIVO_NAO_ENCONTRADO',
+          hash,
+          formato: 'CNAB 240',
+          operationId
+        });
+      }
+
+      logger.processed({ found: true, fileId: resultado.file.id });
+
+      return res.status(200).json({
+        sucesso: true,
+        mensagem: 'Arquivo CNAB 240 encontrado',
+        dados: resultado,
+        formato: 'CNAB 240',
+        operationId
+      });
+
+    } catch (error) {
+      logger.error(error, 'cnab240-buscar-hash');
+
+      const structuredError = ErrorHandler.createError(
+        'ERRO_BUSCA_HASH_CNAB240',
+        error.message,
+        { operation: 'buscar_por_hash', hash: req.params.hash, formato: 'CNAB 240' },
+        error
+      );
+
+      return res.status(structuredError.status).json({
+        sucesso: false,
+        erro: structuredError.mensagem,
+        codigo: structuredError.codigo,
+        formato: 'CNAB 240',
+        operationId
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/cnab240/estatisticas
+   * Retorna estatísticas do banco de dados específicas para CNAB 240
+   */
+  static async obterEstatisticas(req, res) {
+    const operationId = req.operationId || Logger.generateOperationId();
+    const logger = Logger.createCnabLogger(operationId, 'cnab240-estatisticas');
+
+    try {
+      logger.start({ formato: 'CNAB 240' });
+
+      // Obter estatísticas utilizando o service
+      const estatisticas = await Cnab240Service.obterEstatisticas();
+
+      logger.processed(estatisticas);
+
+      return res.status(200).json({
+        sucesso: true,
+        estatisticas,
+        formato: 'CNAB 240',
+        operationId,
+        dataConsulta: new Date().toISOString()
+      });
+
+    } catch (error) {
+      logger.error(error, 'cnab240-estatisticas');
+
+      const structuredError = ErrorHandler.createError(
+        'ERRO_ESTATISTICAS_CNAB240',
+        error.message,
+        { operation: 'obter_estatisticas', formato: 'CNAB 240' },
+        error
+      );
+
+      return res.status(structuredError.status).json({
+        sucesso: false,
+        erro: structuredError.mensagem,
+        codigo: structuredError.codigo,
+        formato: 'CNAB 240',
+        operationId
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/cnab240/operacoes/:operationId
+   * Retorna detalhes completos de uma operação CNAB 240 específica
+   */
+  static async buscarOperacao(req, res) {
+    const requestOperationId = req.operationId || Logger.generateOperationId();
+    const logger = Logger.createCnabLogger(requestOperationId, 'cnab240-buscar-operacao');
+
+    try {
+      const { operationId } = req.params;
+
+      if (!operationId) {
+        const error = ErrorHandler.createError(
+          'OPERATION_ID_OBRIGATORIO',
+          'Operation ID é obrigatório'
+        );
+
+        return res.status(error.status).json({
+          sucesso: false,
+          erro: error.mensagem,
+          codigo: error.codigo,
+          formato: 'CNAB 240',
+          operationId: requestOperationId
+        });
+      }
+
+      logger.start({ targetOperationId: operationId, formato: 'CNAB 240' });
+
+      // Buscar operação
+      const operation = await Operation.findByOperationId(operationId);
+
+      if (!operation || operation.operation_type !== 'cnab240') {
+        return res.status(404).json({
+          sucesso: false,
+          erro: 'Operação CNAB 240 não encontrada',
+          codigo: 'OPERACAO_NAO_ENCONTRADA',
+          formato: 'CNAB 240',
+          operationId: requestOperationId
+        });
+      }
+
+      // Buscar arquivo relacionado
+      const file = await File.findOne({
+        where: {
+          operation_id: operationId,
+          file_type: 'cnab240'
+        },
+        include: [
+          {
+            model: Cnab240File,
+            as: 'cnab240File',
+            required: false
+          }
+        ]
+      });
+
+      const resultado = {
+        operation: operation.getFormattedData ? operation.getFormattedData() : operation,
+        file: file?.getFormattedData ? file.getFormattedData() : file,
+        cnab240: file?.cnab240File || null,
+        resumo: {
+          formato: 'CNAB 240',
+          temArquivo: !!file,
+          temDadosCnab240: !!(file?.cnab240File)
+        }
+      };
+
+      logger.processed({
+        found: true,
+        operationId,
+        hasFile: !!file,
+        hasCnab240Data: !!(file?.cnab240File)
+      });
+
+      return res.status(200).json({
+        sucesso: true,
+        mensagem: 'Operação CNAB 240 encontrada',
+        dados: resultado,
+        formato: 'CNAB 240',
+        operationId: requestOperationId
+      });
+
+    } catch (error) {
+      logger.error(error, 'cnab240-buscar-operacao');
+
+      const structuredError = ErrorHandler.createError(
+        'ERRO_BUSCA_OPERACAO_CNAB240',
+        error.message,
+        { operation: 'buscar_operacao', targetOperationId: req.params.operationId, formato: 'CNAB 240' },
+        error
+      );
+
+      return res.status(structuredError.status).json({
+        sucesso: false,
+        erro: structuredError.mensagem,
+        codigo: structuredError.codigo,
+        formato: 'CNAB 240',
+        operationId: requestOperationId
       });
     }
   }

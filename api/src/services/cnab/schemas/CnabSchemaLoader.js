@@ -10,8 +10,8 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Compatibilidade com Jest e Node.js
+const __dirname = process.cwd() + '/src/services/cnab/schemas';
 
 /**
  * Classe principal para carregamento de schemas CNAB

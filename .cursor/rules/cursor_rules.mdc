@@ -3,7 +3,6 @@ description: Guidelines for creating and maintaining Cursor rules to ensure cons
 globs: .cursor/rules/*.mdc
 alwaysApply: true
 ---
-
 - **Required Rule Structure:**
   ```markdown
   ---
@@ -19,8 +18,9 @@ alwaysApply: true
 
 - **File References:**
   - Use `[filename](mdc:path/to/file)` ([filename](mdc:filename)) to reference files
-  - Example: [prisma.mdc](mdc:.cursor/rules/prisma.mdc) for rule references
-  - Example: [schema.prisma](mdc:prisma/schema.prisma) for code references
+  - Example: [docker_server_check.mdc](mdc:.cursor/rules/docker_server_check.mdc) for Docker rules
+  - Example: [dev_workflow.mdc](mdc:.cursor/rules/dev_workflow.mdc) for workflow references
+  - Example: [taskmaster.mdc](mdc:.cursor/rules/taskmaster.mdc) for task management
 
 - **Code Examples:**
   - Use language-specific code blocks
@@ -50,4 +50,10 @@ alwaysApply: true
   - Keep descriptions concise
   - Include both DO and DON'T examples
   - Reference actual code over theoretical examples
-  - Use consistent formatting across rules 
+  - Use consistent formatting across rules
+
+- **Available Rules:**
+  - [docker_server_check.mdc](mdc:.cursor/rules/docker_server_check.mdc) - Verificação de containers Docker ativos
+  - [dev_workflow.mcd](mdc:.cursor/rules/dev_workflow.mdc) - Fluxo de desenvolvimento com Task Master
+  - [taskmaster.mdc](mdc:.cursor/rules/taskmaster.mdc) - Referência de comandos Task Master
+  - [self_improve.mdc](mdc:.cursor/rules/self_improve.mdc) - Melhorias contínuas de regras 

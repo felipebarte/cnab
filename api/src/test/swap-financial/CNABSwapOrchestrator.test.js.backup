@@ -1,0 +1,557 @@
+import { jest, expect, describe, test, beforeEach, afterEach } from '@jest/globals';
+import CNABSwapOrchestrator from '../../services/payments/CNABSwapOrchestrator.js';
+
+// Mock dos módulos externos
+jest.mock('../../services/external/SwapFinancialService.js');
+jest.mock('../../services/payments/PaymentExtractorService.js');
+jest.mock('../../config/swapConfig.js');
+jest.mock('../../utils/metrics.js', () => ({
+  Timer: jest.fn().mockImplementation(() => ({
+    end: jest.fn()
+  })),
+  metricsCollector: {
+    incrementCounter: jest.fn(),
+    setGauge: jest.fn(),
+    metrics: {
+      gauges: {}
+    }
+  }
+}));
+
+import SwapFinancialService from '../../services/external/SwapFinancialService.js';
+import PaymentExtractorService from '../../services/payments/PaymentExtractorService.js';
+import { getSwapServiceConfig } from '../../config/swapConfig.js';
+
+describe('CNABSwapOrchestrator', () => {
+  let orchestrator;
+  let mockSwapService;
+  let mockPaymentExtractor;
+
+  beforeEach(() => {
+    // Reset todos os mocks
+    jest.clearAllMocks();
+
+    // Mock da configuração Swap
+    getSwapServiceConfig.mockReturnValue({
+      baseURL: 'https://test.swap.com',
+      clientId: 'test_client',
+      clientSecret: 'test_secret'
+    });
+
+    // Mock do SwapFinancialService
+    mockSwapService = {
+      checkBoleto: jest.fn(),
+      healthCheck: jest.fn(),
+      log: jest.fn()
+    };
+    SwapFinancialService.mockImplementation(() => mockSwapService);
+
+    // Mock do PaymentExtractorService
+    mockPaymentExtractor = {
+      extractPaymentData: jest.fn()
+    };
+    PaymentExtractorService.mockImplementation(() => mockPaymentExtractor);
+
+    // Criar instância do orquestrador
+    orchestrator = new CNABSwapOrchestrator({
+      batchSize: 5,
+      maxConcurrentRequests: 3,
+      enableCache: true
+    });
+  });
+
+  afterEach(() => {
+    orchestrator.clearCache();
+  });
+
+  describe('Constructor', () => {
+    test('deve inicializar com configuração padrão', () => {
+      const defaultOrchestrator = new CNABSwapOrchestrator();
+
+      expect(defaultOrchestrator.config.validateAll).toBe(true);
+      expect(defaultOrchestrator.config.batchSize).toBe(10);
+      expect(defaultOrchestrator.config.enableCache).toBe(true);
+      expect(defaultOrchestrator.verificationCache).toBeDefined();
+      expect(defaultOrchestrator.stats).toBeDefined();
+    });
+
+    test('deve aceitar configuração personalizada', () => {
+      const customConfig = {
+        batchSize: 20,
+        maxConcurrentRequests: 10,
+        enableCache: false,
+        validateAll: false
+      };
+
+      const customOrchestrator = new CNABSwapOrchestrator(customConfig);
+
+      expect(customOrchestrator.config.batchSize).toBe(20);
+      expect(customOrchestrator.config.maxConcurrentRequests).toBe(10);
+      expect(customOrchestrator.config.enableCache).toBe(false);
+      expect(customOrchestrator.config.validateAll).toBe(false);
+    });
+
+    test('deve inicializar serviços corretamente', () => {
+      expect(SwapFinancialService).toHaveBeenCalled();
+      expect(PaymentExtractorService).toHaveBeenCalled();
+    });
+  });
+
+  describe('processCNABFile', () => {
+    const mockCnabContent = 'mock cnab file content';
+
+    test('deve processar arquivo CNAB com sucesso', async () => {
+      // Mock de extração CNAB bem-sucedida
+      const mockCnabResult = {
+        success: true,
+        data: {
+          payments: [
+            {
+              id: '1',
+              barcode: '12345678901234567890123456789012345678901234567',
+              amount: 100.00,
+              dueDate: '2024-12-31'
+            },
+            {
+              id: '2',
+              barcode: '23456789012345678901234567890123456789012345678',
+              amount: 200.00,
+              dueDate: '2024-12-31'
+            }
+          ]
+        },
+        summary: {
+          totalRecords: 5,
+          paymentsFound: 2
+        },
+        metadata: {
+          fileName: 'test.cnab',
+          processedAt: new Date().toISOString()
+        }
+      };
+
+      mockPaymentExtractor.extractPaymentData.mockResolvedValue(mockCnabResult);
+
+      // Mock de verificação Swap bem-sucedida
+      const mockSwapResponse = {
+        id: 'bol_123',
+        amountInReais: 100.00,
+        due_date: '2024-12-31',
+        status: 'pending'
+      };
+
+      mockSwapService.checkBoleto.mockResolvedValue(mockSwapResponse);
+
+      const result = await orchestrator.processCNABFile(mockCnabContent);
+
+      expect(result.success).toBe(true);
+      expect(result.data.cnabSummary).toEqual(mockCnabResult.summary);
+      expect(result.data.swapResults).toBeDefined();
+      expect(result.data.swapResults.total).toBe(2);
+
+      expect(mockPaymentExtractor.extractPaymentData).toHaveBeenCalledWith(mockCnabContent, {});
+      expect(mockSwapService.checkBoleto).toHaveBeenCalledTimes(2);
+    });
+
+    test('deve falhar quando extração CNAB falha', async () => {
+      const mockCnabResult = {
+        success: false,
+        error: {
+          message: 'Invalid CNAB format'
+        }
+      };
+
+      mockPaymentExtractor.extractPaymentData.mockResolvedValue(mockCnabResult);
+
+      const result = await orchestrator.processCNABFile(mockCnabContent);
+
+      expect(result.success).toBe(false);
+      expect(result.error.message).toContain('CNAB extraction failed');
+      expect(mockSwapService.checkBoleto).not.toHaveBeenCalled();
+    });
+
+    test('deve processar arquivo sem boletos válidos', async () => {
+      const mockCnabResult = {
+        success: true,
+        data: {
+          payments: [] // Nenhum boleto
+        },
+        summary: {
+          totalRecords: 5,
+          paymentsFound: 0
+        }
+      };
+
+      mockPaymentExtractor.extractPaymentData.mockResolvedValue(mockCnabResult);
+
+      const result = await orchestrator.processCNABFile(mockCnabContent);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('No valid boletos found');
+      expect(result.data.swapResults.total).toBe(0);
+      expect(mockSwapService.checkBoleto).not.toHaveBeenCalled();
+    });
+
+    test('deve lidar com falha no serviço Swap', async () => {
+      const mockCnabResult = {
+        success: true,
+        data: {
+          payments: [
+            {
+              id: '1',
+              barcode: '12345678901234567890123456789012345678901234567',
+              amount: 100.00
+            }
+          ]
+        },
+        summary: {
+          totalRecords: 1,
+          paymentsFound: 1
+        }
+      };
+
+      mockPaymentExtractor.extractPaymentData.mockResolvedValue(mockCnabResult);
+
+      // Serviço Swap não inicializado
+      orchestrator.swapService = null;
+
+      const result = await orchestrator.processCNABFile(mockCnabContent);
+
+      expect(result.success).toBe(false);
+      expect(result.error.message).toContain('Swap Financial service is not available');
+    });
+
+    test('deve atualizar estatísticas durante processamento', async () => {
+      const mockCnabResult = {
+        success: true,
+        data: {
+          payments: [
+            {
+              id: '1',
+              barcode: '12345678901234567890123456789012345678901234567',
+              amount: 100.00
+            }
+          ]
+        },
+        summary: {
+          totalRecords: 1,
+          paymentsFound: 1
+        }
+      };
+
+      mockPaymentExtractor.extractPaymentData.mockResolvedValue(mockCnabResult);
+      mockSwapService.checkBoleto.mockResolvedValue({
+        id: 'bol_123',
+        amountInReais: 100.00,
+        status: 'pending'
+      });
+
+      const initialProcessed = orchestrator.stats.processed;
+
+      await orchestrator.processCNABFile(mockCnabContent);
+
+      expect(orchestrator.stats.processed).toBe(initialProcessed + 1);
+    });
+  });
+
+  describe('verifyBoletoWithSwap', () => {
+    const mockBoleto = {
+      id: '1',
+      barcode: '12345678901234567890123456789012345678901234567',
+      amount: 100.00,
+      dueDate: '2024-12-31'
+    };
+
+    test('deve verificar boleto com sucesso', async () => {
+      const mockSwapResponse = {
+        id: 'bol_123',
+        amountInReais: 100.00,
+        due_date: '2024-12-31',
+        status: 'pending'
+      };
+
+      mockSwapService.checkBoleto.mockResolvedValue(mockSwapResponse);
+
+      const result = await orchestrator.verifyBoletoWithSwap(mockBoleto);
+
+      expect(result.success).toBe(true);
+      expect(result.cnabId).toBe(mockBoleto.id);
+      expect(result.swapData).toEqual(mockSwapResponse);
+      expect(result.mappedData).toBeDefined();
+      expect(result.compatibility).toBeDefined();
+      expect(mockSwapService.checkBoleto).toHaveBeenCalledWith(mockBoleto.barcode);
+    });
+
+    test('deve usar cache quando disponível', async () => {
+      // Primeiro, adicionar resultado ao cache
+      const cachedResult = {
+        success: true,
+        cnabId: mockBoleto.id,
+        swapData: { id: 'cached_bol' }
+      };
+
+      orchestrator.verificationCache.set(mockBoleto.barcode, cachedResult);
+
+      const result = await orchestrator.verifyBoletoWithSwap(mockBoleto);
+
+      expect(result.fromCache).toBe(true);
+      expect(result.swapData.id).toBe('cached_bol');
+      expect(mockSwapService.checkBoleto).not.toHaveBeenCalled();
+    });
+
+    test('deve lidar com falha na verificação Swap', async () => {
+      const swapError = new Error('Boleto not found');
+      mockSwapService.checkBoleto.mockRejectedValue(swapError);
+
+      const result = await orchestrator.verifyBoletoWithSwap(mockBoleto);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe(swapError.message);
+      expect(result.cnabData).toEqual(mockBoleto);
+    });
+
+    test('deve adicionar resultado ao cache quando habilitado', async () => {
+      const mockSwapResponse = {
+        id: 'bol_123',
+        amountInReais: 100.00,
+        status: 'pending'
+      };
+
+      mockSwapService.checkBoleto.mockResolvedValue(mockSwapResponse);
+
+      expect(orchestrator.verificationCache.has(mockBoleto.barcode)).toBe(false);
+
+      await orchestrator.verifyBoletoWithSwap(mockBoleto);
+
+      expect(orchestrator.verificationCache.has(mockBoleto.barcode)).toBe(true);
+    });
+
+    test('não deve adicionar ao cache quando desabilitado', async () => {
+      // Criar orquestrador sem cache
+      const noCacheOrchestrator = new CNABSwapOrchestrator({ enableCache: false });
+      noCacheOrchestrator.swapService = mockSwapService;
+
+      const mockSwapResponse = {
+        id: 'bol_123',
+        amountInReais: 100.00,
+        status: 'pending'
+      };
+
+      mockSwapService.checkBoleto.mockResolvedValue(mockSwapResponse);
+
+      await noCacheOrchestrator.verifyBoletoWithSwap(mockBoleto);
+
+      expect(noCacheOrchestrator.verificationCache.has(mockBoleto.barcode)).toBe(false);
+    });
+  });
+
+  describe('verifyBoletosWithSwap', () => {
+    const mockBoletos = [
+      {
+        id: '1',
+        barcode: '12345678901234567890123456789012345678901234567',
+        amount: 100.00
+      },
+      {
+        id: '2',
+        barcode: '23456789012345678901234567890123456789012345678',
+        amount: 200.00
+      }
+    ];
+
+    test('deve verificar múltiplos boletos com sucesso', async () => {
+      const mockSwapResponse = {
+        id: 'bol_123',
+        amountInReais: 100.00,
+        status: 'pending'
+      };
+
+      mockSwapService.checkBoleto.mockResolvedValue(mockSwapResponse);
+
+      const result = await orchestrator.verifyBoletosWithSwap(mockBoletos);
+
+      expect(result.total).toBe(2);
+      expect(result.verified).toBe(2);
+      expect(result.successful).toBe(2);
+      expect(result.failed).toBe(0);
+      expect(result.validations).toHaveLength(2);
+      expect(mockSwapService.checkBoleto).toHaveBeenCalledTimes(2);
+    });
+
+    test('deve lidar com falhas parciais', async () => {
+      mockSwapService.checkBoleto
+        .mockResolvedValueOnce({
+          id: 'bol_123',
+          amountInReais: 100.00,
+          status: 'pending'
+        })
+        .mockRejectedValueOnce(new Error('Boleto not found'));
+
+      const result = await orchestrator.verifyBoletosWithSwap(mockBoletos);
+
+      expect(result.total).toBe(2);
+      expect(result.verified).toBe(2);
+      expect(result.successful).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(result.validations).toHaveLength(2);
+    });
+
+    test('deve processar em lotes respeitando configuração', async () => {
+      // Configurar lote pequeno para teste
+      orchestrator.config.batchSize = 1;
+
+      const mockSwapResponse = {
+        id: 'bol_123',
+        amountInReais: 100.00,
+        status: 'pending'
+      };
+
+      mockSwapService.checkBoleto.mockResolvedValue(mockSwapResponse);
+
+      const result = await orchestrator.verifyBoletosWithSwap(mockBoletos);
+
+      expect(result.total).toBe(2);
+      expect(mockSwapService.checkBoleto).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Cache Management', () => {
+    test('clearCache deve limpar verificações em cache', () => {
+      orchestrator.verificationCache.set('test_barcode', { data: 'test' });
+      expect(orchestrator.verificationCache.size).toBe(1);
+
+      orchestrator.clearCache();
+
+      expect(orchestrator.verificationCache.size).toBe(0);
+    });
+
+    test('updateCacheMetrics deve atualizar métricas de cache', () => {
+      orchestrator.verificationCache.set('test1', {});
+      orchestrator.verificationCache.set('test2', {});
+      orchestrator.stats.cached = 1;
+      orchestrator.stats.verified = 3;
+
+      orchestrator.updateCacheMetrics();
+
+      // Verificar se métricas foram chamadas (mocked)
+      expect(require('../../utils/metrics.js').metricsCollector.setGauge).toHaveBeenCalled();
+    });
+  });
+
+  describe('Health Check', () => {
+    test('deve retornar status healthy quando tudo funciona', async () => {
+      mockSwapService.healthCheck.mockResolvedValue({
+        status: 'healthy'
+      });
+
+      const health = await orchestrator.healthCheck();
+
+      expect(health.orchestrator).toBe('healthy');
+      expect(health.swapService).toBe('healthy');
+      expect(health.paymentExtractor).toBe('healthy');
+      expect(health.cache).toBeDefined();
+      expect(health.stats).toBeDefined();
+    });
+
+    test('deve identificar problemas no serviço Swap', async () => {
+      mockSwapService.healthCheck.mockRejectedValue(new Error('Service unavailable'));
+
+      const health = await orchestrator.healthCheck();
+
+      expect(health.swapService).toBe('unhealthy');
+      expect(health.swapServiceError).toBe('Service unavailable');
+    });
+
+    test('deve lidar com serviço Swap não inicializado', async () => {
+      orchestrator.swapService = null;
+
+      const health = await orchestrator.healthCheck();
+
+      expect(health.swapService).toBe('not_initialized');
+    });
+  });
+
+  describe('Utility Methods', () => {
+    test('filterValidBoletos deve filtrar boletos válidos', () => {
+      const boletos = [
+        {
+          id: '1',
+          barcode: '12345678901234567890123456789012345678901234567', // válido
+          amount: 100.00
+        },
+        {
+          id: '2',
+          barcode: '123invalid', // inválido
+          amount: 200.00
+        },
+        {
+          id: '3',
+          barcode: '23456789012345678901234567890123456789012345678', // válido
+          amount: 300.00
+        }
+      ];
+
+      const validBoletos = orchestrator.filterValidBoletos(boletos);
+
+      expect(validBoletos).toHaveLength(2);
+      expect(validBoletos[0].id).toBe('1');
+      expect(validBoletos[1].id).toBe('3');
+    });
+
+    test('maskBarcode deve mascarar código de barras', () => {
+      const barcode = '12345678901234567890123456789012345678901234567';
+      const masked = orchestrator.maskBarcode(barcode);
+
+      expect(masked).toMatch(/^12345.*34567$/);
+      expect(masked.length).toBe(barcode.length);
+    });
+
+    test('analyzeCompatibility deve analisar compatibilidade', () => {
+      const cnabPayments = [
+        { id: '1', amount: 100.00, barcode: 'test1' },
+        { id: '2', amount: 200.00, barcode: 'test2' }
+      ];
+
+      const swapValidations = [
+        { success: true, cnabId: '1', swapData: { amountInReais: 100.00 } },
+        { success: false, cnabId: '2', error: 'Not found' }
+      ];
+
+      const compatibility = orchestrator.analyzeCompatibility(cnabPayments, swapValidations);
+
+      expect(compatibility.totalBoletos).toBe(2);
+      expect(compatibility.compatibleBoletos).toBe(1);
+      expect(compatibility.incompatibleBoletos).toBe(1);
+      expect(compatibility.compatibilityRate).toBe(50);
+    });
+  });
+
+  describe('Stats and Metrics', () => {
+    test('getStats deve retornar estatísticas atuais', () => {
+      orchestrator.stats.processed = 5;
+      orchestrator.stats.verified = 4;
+      orchestrator.stats.successful = 3;
+      orchestrator.stats.failed = 1;
+
+      const stats = orchestrator.getStats();
+
+      expect(stats.processed).toBe(5);
+      expect(stats.verified).toBe(4);
+      expect(stats.successful).toBe(3);
+      expect(stats.failed).toBe(1);
+      expect(stats.successRate).toBe(75); // 3/4 * 100
+    });
+
+    test('resetStats deve zerar estatísticas', () => {
+      orchestrator.stats.processed = 5;
+      orchestrator.stats.verified = 4;
+
+      orchestrator.resetStats();
+
+      expect(orchestrator.stats.processed).toBe(0);
+      expect(orchestrator.stats.verified).toBe(0);
+      expect(orchestrator.stats.successful).toBe(0);
+      expect(orchestrator.stats.failed).toBe(0);
+    });
+  });
+}); 

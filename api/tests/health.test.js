@@ -1,4 +1,15 @@
 import request from 'supertest';
+
+// Mock do swagger para evitar problemas com import.meta no Jest
+jest.mock('../src/config/swagger.js', () => ({
+  setupSwagger: jest.fn(),
+  default: {
+    setupSwagger: jest.fn(),
+    swaggerSpec: {},
+    swaggerUiOptions: {}
+  }
+}));
+
 import app from '../src/index.js';
 
 describe('Health Check Endpoints', () => {

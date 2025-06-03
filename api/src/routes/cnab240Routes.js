@@ -75,4 +75,33 @@ router.post('/processar-webhook', Cnab240Controller.processarEEnviarWebhook);
  */
 router.post('/processar-webhook/upload', uploadMiddleware, Cnab240Controller.processarEEnviarWebhook);
 
+// ===== ROTAS DE PERSISTÊNCIA =====
+
+/**
+ * @route GET /cnab240/historico
+ * @desc Lista histórico de arquivos CNAB 240 processados
+ * @query { page?, limit?, startDate?, endDate?, status?, banco? }
+ */
+router.get('/historico', Cnab240Controller.listarHistorico);
+
+/**
+ * @route GET /cnab240/historico/:hash
+ * @desc Busca arquivo processado por hash SHA-256
+ * @param { hash } Hash SHA-256 do arquivo
+ */
+router.get('/historico/:hash', Cnab240Controller.buscarPorHash);
+
+/**
+ * @route GET /cnab240/estatisticas
+ * @desc Estatísticas do banco de dados e processamentos
+ */
+router.get('/estatisticas', Cnab240Controller.obterEstatisticas);
+
+/**
+ * @route GET /cnab240/operacoes/:operationId
+ * @desc Detalhes de operação específica por ID
+ * @param { operationId } ID único da operação
+ */
+router.get('/operacoes/:operationId', Cnab240Controller.buscarOperacao);
+
 export default router; 
