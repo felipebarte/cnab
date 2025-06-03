@@ -9,13 +9,15 @@ import Cnab240BaseParser from './cnab240BaseParser.js';
 import { CNAB240Parser } from './parsers/index.js';
 import { BANCOS_240, UTILS_VALIDACAO } from '../../config/bancos240.js';
 import crypto from 'crypto';
+import sequelize from '../../config/database.js';
+import { ProcessingError, ValidationError } from './errors/cnab240Errors.js';
+import { SegmentoParser } from './parsers/segmentoParser.js';
 
 // Importar modelos MySQL para persistência
 import {
   Operation,
   File,
   Cnab240File,
-  sequelize,
   createOperationWithFile,
   processCnab240File,
   getDatabaseStats,
@@ -99,7 +101,7 @@ class Cnab240Service {
       // Processamento linha por linha
       const linhas = cnabContent.split('\n')
         .map(linha => linha.replace(/\r?\n?$/g, '')) // Remove \r e \n do final
-        .filter(linha => linha.trim() !== '');
+        .filter(linha => linha.length > 0); // ✅ CORRIGIDO: usar length ao invés de trim()
       const dadosProcessados = this.processarLinhas(linhas);
 
       // Identificação do banco
@@ -364,15 +366,22 @@ class Cnab240Service {
 
     let loteAtual = null;
 
+    console.log(`[DEBUG] Iniciando processamento de ${linhas.length} linhas`);
+
     linhas.forEach((linha, index) => {
       try {
+        console.log(`[DEBUG] Processando linha ${index + 1}: tipo registro ${linha[7]}, tamanho ${linha.length}`);
+
         // Usar o parser genérico que detecta automaticamente o tipo
         const dadosParsed = CNAB240Parser.parse(linha);
         const tipoRegistro = dadosParsed._metadata.tipo;
 
+        console.log(`[DEBUG] Linha ${index + 1} parsed com sucesso: tipo ${tipoRegistro}`);
+
         switch (tipoRegistro) {
           case '0': // Header de arquivo
             estrutura.headerArquivo = dadosParsed;
+            console.log(`[DEBUG] Header de arquivo definido`);
             break;
 
           case '1': // Header de lote
@@ -382,6 +391,7 @@ class Cnab240Service {
               trailer: null
             };
             estrutura.lotes.push(loteAtual);
+            console.log(`[DEBUG] Novo lote criado: ${estrutura.lotes.length}`);
             break;
 
           case '3': // Detalhe (Segmentos A, B, etc.)
@@ -389,6 +399,7 @@ class Cnab240Service {
               throw new Error(`Linha ${index + 1}: Registro de detalhe encontrado sem header de lote`);
             }
             loteAtual.detalhes.push(dadosParsed);
+            console.log(`[DEBUG] Detalhe adicionado ao lote: segmento ${dadosParsed.segmento}, total detalhes: ${loteAtual.detalhes.length}`);
             break;
 
           case '5': // Trailer de lote
@@ -396,10 +407,12 @@ class Cnab240Service {
               throw new Error(`Linha ${index + 1}: Trailer de lote encontrado sem header de lote`);
             }
             loteAtual.trailer = dadosParsed;
+            console.log(`[DEBUG] Trailer de lote definido`);
             break;
 
           case '9': // Trailer de arquivo
             estrutura.trailerArquivo = dadosParsed;
+            console.log(`[DEBUG] Trailer de arquivo definido`);
             break;
 
           default:
@@ -411,6 +424,8 @@ class Cnab240Service {
         // Continua processamento das demais linhas
       }
     });
+
+    console.log(`[DEBUG] Processamento concluído: ${estrutura.lotes.length} lotes, header: ${!!estrutura.headerArquivo}, trailer: ${!!estrutura.trailerArquivo}`);
 
     return estrutura;
   }
@@ -433,7 +448,7 @@ class Cnab240Service {
     // Dividir em linhas e limpar caracteres de quebra de linha
     const linhas = cnabContent.split('\n')
       .map(linha => linha.replace(/\r?\n?$/g, '')) // Remove apenas quebras de linha
-      .filter(linha => linha.trim() !== '');
+      .filter(linha => linha.length > 0); // ✅ CORRIGIDO: usar length ao invés de trim()
 
     // Verificar se tem pelo menos 3 linhas (header arquivo, header lote, trailer arquivo)
     if (linhas.length < 3) {
@@ -563,10 +578,10 @@ class Cnab240Service {
   }
 
   /**
-   * Processa os detalhes de um lote com informações enriquecidas
-   * @param {Array} detalhes - Detalhes do lote
+   * Processa os detalhes de um lote, incluindo extração de códigos de barras
+   * @param {Array} detalhes - Array de detalhes do lote
    * @param {Object} configuracaoBanco - Configuração do banco
-   * @returns {Array} Detalhes processados
+   * @returns {Array} Detalhes processados com códigos de barras
    */
   static processarDetalhesLote(detalhes, configuracaoBanco) {
     return detalhes.map((detalhe, index) => {
@@ -584,6 +599,20 @@ class Cnab240Service {
       } else if (detalhe.segmento === 'B') {
         resultado.informacoesComplementares = this.extrairInformacoesComplementares(detalhe);
         resultado.pix = this.extrairDadosPix(detalhe, configuracaoBanco);
+      } else if (detalhe.segmento === 'J') {
+        // ✅ NOVO: Extrair dados de títulos de cobrança com código de barras
+        resultado.titulo = this.extrairDadosTitulo(detalhe);
+        console.log(`[DEBUG] Código de barras extraído do segmento J: ${detalhe.codigoBarras}`);
+      } else if (detalhe.segmento === 'O') {
+        // ✅ NOVO: Extrair dados de tributos com código de barras
+        resultado.tributo = this.extrairDadosTributo(detalhe);
+        console.log(`[DEBUG] Código de barras extraído do segmento O: ${detalhe.codigoBarras}`);
+      }
+
+      // ✅ CORREÇÃO CRÍTICA: Incluir código de barras se disponível
+      if (detalhe.codigoBarras && detalhe.codigoBarras.trim() !== '') {
+        resultado.codigo_barras = detalhe.codigoBarras.trim();
+        console.log(`[DEBUG] Código de barras registrado para segmento ${detalhe.segmento}: ${resultado.codigo_barras}`);
       }
 
       return resultado;
@@ -1047,6 +1076,251 @@ class Cnab240Service {
         valido: false,
         erro: `Erro na validação: ${error.message}`,
       };
+    }
+  }
+
+  /**
+   * ✅ NOVA FUNÇÃO: Extrai dados específicos de títulos de cobrança (Segmento J)
+   * @param {Object} detalhe - Dados do segmento J parseado
+   * @returns {Object} Dados formatados do título
+   */
+  static extrairDadosTitulo(detalhe) {
+    return {
+      codigoBarras: detalhe.codigoBarras || '',
+      nomeFavorecido: detalhe.nomeFavorecido || '',
+      dataVencimento: this.formatarData(detalhe.dataVencimento),
+      valorTitulo: this.formatarValor(detalhe.valorTitulo),
+      valorPago: this.formatarValor(detalhe.valorPago),
+      dataPagamento: this.formatarData(detalhe.dataPagamento),
+      valorEfetivo: this.formatarValor(detalhe.valorEfetivo),
+      descontoAbatimento: this.formatarValor(detalhe.descontoAbatimento),
+      acrescimoMora: this.formatarValor(detalhe.acrescimoMora),
+      informacoesComplementares: detalhe.informacoesComplementares || '',
+      metadata: detalhe._metadata || {}
+    };
+  }
+
+  /**
+   * ✅ NOVA FUNÇÃO: Extrai dados específicos de tributos/concessionárias (Segmento O)
+   * @param {Object} detalhe - Dados do segmento O parseado
+   * @returns {Object} Dados formatados do tributo
+   */
+  static extrairDadosTributo(detalhe) {
+    return {
+      codigoBarras: detalhe.codigoBarras || '',
+      nomeConcessionaria: detalhe.nomeConcessionaria || '',
+      dataVencimento: this.formatarData(detalhe.dataVencimento),
+      valorDocumento: this.formatarValor(detalhe.valorDocumento),
+      valorPago: this.formatarValor(detalhe.valorPago),
+      valorDesconto: this.formatarValor(detalhe.valorDesconto),
+      dataPagamento: this.formatarData(detalhe.dataPagamento),
+      valorEfetivado: this.formatarValor(detalhe.valorEfetivado),
+      referencia: detalhe.referencia || '',
+      informacoesComplementares: detalhe.informacoesComplementares || '',
+      metadata: detalhe._metadata || {}
+    };
+  }
+
+  /**
+   * ✅ NOVA FUNÇÃO: Formata uma data do formato CNAB (DDMMAAAA) para formato legível
+   * @param {string} dataCnab - Data no formato CNAB (ex: "19052025")
+   * @returns {string} Data formatada (ex: "19/05/2025") ou string vazia se inválida
+   */
+  static formatarData(dataCnab) {
+    if (!dataCnab || typeof dataCnab !== 'string' || dataCnab.length !== 8) {
+      return '';
+    }
+
+    // Verificar se não são zeros
+    if (dataCnab === '00000000') {
+      return '';
+    }
+
+    try {
+      const dia = dataCnab.substring(0, 2);
+      const mes = dataCnab.substring(2, 4);
+      const ano = dataCnab.substring(4, 8);
+
+      // Validação básica
+      const diaNum = parseInt(dia);
+      const mesNum = parseInt(mes);
+      const anoNum = parseInt(ano);
+
+      if (diaNum < 1 || diaNum > 31 || mesNum < 1 || mesNum > 12 || anoNum < 1900) {
+        return '';
+      }
+
+      return `${dia}/${mes}/${ano}`;
+    } catch (error) {
+      return '';
+    }
+  }
+
+  /**
+   * ✅ NOVA FUNÇÃO: Formata um valor do formato CNAB (string com centavos) para número em reais
+   * @param {string} valorCnab - Valor no formato CNAB (ex: "000002234040")
+   * @returns {number} Valor em reais (ex: 22340.40) ou 0 se inválido
+   */
+  static formatarValor(valorCnab) {
+    if (!valorCnab || typeof valorCnab !== 'string') {
+      return 0;
+    }
+
+    // Remove espaços e verifica se não são apenas zeros
+    const valorLimpo = valorCnab.trim();
+    if (valorLimpo === '' || /^0+$/.test(valorLimpo)) {
+      return 0;
+    }
+
+    try {
+      const valorInteiro = parseInt(valorLimpo) || 0;
+      // Converte centavos para reais (divide por 100)
+      return valorInteiro / 100;
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  /**
+   * ✅ CORREÇÃO CRÍTICA: Salva segmento CNAB 240 no banco de dados incluindo códigos de barras
+   * @param {number} batchId - ID do lote
+   * @param {Object} segmento - Dados do segmento processado
+   * @param {string} operationId - ID da operação
+   * @returns {Promise<Object>} Segmento salvo
+   */
+  static async salvarSegmentoCnab240(batchId, segmento, operationId) {
+    try {
+      // ✅ NOVO: Extrair código de barras baseado no segmento
+      let codigoBarras = null;
+
+      // Para segmentos J (títulos/cobrança)
+      if (segmento.segmento === 'J' && segmento.titulo?.codigoBarras) {
+        codigoBarras = segmento.titulo.codigoBarras;
+        console.log(`[DEBUG] Código de barras extraído do segmento J: ${codigoBarras}`);
+      }
+
+      // Para segmentos O (tributos/concessionárias)  
+      if (segmento.segmento === 'O' && segmento.tributo?.codigoBarras) {
+        codigoBarras = segmento.tributo.codigoBarras;
+        console.log(`[DEBUG] Código de barras extraído do segmento O: ${codigoBarras}`);
+      }
+
+      // Também verificar diretamente nos dados originais como fallback
+      if (!codigoBarras && segmento.dadosOriginais?.codigoBarras) {
+        codigoBarras = segmento.dadosOriginais.codigoBarras;
+        console.log(`[DEBUG] Código de barras extraído dos dados originais: ${codigoBarras}`);
+      }
+
+      // Dados básicos do segmento
+      const dadosSegmento = {
+        batch_id: batchId,
+        operation_id: operationId,
+        segmento_tipo: segmento.segmento,
+        segmento_sequencia: segmento.sequencia || 0,
+        registro_numero: segmento.numeroSequencial || 0,
+
+        // ✅ CRÍTICO: Incluir código de barras no salvamento
+        codigo_barras: codigoBarras,
+
+        // Dados do pagamento se for segmento A
+        codigo_movimento: segmento.pagamento?.codigoMovimento,
+        codigo_instrucao: segmento.pagamento?.codigoInstrucao,
+
+        // Dados do favorecido se disponível
+        favorecido_banco: segmento.beneficiario?.banco || segmento.pagamento?.bancoFavorecido,
+        favorecido_agencia: segmento.beneficiario?.agencia || segmento.pagamento?.agenciaFavorecido,
+        favorecido_agencia_dv: segmento.beneficiario?.agenciaDv || segmento.pagamento?.dvAgenciaFavorecido,
+        favorecido_conta: segmento.beneficiario?.conta || segmento.pagamento?.contaFavorecido,
+        favorecido_conta_dv: segmento.beneficiario?.contaDv || segmento.pagamento?.dvContaFavorecido,
+        favorecido_nome: segmento.beneficiario?.nome || segmento.pagamento?.nomeFavorecido || segmento.titulo?.nomeFavorecido || segmento.tributo?.nomeConcessionaria,
+        favorecido_documento: segmento.beneficiario?.documento,
+
+        // Valores - priorizar valores específicos por segmento
+        valor_operacao: (() => {
+          if (segmento.segmento === 'J' && segmento.titulo) {
+            return this.parseValorCNAB(segmento.titulo.valorPago) || this.parseValorCNAB(segmento.titulo.valorTitulo);
+          }
+          if (segmento.segmento === 'O' && segmento.tributo) {
+            return this.parseValorCNAB(segmento.tributo.valorPago) || this.parseValorCNAB(segmento.tributo.valorDocumento);
+          }
+          if (segmento.pagamento?.valorPagamento) {
+            return this.parseValorCNAB(segmento.pagamento.valorPagamento);
+          }
+          return null;
+        })(),
+
+        // Datas
+        data_operacao: (() => {
+          if (segmento.titulo?.dataPagamento) {
+            return this.formatarDataCNAB(segmento.titulo.dataPagamento);
+          }
+          if (segmento.tributo?.dataPagamento) {
+            return this.formatarDataCNAB(segmento.tributo.dataPagamento);
+          }
+          if (segmento.pagamento?.dataPagamento) {
+            return this.formatarDataCNAB(segmento.pagamento.dataPagamento);
+          }
+          return null;
+        })(),
+
+        data_efetivacao: (() => {
+          if (segmento.titulo?.dataVencimento) {
+            return this.formatarDataCNAB(segmento.titulo.dataVencimento);
+          }
+          if (segmento.tributo?.dataVencimento) {
+            return this.formatarDataCNAB(segmento.tributo.dataVencimento);
+          }
+          if (segmento.pagamento?.dataEfetivacao) {
+            return this.formatarDataCNAB(segmento.pagamento.dataEfetivacao);
+          }
+          return null;
+        })(),
+
+        // PIX específico
+        chave_pix: segmento.pix?.chave,
+        tipo_chave_pix: segmento.pix?.tipoChave,
+
+        // Informações adicionais
+        finalidade_ted: segmento.pagamento?.finalidadeDOC,
+        numero_documento: segmento.titulo?.numeroDocumento || segmento.tributo?.referencia || segmento.pagamento?.numeroDocumentoEmpresa,
+
+        // Dados completos em JSON
+        dados_completos: JSON.stringify(segmento)
+      };
+
+      console.log(`[DEBUG] Salvando segmento ${segmento.segmento} com código de barras: ${codigoBarras || 'NENHUM'}`);
+
+      // Executar inserção SQL direta para garantir compatibilidade
+      const [results] = await sequelize.query(
+        `INSERT INTO cnab240_segments (
+          batch_id, operation_id, segmento_tipo, segmento_sequencia, registro_numero,
+          codigo_movimento, codigo_instrucao, 
+          favorecido_banco, favorecido_agencia, favorecido_agencia_dv, 
+          favorecido_conta, favorecido_conta_dv, favorecido_nome, favorecido_documento,
+          valor_operacao, data_operacao, data_efetivacao,
+          chave_pix, tipo_chave_pix, finalidade_ted, numero_documento, codigo_barras,
+          dados_completos, created_at, updated_at
+        ) VALUES (
+          :batch_id, :operation_id, :segmento_tipo, :segmento_sequencia, :registro_numero,
+          :codigo_movimento, :codigo_instrucao,
+          :favorecido_banco, :favorecido_agencia, :favorecido_agencia_dv,
+          :favorecido_conta, :favorecido_conta_dv, :favorecido_nome, :favorecido_documento,
+          :valor_operacao, :data_operacao, :data_efetivacao,
+          :chave_pix, :tipo_chave_pix, :finalidade_ted, :numero_documento, :codigo_barras,
+          :dados_completos, NOW(), NOW()
+        )`,
+        {
+          replacements: dadosSegmento,
+          type: sequelize.QueryTypes.INSERT
+        }
+      );
+
+      console.log(`[SUCCESS] Segmento ${segmento.segmento} salvo com ID: ${results}`);
+      return { id: results, ...dadosSegmento };
+
+    } catch (error) {
+      console.error(`[ERROR] Erro ao salvar segmento ${segmento.segmento}:`, error.message);
+      throw new Error(`Erro ao salvar segmento CNAB 240: ${error.message}`);
     }
   }
 }

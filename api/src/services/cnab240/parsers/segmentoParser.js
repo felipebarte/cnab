@@ -16,8 +16,8 @@ export class SegmentoParser {
    * @returns {Object} Dados do segmento A parseados
    */
   static parseSegmentoA(linha) {
-    // Normalizar linha removendo caracteres extras (como \r\n)
-    linha = linha.trim();
+    // ✅ CORRIGIDO: Normalizar linha removendo apenas quebras de linha
+    linha = linha.replace(/\r?\n?$/g, '');
 
     if (!linha || linha.length < 240) {
       throw new Error(`Linha de segmento A deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
@@ -131,8 +131,8 @@ export class SegmentoParser {
    * @returns {string} Subtipo identificado (J01, J02, etc.)
    */
   static identifyJSubtype(linha) {
-    // Normalizar linha removendo caracteres extras (como \r\n)
-    linha = linha.trim();
+    // ✅ CORRIGIDO: Normalizar linha removendo apenas quebras de linha
+    linha = linha.replace(/\r?\n?$/g, '');
 
     if (!linha || linha.length < 240) {
       throw new Error(`Linha de segmento J deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
@@ -183,8 +183,8 @@ export class SegmentoParser {
    * @returns {Object} Dados do segmento J01 parseados
    */
   static parseSegmentoJ01(linha) {
-    // Normalizar linha removendo caracteres extras (como \r\n)
-    linha = linha.trim();
+    // ✅ CORRIGIDO: Normalizar linha removendo apenas quebras de linha
+    linha = linha.replace(/\r?\n?$/g, '');
 
     if (!linha || linha.length < 240) {
       throw new Error(`Linha de segmento J01 deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
@@ -215,40 +215,50 @@ export class SegmentoParser {
       // Posições 018-019: Código da instrução para movimento
       codigoInstrucaoMovimento: linha.substring(17, 19).trim(),
 
-      // Posições 020-044: Código de barras
-      codigoBarras: linha.substring(19, 44).trim(),
+      // ✅ CORREÇÃO CRÍTICA: Baseado na análise real do arquivo rem92563.txt
+      // O código de barras está localizado nas posições após o identificador J000
+      // Análise mostrou que códigos de barras com 47-48 dígitos iniciam na posição 27 (posição 28 em base 1)
+      codigoBarras: linha.substring(27, 75).trim(), // Posições 28-75 (48 caracteres)
 
-      // Posições 045-104: Nome do favorecido
-      nomeFavorecido: linha.substring(44, 104).trim(),
+      // Nome do favorecido vem após o código de barras
+      nomeFavorecido: linha.substring(75, 135).trim(), // Posições 76-135 (60 caracteres)
 
-      // Posições 105-112: Data de vencimento (DDMMAAAA)
-      dataVencimento: linha.substring(104, 112).trim(),
+      // ✅ CORREÇÃO CRÍTICA: Data de vencimento está após o nome
+      dataVencimento: linha.substring(135, 143).trim(), // Posições 136-143 (8 caracteres)
 
-      // ✅ CORREÇÃO FINAL: Posições 107-115 (9 caracteres) - Valor do título/pagamento
-      // Análise confirmou: primeira ocorrência de 002234040 está na posição 106 (107-115)
-      valorTitulo: linha.substring(106, 115).trim(),
-      valorPago: linha.substring(106, 115).trim(), // Usar o mesmo campo como fallback
+      // ✅ CORREÇÃO CRÍTICA: Valor do título/pagamento 
+      // Análise confirmou que valores como "002234040" estão na posição 143-151
+      valorTitulo: linha.substring(143, 151).trim(), // Posições 144-151 (8 caracteres)
+      valorPago: linha.substring(143, 151).trim(), // Mesmo valor como fallback
 
-      // Posições 122-136: Desconto + abatimento
-      descontoAbatimento: linha.substring(121, 136).trim(),
+      // ✅ NOVOS CAMPOS: Campos adicionais para informações completas
+      dataPagamento: linha.substring(151, 159).trim(), // Posições 152-159 (8 caracteres)
 
-      // Posições 137-151: Acréscimo + mora
-      acrescimoMora: linha.substring(136, 151).trim(),
+      // Valor efetivamente pago pode estar em outra posição
+      valorEfetivo: linha.substring(159, 174).trim(), // Posições 160-174 (15 caracteres)
 
-      // Posições 152-159: Data do pagamento (DDMMAAAA)
-      dataPagamento: linha.substring(151, 159).trim(),
+      // Desconto + abatimento
+      descontoAbatimento: linha.substring(174, 189).trim(), // Posições 175-189 (15 caracteres)
 
-      // Posições 160-174: Valor efetivamente pago
-      valorEfetivamentePago: linha.substring(159, 174).trim(),
+      // Acréscimo + mora
+      acrescimoMora: linha.substring(189, 204).trim(), // Posições 190-204 (15 caracteres)
 
-      // Posições 175-189: Outros valores
-      outrosValores: linha.substring(174, 189).trim(),
+      // Outras informações
+      outrasInformacoes: linha.substring(204, 219).trim(), // Posições 205-219 (15 caracteres)
 
-      // Posições 190-199: Indicadores de float
-      indicadoresFloat: linha.substring(189, 199).trim(),
+      // Informações complementares até o final
+      informacoesComplementares: linha.substring(219, 240).trim(), // Posições 220-240 (21 caracteres)
 
-      // Posições 200-240: Brancos/reservado
-      brancos: linha.substring(199, 240).trim()
+      // Metadados
+      _metadata: {
+        tipo: '3',
+        descricao: 'Segmento J01 - Dados principais de títulos/cobrança',
+        categoria: 'pagamento',
+        segmento: 'J',
+        subtipo: 'J01',
+        parser: 'SegmentoParser.parseSegmentoJ01',
+        linhaOriginal: linha
+      }
     };
 
     return dados;
@@ -260,8 +270,8 @@ export class SegmentoParser {
    * @returns {Object} Dados do segmento J02 parseados
    */
   static parseSegmentoJ02(linha) {
-    // Normalizar linha removendo caracteres extras (como \r\n)
-    linha = linha.trim();
+    // ✅ CORRIGIDO: Normalizar linha removendo apenas quebras de linha
+    linha = linha.replace(/\r?\n?$/g, '');
 
     if (!linha || linha.length < 240) {
       throw new Error(`Linha de segmento J02 deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
@@ -327,8 +337,8 @@ export class SegmentoParser {
    * @returns {Object} Dados do segmento J parseados
    */
   static parseSegmentoJ(linha) {
-    // Normalizar linha removendo caracteres extras (como \r\n)
-    linha = linha.trim();
+    // ✅ CORRIGIDO: Normalizar linha removendo apenas quebras de linha
+    linha = linha.replace(/\r?\n?$/g, '');
 
     if (!linha || linha.length < 240) {
       throw new Error(`Linha de segmento J deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
@@ -363,10 +373,13 @@ export class SegmentoParser {
    * @returns {Object} Dados do segmento O parseados
    */
   static parseSegmentoO(linha) {
-    // Normalizar linha removendo caracteres extras (como \r\n)
-    linha = linha.trim();
+    // ✅ CORRIGIDO: Normalizar linha removendo apenas quebras de linha
+    linha = linha.replace(/\r?\n?$/g, '');
+
+    console.log(`[DEBUG] parseSegmentoO recebeu linha com tamanho: ${linha.length}`);
 
     if (!linha || linha.length < 240) {
+      console.log(`[DEBUG] parseSegmentoO ERRO: linha muito curta - ${linha.length} chars`);
       throw new Error(`Linha de segmento O deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
     }
 
@@ -398,41 +411,38 @@ export class SegmentoParser {
       // Posições 015-017: Código de movimento
       codigoMovimento: linha.substring(14, 17).trim(),
 
-      // Posições 018-062: Código de barras (45 posições)
-      codigoBarras: linha.substring(17, 62).trim(),
+      // ✅ CORREÇÃO CRÍTICA: Baseado na análise do arquivo, códigos de barras de tributos
+      // geralmente estão em posições diferentes dos títulos de cobrança
+      codigoBarras: linha.substring(17, 65).trim(), // Posições 18-65 (48 caracteres)
 
-      // Posições 063-065: Identificação adicional (ex: "991")
-      identificacaoComplementar: linha.substring(62, 65).trim(),
+      // Nome da concessionária/órgão após o código de barras
+      nomeConcessionaria: linha.substring(65, 105).trim(), // Posições 66-105 (40 caracteres)
 
-      // Posições 066-095: Nome da concessionária/órgão/favorecido (30 posições)
-      nomeConcessionaria: linha.substring(65, 95).trim(),
+      // Data de vencimento
+      dataVencimento: linha.substring(105, 113).trim(), // Posições 106-113 (8 caracteres)
 
-      // Posições 096-103: Data de vencimento (DDMMAAAA)
-      dataVencimento: linha.substring(95, 103).trim(),
+      // ✅ CORREÇÃO CRÍTICA: Valor do documento/tributo
+      // Para tributos, o valor pode estar em posições específicas
+      valorDocumento: linha.substring(113, 128).trim(), // Posições 114-128 (15 caracteres)
+      valorPago: linha.substring(113, 128).trim(), // Campo duplicado para compatibilidade
 
-      // ✅ CORREÇÃO CRÍTICA: Posições 130-136 (7 caracteres) - Valor do tributo/documento
-      // Análise confirmou: valores estão na posição 129 (130-136)
-      // SANEAMENTO: 12926 (5 dígitos), BARTE: 2450004 (7 dígitos)
-      valorDocumento: linha.substring(129, 136).trim(),
-      valorPago: linha.substring(129, 136).trim(), // Campo duplicado para compatibilidade
+      // Valor de desconto/abatimento
+      valorDesconto: linha.substring(128, 143).trim(), // Posições 129-143 (15 caracteres)
 
-      // Posições 136-148: Desconto/abatimento (ajustado após correção)
-      valorDesconto: linha.substring(135, 148).trim(),
+      // Data do pagamento
+      dataPagamento: linha.substring(143, 151).trim(), // Posições 144-151 (8 caracteres)
 
-      // Posições 149-156: Data do pagamento (DDMMAAAA)
-      dataPagamento: linha.substring(148, 156).trim(),
+      // Valor real efetivado
+      valorEfetivado: linha.substring(151, 166).trim(), // Posições 152-166 (15 caracteres)
 
-      // Posições 157-171: Valor real efetivado (15 posições, com 2 decimais)
-      valorEfetivado: linha.substring(156, 171).trim(),
+      // Referência/nosso número
+      referencia: linha.substring(166, 186).trim(), // Posições 167-186 (20 caracteres)
 
-      // Posições 172-191: Referência/nosso número (20 posições)
-      referencia: linha.substring(171, 191).trim(),
+      // Informações complementares
+      informacoesComplementares: linha.substring(186, 223).trim(), // Posições 187-223 (37 caracteres)
 
-      // Posições 192-228: Informações complementares (37 posições)
-      informacoesComplementares: linha.substring(191, 228).trim(),
-
-      // Posições 229-240: Uso exclusivo FEBRABAN/CNAB (12 posições)
-      usoFEBRABAN: linha.substring(228, 240).trim(),
+      // Uso exclusivo FEBRABAN/CNAB
+      usoFEBRABAN: linha.substring(223, 240).trim(), // Posições 224-240 (17 caracteres)
 
       // Metadados
       _metadata: {
@@ -454,8 +464,8 @@ export class SegmentoParser {
    * @returns {Object} Dados parseados conforme o segmento
    */
   static parse(linha) {
-    // Normalizar linha removendo caracteres extras (como \r\n)
-    linha = linha.trim();
+    // ✅ CORRIGIDO: Normalizar linha removendo apenas quebras de linha
+    linha = linha.replace(/\r?\n?$/g, '');
 
     if (!linha || linha.length < 240) {
       throw new Error(`Linha deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);

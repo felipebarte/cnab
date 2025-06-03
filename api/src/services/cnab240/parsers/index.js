@@ -22,8 +22,8 @@ export class CNAB240Parser {
    * @returns {Object} Informações sobre o tipo de registro
    */
   static detectType(linha) {
-    // Normalizar linha removendo caracteres extras (como \r\n)
-    linha = linha.trim();
+    // ✅ CORRIGIDO: Normalizar linha removendo apenas quebras de linha
+    linha = linha.replace(/\r?\n?$/g, '');
 
     if (!linha || linha.length < 240) {
       throw new Error(`Linha deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);

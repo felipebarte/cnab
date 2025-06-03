@@ -221,7 +221,57 @@ export class CnabUnifiedController {
 
       logger.processed(resultado);
 
-      return res.status(200).json({
+      // ✅ NOVO: Compilar todos os códigos de barras encontrados
+      const codigosBarras = [];
+
+      if (resultado.dadosEstruturados?.lotes) {
+        resultado.dadosEstruturados.lotes.forEach(lote => {
+          if (lote.detalhes) {
+            lote.detalhes.forEach(detalhe => {
+              // Códigos de barras de segmentos J (títulos)
+              if (detalhe.segmento === 'J' && detalhe.titulo?.codigoBarras) {
+                codigosBarras.push({
+                  tipo: 'titulo',
+                  segmento: 'J',
+                  codigo: detalhe.titulo.codigoBarras,
+                  favorecido: detalhe.titulo.nomeFavorecido,
+                  valor: detalhe.titulo.valorPago || detalhe.titulo.valorTitulo,
+                  dataVencimento: detalhe.titulo.dataVencimento,
+                  dataPagamento: detalhe.titulo.dataPagamento
+                });
+              }
+
+              // Códigos de barras de segmentos O (tributos)
+              if (detalhe.segmento === 'O' && detalhe.tributo?.codigoBarras) {
+                codigosBarras.push({
+                  tipo: 'tributo',
+                  segmento: 'O',
+                  codigo: detalhe.tributo.codigoBarras,
+                  concessionaria: detalhe.tributo.nomeConcessionaria,
+                  valor: detalhe.tributo.valorPago || detalhe.tributo.valorDocumento,
+                  dataVencimento: detalhe.tributo.dataVencimento,
+                  dataPagamento: detalhe.tributo.dataPagamento
+                });
+              }
+
+              // Fallback: verificar diretamente nos dados originais
+              if (!detalhe.titulo?.codigoBarras && !detalhe.tributo?.codigoBarras && detalhe.dadosOriginais?.codigoBarras) {
+                codigosBarras.push({
+                  tipo: 'outro',
+                  segmento: detalhe.segmento,
+                  codigo: detalhe.dadosOriginais.codigoBarras,
+                  favorecido: detalhe.dadosOriginais.nomeFavorecido || 'N/A',
+                  valor: detalhe.dadosOriginais.valorPago || detalhe.dadosOriginais.valorTitulo || detalhe.dadosOriginais.valorDocumento,
+                  observacao: 'Extraído dos dados originais'
+                });
+              }
+            });
+          }
+        });
+      }
+
+      // ✅ MELHORADO: Resposta mais completa incluindo códigos de barras
+      const response = {
         sucesso: true,
         mensagem: `Arquivo ${formato.nome} processado com sucesso via detecção automática`,
         dados: resultado.dadosEstruturados || resultado.dados,
@@ -237,8 +287,14 @@ export class CnabUnifiedController {
           tipo: req.file.mimetype,
         },
         operationId,
-        dataProcessamento: resultado.dataProcessamento || new Date().toISOString()
-      });
+        dataProcessamento: resultado.dataProcessamento || new Date().toISOString(),
+        codigosBarras: {
+          total: codigosBarras.length,
+          lista: codigosBarras
+        }
+      };
+
+      return res.status(200).json(response);
 
     } catch (error) {
       logger.error(error, 'processing');
@@ -334,7 +390,57 @@ export class CnabUnifiedController {
 
       logger.processed(resultado);
 
-      return res.status(200).json({
+      // ✅ NOVO: Compilar todos os códigos de barras encontrados
+      const codigosBarras = [];
+
+      if (resultado.dadosEstruturados?.lotes) {
+        resultado.dadosEstruturados.lotes.forEach(lote => {
+          if (lote.detalhes) {
+            lote.detalhes.forEach(detalhe => {
+              // Códigos de barras de segmentos J (títulos)
+              if (detalhe.segmento === 'J' && detalhe.titulo?.codigoBarras) {
+                codigosBarras.push({
+                  tipo: 'titulo',
+                  segmento: 'J',
+                  codigo: detalhe.titulo.codigoBarras,
+                  favorecido: detalhe.titulo.nomeFavorecido,
+                  valor: detalhe.titulo.valorPago || detalhe.titulo.valorTitulo,
+                  dataVencimento: detalhe.titulo.dataVencimento,
+                  dataPagamento: detalhe.titulo.dataPagamento
+                });
+              }
+
+              // Códigos de barras de segmentos O (tributos)
+              if (detalhe.segmento === 'O' && detalhe.tributo?.codigoBarras) {
+                codigosBarras.push({
+                  tipo: 'tributo',
+                  segmento: 'O',
+                  codigo: detalhe.tributo.codigoBarras,
+                  concessionaria: detalhe.tributo.nomeConcessionaria,
+                  valor: detalhe.tributo.valorPago || detalhe.tributo.valorDocumento,
+                  dataVencimento: detalhe.tributo.dataVencimento,
+                  dataPagamento: detalhe.tributo.dataPagamento
+                });
+              }
+
+              // Fallback: verificar diretamente nos dados originais
+              if (!detalhe.titulo?.codigoBarras && !detalhe.tributo?.codigoBarras && detalhe.dadosOriginais?.codigoBarras) {
+                codigosBarras.push({
+                  tipo: 'outro',
+                  segmento: detalhe.segmento,
+                  codigo: detalhe.dadosOriginais.codigoBarras,
+                  favorecido: detalhe.dadosOriginais.nomeFavorecido || 'N/A',
+                  valor: detalhe.dadosOriginais.valorPago || detalhe.dadosOriginais.valorTitulo || detalhe.dadosOriginais.valorDocumento,
+                  observacao: 'Extraído dos dados originais'
+                });
+              }
+            });
+          }
+        });
+      }
+
+      // ✅ MELHORADO: Resposta mais completa incluindo códigos de barras
+      const response = {
         sucesso: true,
         mensagem: `Conteúdo ${formato.nome} processado com sucesso via detecção automática`,
         dados: resultado.dadosEstruturados || resultado.dados,
@@ -346,7 +452,9 @@ export class CnabUnifiedController {
         informacoesArquivo: resultado.informacoesArquivo,
         operationId,
         dataProcessamento: resultado.dataProcessamento || new Date().toISOString()
-      });
+      };
+
+      return res.status(200).json(response);
 
     } catch (error) {
       logger.error(error, 'processing');
