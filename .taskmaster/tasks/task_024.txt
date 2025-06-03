@@ -1,37 +1,11 @@
 # Task ID: 24
-# Title: Implementar Funcionalidades Avançadas Swap Financial
+# Title: Configure CORS and Security Headers
 # Status: pending
-# Dependencies: 23
-# Priority: medium
-# Description: Implementar funcionalidades avançadas para otimização e escalabilidade da integração Swap Financial
+# Dependencies: 12
+# Priority: high
+# Description: Set up CORS and configure security headers for the application.
 # Details:
-Incluir sistema de filas para processamento assíncrono, cache distribuído, auditoria completa, relatórios analíticos e otimizações de performance
+Ensure CORS is configured correctly to allow safe cross-origin requests. Set security headers to protect against common vulnerabilities.
 
 # Test Strategy:
-
-
-# Subtasks:
-## 1. Implementar Sistema de Filas para Processamento Assíncrono [pending]
-### Dependencies: None
-### Description: Criar sistema de filas com BullMQ para processamento assíncrono de boletos
-### Details:
-Implementar filas para: verificação de boletos, processamento de pagamentos, retry de falhas, notificações. Incluir dashboard de monitoramento de filas, priority queues, workers escaláveis e dead letter queues para erros persistentes.
-
-## 2. Implementar Cache Distribuído Redis [pending]
-### Dependencies: 24.1
-### Description: Configurar cache distribuído para otimização de performance
-### Details:
-Implementar cache para tokens de autenticação, dados de boletos verificados, resultados de consultas frequentes. Incluir estratégias de invalidação, TTL inteligente, cache warming e fallback para casos de falha do cache.
-
-## 3. Implementar Sistema de Auditoria Completa [pending]
-### Dependencies: 24.2
-### Description: Criar sistema de auditoria para todas as operações Swap Financial
-### Details:
-Implementar logs de auditoria para: tentativas de autenticação, verificações de boleto, pagamentos processados, erros e falhas. Incluir rastreabilidade completa, correlação de IDs, retention policies e compliance com regulamentações financeiras.
-
-## 4. Criar Dashboard e Relatórios Analíticos [pending]
-### Dependencies: 24.3
-### Description: Desenvolver dashboard para monitoramento e relatórios da integração
-### Details:
-Criar dashboard web com: status de pagamentos em tempo real, estatísticas de performance, análise de erros, relatórios financeiros, alertas visuais. Incluir exportação de relatórios, filtros avançados e visualizações interativas.
-
+Test API requests from different origins and verify security headers are correctly applied.

@@ -1,15 +1,11 @@
 # Task ID: 15
-# Title: Atualizar Documentação Swagger
+# Title: Document Technical Implementation
 # Status: pending
-# Dependencies: 10
-# Priority: medium
-# Description: Documentação completa da API refatorada com novos recursos
+# Dependencies: 1
+# Priority: low
+# Description: Create and update technical documentation for the project.
 # Details:
-- Documentar todos os novos endpoints universais
-- Documentar endpoints de pagamento
-- Exemplos de uso para cada banco
-- Schemas de request/response
-- Guias de migração
+Document the architecture, API integrations, and key components of the application. Ensure documentation is clear and accessible.
 
 # Test Strategy:
-Verificar se toda funcionalidade está documentada e exemplos funcionam
+Review documentation for completeness and clarity.

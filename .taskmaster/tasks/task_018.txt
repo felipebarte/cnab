@@ -1,15 +1,11 @@
 # Task ID: 18
-# Title: Validação Final e Critérios de Sucesso
+# Title: Create Audit Logs for Approvals
 # Status: pending
-# Dependencies: 17
-# Priority: high
-# Description: Validação final de todos os critérios de sucesso do projeto
+# Dependencies: 5
+# Priority: medium
+# Description: Implement logging for approval actions for audit purposes.
 # Details:
-- Verificar processamento de todos os 8 bancos
-- Validar precisão ≥99% na extração de códigos
-- Confirmar uptime ≥99.9% da integração
-- Verificar redução de 50% no tempo de processamento
-- Validar 100% compatibilidade com endpoints atuais
+Develop a logging system to track all approval and rejection actions, ensuring logs are detailed and secure.
 
 # Test Strategy:
-Executar checklist completo de critérios de sucesso e validar métricas
+Perform approval actions and verify that logs are accurately recorded.

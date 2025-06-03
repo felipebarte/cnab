@@ -1,15 +1,43 @@
 # Task ID: 5
-# Title: Implementar CnabParserService
-# Status: done
-# Dependencies: 3, 4
+# Title: Implement Approval System API
+# Status: pending
+# Dependencies: 1
 # Priority: high
-# Description: Criar parser universal para extrair dados estruturados dos arquivos CNAB
+# Description: Develop the API integration for creating and managing approval batches.
 # Details:
-- Parser universal para CNAB 240 e 400
-- Extração estruturada de dados
-- Suporte a todos os bancos do cnab_yaml
-- Otimização para arquivos grandes
-- Integração com validador
+Create API endpoints for batch approval creation, approval/rejection flows, and logging. Ensure state persistence for approvals.
 
 # Test Strategy:
-Verificar parsing correto de arquivos CNAB de diferentes tamanhos e bancos
+Test API endpoints with various approval scenarios and verify state persistence.
+
+# Subtasks:
+## 1. Design API Endpoints [pending]
+### Dependencies: None
+### Description: Design the structure and specifications for the API endpoints required for batch approval creation and management.
+### Details:
+Define the endpoints for creating approval batches, managing approval/rejection flows, and logging.
+
+## 2. Develop Batch Approval Creation Endpoint [pending]
+### Dependencies: 5.1
+### Description: Implement the API endpoint for creating approval batches.
+### Details:
+Develop the backend logic and database interactions for creating new approval batches.
+
+## 3. Implement Approval/Rejection Flows [pending]
+### Dependencies: 5.2
+### Description: Develop the API logic for handling approval and rejection actions within a batch.
+### Details:
+Create the necessary logic to update approval states and manage transitions between approved and rejected states.
+
+## 4. Develop Logging Mechanism [pending]
+### Dependencies: 5.3
+### Description: Implement logging for all actions performed through the approval system API.
+### Details:
+Ensure that all API interactions are logged for audit and debugging purposes.
+
+## 5. Ensure State Persistence [pending]
+### Dependencies: 5.4
+### Description: Verify and ensure that the state of approvals is consistently persisted across the system.
+### Details:
+Implement mechanisms to maintain state consistency and recoverability in case of failures.
+

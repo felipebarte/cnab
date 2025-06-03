@@ -1,14 +1,43 @@
 # Task ID: 2
-# Title: Implementar CnabSchemaLoader
-# Status: done
+# Title: Implement API Integration for Resultados
+# Status: pending
 # Dependencies: 1
 # Priority: high
-# Description: Criar serviço para carregar e cachear schemas YAML dos bancos suportados
+# Description: Integrate the frontend with the backend APIs to fetch processed results.
 # Details:
-- Implementar carregamento dinâmico de schemas do cnab_yaml
-- Adicionar cache para schemas carregados
-- Suportar todos os 8 bancos: BB (001), Santander (033), Banrisul (041), Caixa (104), Bradesco (237), Itaú (341), Sicredi (748), Sicoob (756)
-- Implementar validação de schema
+Use Axios to implement API calls to GET /api/v1/cnab/resultados and GET /api/v1/cnab/resultados/:operationId. Store operationIds locally using localStorage or IndexedDB for persistence.
 
 # Test Strategy:
-Testar carregamento de schemas de todos os bancos suportados e verificar cache
+Mock API responses and verify that data is correctly fetched and stored locally.
+
+# Subtasks:
+## 1. Set Up Axios for API Calls [pending]
+### Dependencies: None
+### Description: Install and configure Axios in the frontend project to handle API requests.
+### Details:
+Ensure Axios is installed via npm or yarn and configure a base URL for the API endpoints.
+
+## 2. Implement GET /api/v1/cnab/resultados [pending]
+### Dependencies: 2.1
+### Description: Create a function to fetch all results using the GET /api/v1/cnab/resultados endpoint.
+### Details:
+Use Axios to send a GET request to the endpoint and handle the response data appropriately.
+
+## 3. Implement GET /api/v1/cnab/resultados/:operationId [pending]
+### Dependencies: 2.1
+### Description: Create a function to fetch specific results using the GET /api/v1/cnab/resultados/:operationId endpoint.
+### Details:
+Use Axios to send a GET request with a dynamic operationId and handle the response data.
+
+## 4. Store operationIds Locally [pending]
+### Dependencies: 2.2, 2.3
+### Description: Implement local storage of operationIds using localStorage or IndexedDB for persistence.
+### Details:
+Decide between localStorage and IndexedDB based on data size and complexity, and implement the storage solution.
+
+## 5. Integrate API Calls with Frontend [pending]
+### Dependencies: 2.2, 2.3, 2.4
+### Description: Connect the API functions to the frontend components to display the fetched results.
+### Details:
+Ensure the frontend components call the API functions and display the results to the user.
+

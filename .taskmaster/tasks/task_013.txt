@@ -1,15 +1,11 @@
 # Task ID: 13
-# Title: Implementar Logging Estruturado
+# Title: Develop Reporting and Export Features
 # Status: pending
-# Dependencies: 8
+# Dependencies: 6
 # Priority: medium
-# Description: Sistema de logging completo para todas as operações
+# Description: Implement features for generating and exporting reports.
 # Details:
-- Logging estruturado com Winston
-- Logs de integração com APIs externas
-- Logs de processamento CNAB
-- Logs de performance e erros
-- Configuração de níveis de log
+Create functionality to generate payment reports and export them in various formats. Implement advanced filtering options and scheduling capabilities.
 
 # Test Strategy:
-Verificar logs estruturados em todas as operações críticas
+Generate reports with different filters and verify export functionality.

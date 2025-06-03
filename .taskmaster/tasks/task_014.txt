@@ -1,15 +1,11 @@
 # Task ID: 14
-# Title: Criar Testes de Integração
+# Title: Setup Unit and Integration Testing
 # Status: pending
-# Dependencies: 5, 8
-# Priority: high
-# Description: Suite completa de testes de integração com arquivos CNAB reais
+# Dependencies: 1
+# Priority: medium
+# Description: Establish a testing framework for unit and integration tests.
 # Details:
-- Testes com arquivos CNAB reais de todos os bancos
-- Testes de performance para arquivos grandes
-- Testes de integração com API externa
-- Cobertura mínima de 90%
-- Testes de carga (1000 req/min)
+Use Jest and React Testing Library to write unit and integration tests for critical components and features.
 
 # Test Strategy:
-Executar suite completa de testes e verificar cobertura ≥90%
+Run tests to ensure all components and features work as expected.

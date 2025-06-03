@@ -1,204 +1,141 @@
-# PRD - Refatoração Sistema CNAB com cnab_yaml
+# PRD - Integração e Melhorias do Frontend CNAB
 
-## Visão Geral do Projeto
+## 1. Visão Geral
 
-**Nome do Projeto:** Refatoração Sistema CNAB Universal com cnab_yaml
-**Versão:** 2.0.0
-**Data:** Janeiro 2025
+Este documento descreve as tarefas necessárias para completar a integração do frontend React/TypeScript com o backend da API CNAB e implementar funcionalidades faltantes para um sistema completo de gestão de pagamentos CNAB.
 
-## Problema Atual
+## 2. Contexto Atual
 
-O sistema atual de processamento CNAB possui as seguintes limitações críticas:
+### 2.1 Estado Atual do Frontend
+- React + TypeScript com Vite
+- Shadcn/UI para componentes
+- TanStack Query para gerenciamento de estado
+- Upload e processamento de CNAB funcionando
+- Interface de usuário completa mas parcialmente integrada
 
-1. **Dependência única**: Usa apenas `cnab400-itau-parser` limitado ao banco Itaú
-2. **Inconsistência**: Lógicas diferentes para CNAB 400 vs CNAB 240
-3. **Manutenção complexa**: Validadores CNAB 240 implementados manualmente
-4. **Escalabilidade limitada**: Difícil adicionar novos bancos
-5. **Falta de integração**: Não conecta com APIs externas de pagamento
-6. **Schemas dispersos**: Validações hardcoded sem padronização
+### 2.2 APIs Backend Disponíveis
+- POST /api/v1/cnab/processar-auto/upload - Funcionando
+- POST /api/v1/cnab/detectar-formato - Funcionando  
+- POST /api/v1/cnab/validar-auto - Funcionando
+- POST /api/v1/cnab/webhook-auto/upload - Funcionando
+- GET /api/v1/cnab/resultados - Disponível
+- GET /api/v1/cnab/resultados/:operationId - Disponível
 
-## Objetivos da Refatoração
+## 3. Objetivos e Funcionalidades
 
-### Objetivo Principal
-Criar um sistema CNAB universal que utilize o repositório `@banco-br/cnab_yaml` como fonte única de verdade para layouts CNAB, com capacidade de processar arquivos de múltiplos bancos e integrar com APIs externas de pagamento.
+### 3.1 Integração com APIs de Resultados
+- Implementar busca de resultados processados
+- Implementar listagem de histórico de operações
+- Sistema de polling para atualizações em tempo real
+- Persistência local de operationIds
 
-### Objetivos Específicos
+### 3.2 Dashboard com Dados Reais
+- Conectar dashboard com dados do backend
+- Estatísticas baseadas em resultados reais
+- Gráficos e métricas de performance
+- Filtros por período e status
 
-1. **Unificação**: Sistema único para CNAB 240 e 400
-2. **Multi-banco**: Suporte a todos os bancos do cnab_yaml (Itaú, Bradesco, Santander, BB, Caixa, etc.)
-3. **Validação robusta**: Baseada em schemas YAML oficiais
-4. **Integração de pagamento**: Pipeline completo até API externa
-5. **Compatibilidade**: Manter endpoints atuais funcionando
-6. **Escalabilidade**: Arquitetura para fácil adição de novos bancos
-7. **Documentação**: Swagger atualizado com novos recursos
+### 3.3 Sistema de Aprovações Integrado
+- API para criação de lotes de aprovação
+- Fluxo completo de aprovação/rejeição
+- Notificações e logs de auditoria
+- Estados de aprovação persistidos
 
-## Requisitos Funcionais
+### 3.4 Gestão de Pagamentos
+- CRUD completo de pagamentos
+- Integração com dados de CNAB processados
+- Status tracking e atualizações
+- Validações e regras de negócio
 
-### RF001 - Sistema CNAB Universal
-- Detectar automaticamente formato (240/400) e banco
-- Processar arquivos de qualquer banco suportado pelo cnab_yaml
-- Validar usando schemas oficiais do repositório
+### 3.5 Sistema de Autenticação
+- Login/logout de usuários
+- Controle de acesso por roles
+- Proteção de rotas sensíveis
+- Gestão de sessões
 
-### RF002 - Extração de Dados de Pagamento
-- Extrair códigos de barras, linhas digitáveis e dados de pagamento
-- Validar códigos de barras com algoritmos corretos
-- Estruturar dados para integração com APIs externas
+### 3.6 Melhorias de UX/UI
+- Loading states apropriados
+- Error boundaries e tratamento de erros
+- Notificações e feedback visual
+- Responsividade e acessibilidade
 
-### RF003 - Integração com API Externa
-- Enviar lotes de pagamento para APIs SWAP Financial
-- Implementar retry logic e error handling
-- Logging completo de integrações
+### 3.7 Relatórios e Exportações
+- Geração de relatórios de pagamentos
+- Exportação em diferentes formatos
+- Filtros avançados
+- Agendamento de relatórios
 
-### RF004 - Validação Multi-Camada
-- Validação estrutural (tamanho de linhas)
-- Validação de campos (usando schemas YAML)
-- Validação de integridade (checksums, totalizadores)
-- Validação de regras de negócio
+## 4. Tecnologias e Ferramentas
 
-### RF005 - Backwards Compatibility
-- Manter todos os endpoints atuais funcionando
-- Implementar novos endpoints em paralelo
-- Fornecer path de migração gradual
+### 4.1 Stack Atual
+- React 18 + TypeScript
+- Vite para build
+- TanStack Query
+- Axios para HTTP
+- Shadcn/UI
+- React Router
+- Sonner para notificações
 
-### RF006 - Caching e Performance
-- Cache de schemas carregados
-- Cache de instâncias CNAB por banco
-- Otimização de processamento de arquivos grandes
+### 4.2 Padrões de Desenvolvimento
+- Componentização reutilizável
+- TypeScript strict mode
+- Error handling robusto
+- Performance otimizada
+- Testes unitários e integração
 
-## Requisitos Técnicos
+## 5. Critérios de Aceitação
 
-### RT001 - Dependências
-- Adicionar `@banco-br/cnab_yaml` v2.1.0+
-- Adicionar `@banco-br/nodejs-cnab` 
-- Adicionar `js-yaml` para parsing de schemas
-- Manter `cnab400-itau-parser` para compatibilidade
+### 5.1 Funcionalidades Core
+- Upload e processamento de CNAB funcionando 100%
+- Dashboard mostrando dados reais do backend
+- Sistema de aprovações completamente integrado
+- CRUD de pagamentos funcionando
+- Autenticação e autorização implementadas
 
-### RT002 - Arquitetura
-- Implementar padrão Service Layer
-- Usar Factory Pattern para instâncias CNAB
-- Implementar Strategy Pattern para diferentes bancos
-- Aplicar Decorator Pattern para validações
+### 5.2 Qualidade e Performance
+- Tempo de carregamento < 3 segundos
+- Interface responsiva em todos os dispositivos
+- Tratamento de erros em todos os fluxos
+- Notificações claras para todas as ações
+- Validações client-side e server-side
 
-### RT003 - Estrutura de Pastas
-```
-src/services/cnab/
-├── CnabUniversalService.js      # Serviço principal
-├── CnabValidatorService.js      # Validação universal
-├── CnabParserService.js         # Parser universal
-├── CnabSchemaLoader.js          # Carregador de schemas
-└── legacy/                      # Compatibilidade
-src/services/payment/
-├── PaymentExtractorService.js   # Extração de pagamentos
-└── PaymentValidatorService.js   # Validação de códigos
-src/services/integration/
-└── ExternalAPIService.js        # Integração API externa
-```
+### 5.3 Segurança
+- Rotas protegidas por autenticação
+- Validação de dados de entrada
+- Sanitização de inputs
+- Headers de segurança configurados
 
-### RT004 - Testes
-- Cobertura mínima de 90% para novos serviços
-- Testes de integração com arquivos CNAB reais
-- Testes de performance para arquivos grandes
-- Testes de compatibilidade com endpoints antigos
+## 6. Limitações e Restrições
 
-## Bancos a Suportar
+### 6.1 Técnicas
+- Manter compatibilidade com APIs existentes
+- Não quebrar funcionalidades já implementadas
+- Usar tecnologias já estabelecidas no projeto
 
-Baseado no repositório cnab_yaml:
-- **001** - Banco do Brasil
-- **033** - Banco Santander  
-- **041** - Banco do Estado do Rio Grande do Sul (Banrisul)
-- **104** - Caixa Econômica Federal
-- **237** - Banco Bradesco
-- **341** - Banco Itaú (atual)
-- **748** - Banco Cooperativo Sicredi
-- **756** - Banco Cooperativo do Brasil (Sicoob)
+### 6.2 Temporais
+- Implementação incremental para não interromper desenvolvimento
+- Priorizar funcionalidades core primeiro
+- Manter versionamento e rollback possível
 
-## Endpoints a Implementar
+## 7. Dependências
 
-### Novos Endpoints Universais
-- `POST /api/v1/cnab/universal/processar` - Processamento universal
-- `POST /api/v1/cnab/universal/upload` - Upload universal
-- `POST /api/v1/cnab/universal/validar` - Validação universal
-- `POST /api/v1/cnab/universal/pagamentos` - Extrair e enviar pagamentos
-- `GET /api/v1/cnab/universal/bancos` - Listar bancos suportados
-- `GET /api/v1/cnab/universal/schemas/{banco}` - Schemas de banco específico
+### 7.1 Backend
+- APIs de resultados devem estar funcionando
+- Endpoints de autenticação disponíveis
+- Sistema de webhook configurado
 
-### Endpoints de Integração
-- `POST /api/v1/pagamentos/lote` - Enviar lote para API externa
-- `GET /api/v1/pagamentos/status/{loteId}` - Status do lote
-- `POST /api/v1/pagamentos/webhook` - Receber notificações
+### 7.2 Infraestrutura
+- CORS configurado adequadamente
+- SSL/TLS em produção
+- Monitoramento e logs
 
-## Critérios de Sucesso
+## 8. Entregáveis
 
-### Funcionais
-- [ ] Processar arquivos CNAB de todos os 8 bancos suportados
-- [ ] Validação 100% baseada em schemas oficiais
-- [ ] Extrair códigos de barras com 99%+ de precisão
-- [ ] Integração com API externa com 99.9% de uptime
-- [ ] Manter 100% compatibilidade com endpoints atuais
-
-### Técnicos
-- [ ] Reduzir tempo de processamento em 50%
-- [ ] Cobertura de testes ≥ 90%
-- [ ] Documentação Swagger 100% atualizada
-- [ ] Zero breaking changes nos endpoints existentes
-- [ ] Logging estruturado para todas as operações
-
-### Performance
-- [ ] Processar arquivos de até 100MB em < 30 segundos
-- [ ] Suportar 1000 requisições/min simultâneas
-- [ ] Tempo de resposta API externa < 5 segundos
-- [ ] Cache hit rate > 80% para schemas
-
-## Fases de Implementação
-
-### Fase 1: Fundação (2 semanas)
-- Configurar dependências e estrutura
-- Implementar serviços base (CnabUniversalService, CnabSchemaLoader)
-- Testes unitários básicos
-
-### Fase 2: Core Features (3 semanas)  
-- Implementar parsing e validação universal
-- Extração de dados de pagamento
-- Testes de integração
-
-### Fase 3: Integração (2 semanas)
-- Serviço de integração com API externa
-- Endpoints universais
-- Documentação Swagger
-
-### Fase 4: Compatibilidade (1 semana)
-- Garantir backwards compatibility
-- Testes de regressão
-- Deployment e monitoramento
-
-## Riscos e Mitigações
-
-### Alto Risco
-- **Schemas incompatíveis**: Mitigação via testes extensivos com arquivos reais
-- **Performance degradada**: Mitigação via profiling e otimização
-- **Breaking changes**: Mitigação via testes de compatibilidade
-
-### Médio Risco  
-- **Dependências externas**: Mitigação via fallbacks e circuit breakers
-- **Complexidade de validação**: Mitigação via implementação incremental
-
-## Tecnologias
-
-- **Core**: Node.js 18+, Express.js
-- **CNAB**: @banco-br/cnab_yaml, @banco-br/nodejs-cnab
-- **Validação**: js-yaml, joi
-- **Testes**: Jest, Supertest
-- **Documentação**: Swagger/OpenAPI 3.0
-- **Logging**: Winston/Morgan estruturado
-- **Cache**: Node.js Map (futuro: Redis)
-
-## Definição de Pronto
-
-Uma task está pronta quando:
-- [ ] Código implementado e funcionando
-- [ ] Testes unitários com cobertura ≥ 90%
-- [ ] Testes de integração passando
-- [ ] Documentação atualizada
-- [ ] Code review aprovado
-- [ ] Nenhum lint error
-- [ ] Compatibilidade verificada 
+1. Integração completa com APIs de resultados
+2. Dashboard funcional com dados reais
+3. Sistema de aprovações operacional
+4. CRUD de pagamentos implementado
+5. Autenticação e autorização funcionando
+6. Relatórios e exportações disponíveis
+7. Testes unitários e de integração
+8. Documentação técnica atualizada 

@@ -1,15 +1,11 @@
 # Task ID: 3
-# Title: Implementar CnabUniversalService
-# Status: done
+# Title: Develop Real-time Polling System
+# Status: pending
 # Dependencies: 2
-# Priority: high
-# Description: Criar serviço principal que detecta automaticamente formato e banco
+# Priority: medium
+# Description: Implement a polling system to update results in real-time.
 # Details:
-- Detectar automaticamente formato CNAB (240/400)
-- Identificar banco automaticamente
-- Aplicar padrão Factory para instâncias CNAB
-- Implementar Strategy Pattern para diferentes bancos
-- Integrar com CnabSchemaLoader
+Use setInterval to periodically call the API endpoints and update the UI with new data. Ensure efficient polling to minimize server load.
 
 # Test Strategy:
-Testar detecção automática de formato e banco com arquivos CNAB reais de diferentes bancos
+Simulate server updates and verify that the UI reflects changes in near real-time.

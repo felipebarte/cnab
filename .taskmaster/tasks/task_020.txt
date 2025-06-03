@@ -1,49 +1,11 @@
 # Task ID: 20
-# Title: Implementar APIs de Consulta e Relatórios
+# Title: Develop Advanced Filtering for Reports
 # Status: pending
-# Dependencies: 19
+# Dependencies: 13
 # Priority: medium
-# Description: Criar endpoints para consultar dados CNAB armazenados e gerar relatórios
+# Description: Enhance report generation with advanced filtering options.
 # Details:
-Desenvolver APIs RESTful para consulta de dados históricos CNAB
+Implement complex filtering logic for report generation, allowing users to filter by multiple criteria such as date range, status, and type.
 
 # Test Strategy:
-
-
-# Subtasks:
-## 1. Criar Endpoints de Consulta Básica [pending]
-### Dependencies: None
-### Description: Implementar endpoints básicos para consultar arquivos e registros CNAB
-### Details:
-- GET /api/v1/cnab/arquivos - Listar arquivos processados
-- GET /api/v1/cnab/arquivos/:id - Detalhes de um arquivo
-- GET /api/v1/cnab/registros - Listar registros com filtros
-- GET /api/v1/cnab/registros/:id - Detalhes de um registro
-- Implementar paginação padrão
-- Adicionar filtros por data, banco, status
-- Incluir contadores e totalizadores
-
-## 2. Implementar Endpoints de Relatórios [pending]
-### Dependencies: 20.1
-### Description: Criar endpoints para gerar relatórios e estatísticas dos dados CNAB
-### Details:
-- GET /api/v1/cnab/relatorios/resumo - Resumo geral por período
-- GET /api/v1/cnab/relatorios/banco/:codigo - Relatório por banco
-- GET /api/v1/cnab/relatorios/financeiro - Relatório financeiro
-- GET /api/v1/cnab/relatorios/pagamentos - Status de pagamentos
-- Implementar agregações e totalizadores
-- Suporte a exportação JSON/CSV
-- Cache de relatórios pesados
-
-## 3. Implementar Busca Avançada e Filtros [pending]
-### Dependencies: 20.1
-### Description: Criar sistema de busca avançada com múltiplos filtros e ordenação
-### Details:
-- Busca por documento/CPF/CNPJ do pagador
-- Filtros por valor (faixa de valores)
-- Filtros por data de vencimento e pagamento
-- Busca por nosso número e número do documento
-- Filtros por status de pagamento
-- Ordenação por múltiplos campos
-- Filtros combinados com operadores AND/OR
-
+Generate reports using advanced filters and verify accuracy and performance.

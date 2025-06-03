@@ -1,15 +1,11 @@
 # Task ID: 11
-# Title: Implementar Cache e Performance
+# Title: Ensure Application Responsiveness
 # Status: pending
-# Dependencies: 3
+# Dependencies: 1
 # Priority: medium
-# Description: Otimizar performance com cache de schemas e instâncias CNAB
+# Description: Make the application responsive across all devices.
 # Details:
-- Cache de schemas carregados
-- Cache de instâncias CNAB por banco
-- Otimização para arquivos grandes (>100MB)
-- Profiling e monitoramento de performance
-- Target: processar 100MB em <30s
+Use CSS media queries and responsive design principles to ensure the application works on different screen sizes and devices.
 
 # Test Strategy:
-Testar performance com arquivos de diferentes tamanhos e verificar cache hit rate >80%
+Test the application on various devices and screen sizes to ensure responsiveness.

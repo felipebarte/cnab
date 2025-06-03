@@ -1,61 +1,11 @@
 # Task ID: 23
-# Title: Implementar Integração com Swap Financial API
-# Status: done
-# Dependencies: 8
-# Priority: high
-# Description: Implementar sistema completo de integração com a API da Swap Financial para processamento e pagamento de boletos extraídos dos arquivos CNAB
+# Title: Enhance Accessibility Features
+# Status: pending
+# Dependencies: 1
+# Priority: medium
+# Description: Improve the accessibility of the application.
 # Details:
-Sistema deve incluir autenticação OAuth 2.0, verificação de boletos, processamento de pagamentos, gestão de erros e monitoramento completo
+Ensure the application meets WCAG 2.1 standards, focusing on keyboard navigation, screen reader support, and color contrast.
 
 # Test Strategy:
-
-
-# Subtasks:
-## 1. Implementar Sistema de Autenticação Swap Financial [done]
-### Dependencies: None
-### Description: Criar serviço de autenticação OAuth 2.0 para API da Swap Financial
-### Details:
-Implementar SwapAuthService com gestão de tokens, cache automático, renovação e suporte a STG/PROD. Incluir tratamento de erros 400, retry logic e validação de credenciais.
-
-## 2. Implementar Serviço de Verificação de Boletos [done]
-### Dependencies: 23.1
-### Description: Criar SwapBoletoService para verificar e validar boletos via API
-### Details:
-Implementar verificação de boletos via código de barras, validação de dados (payee, amount, due_date), suporte a tipos generic/utility_bill, tratamento de horários comerciais e validação de janela de pagamento.
-
-## 3. Criar Orquestrador CNAB-Swap [done]
-### Dependencies: 23.2
-### Description: Implementar CNABSwapOrchestrator para integrar dados CNAB com API Swap
-### Details:
-Criar orquestrador que processa boletos extraídos do CNAB, valida com Swap API, agenda pagamentos e gerencia o fluxo completo. Incluir mapeamento de dados CNAB para formato Swap, validação de compatibilidade e tratamento de inconsistências.
-
-## 4. Implementar Sistema de Tratamento de Erros [done]
-### Dependencies: 23.3
-### Description: Criar sistema robusto para tratamento de erros da API Swap Financial
-### Details:
-Implementar tratamento específico para códigos 422 (fora de horário, boleto já pago), 503 (serviço indisponível), 504 (timeout). Incluir retry logic inteligente, fallback strategies, logging estruturado e alertas de monitoramento.
-
-## 5. Configurar Sistema de Monitoramento e Métricas [done]
-### Dependencies: 23.4
-### Description: Implementar monitoramento completo para integração Swap Financial
-### Details:
-Configurar métricas para taxa de sucesso de autenticação, tempo de resposta da API, taxa de pagamentos bem-sucedidos, erros por tipo. Implementar dashboards, alertas e relatórios de performance. Integrar com Winston + Prometheus para coleta de métricas.
-
-## 6. Implementar Endpoints da API Swap Integration [done]
-### Dependencies: 23.3
-### Description: Criar endpoints REST para gerenciar a integração com Swap Financial
-### Details:
-Implementar endpoints para: /swap/auth (autenticação), /swap/boletos/check (verificação), /swap/boletos/pay (pagamento), /swap/status (status de pagamentos), /swap/health (health check). Incluir validação de entrada, documentação Swagger e tratamento de erros.
-
-## 7. Criar Testes de Integração e Unitários [done]
-### Dependencies: 23.6
-### Description: Implementar suite completa de testes para integração Swap Financial
-### Details:
-Criar testes unitários para todos os serviços (SwapAuthService, SwapBoletoService, CNABSwapOrchestrator), testes de integração com API real em ambiente de teste, mocks para desenvolvimento local, testes de carga e stress, validação de cenários de erro e recovery.
-
-## 8. Configurar Ambiente e Deployment [done]
-### Dependencies: 23.7
-### Description: Configurar ambientes de desenvolvimento, staging e produção
-### Details:
-Configurar variáveis de ambiente para STG/PROD, setup de Docker para desenvolvimento local, CI/CD pipeline para deployment automático, configuração de segurança para API keys, backup e recovery procedures, documentação de deployment.
-
+Conduct accessibility testing using tools like Axe and manual testing with screen readers.

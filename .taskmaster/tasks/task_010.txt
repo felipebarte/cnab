@@ -1,15 +1,11 @@
 # Task ID: 10
-# Title: Implementar Endpoints de Pagamento
+# Title: Develop Notification System
 # Status: pending
-# Dependencies: 8
+# Dependencies: 1
 # Priority: medium
-# Description: Criar endpoints para extração e envio de pagamentos
+# Description: Implement a notification system for user feedback.
 # Details:
-- POST /api/v1/cnab/universal/pagamentos
-- POST /api/v1/pagamentos/lote
-- GET /api/v1/pagamentos/status/{loteId}
-- POST /api/v1/pagamentos/webhook
-- Integração completa com ExternalAPIService
+Use Sonner to create a notification system that provides clear feedback for user actions and system events.
 
 # Test Strategy:
-Testar fluxo completo de extração e envio de pagamentos para API externa
+Trigger various user actions and verify that notifications are displayed appropriately.

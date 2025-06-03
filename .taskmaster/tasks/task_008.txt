@@ -1,16 +1,11 @@
 # Task ID: 8
-# Title: Implementar ExternalAPIService
-# Status: done
-# Dependencies: 7
+# Title: Enhance UX/UI with Loading States
+# Status: pending
+# Dependencies: 1
 # Priority: medium
-# Description: Serviço de integração com APIs externas para envio de lotes de pagamento
+# Description: Improve user experience by adding appropriate loading states.
 # Details:
-- Integração com APIs SWAP Financial
-- Implementar retry logic
-- Error handling robusto
-- Logging completo de integrações
-- Circuit breaker pattern
-- Webhook handling
+Implement loading indicators using Shadcn/UI components for asynchronous operations. Ensure smooth transitions and feedback.
 
 # Test Strategy:
-Testar integração com API externa mock e verificar retry logic e error handling
+Simulate slow network conditions and verify loading states are displayed correctly.
