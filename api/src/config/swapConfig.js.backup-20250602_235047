@@ -33,8 +33,8 @@ const swapConfig = {
 
   // URLs por ambiente
   urls: {
-    staging: 'https://api.staging.swapcards.com.br/beta_v3',
-    production: 'https://api.swapcards.com.br/beta_v3'
+    staging: 'https://api-stag.contaswap.io',
+    production: 'https://api-prod.contaswap.io'
   },
 
   // Configurações de cache de token

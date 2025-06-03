@@ -3,7 +3,6 @@ description: Guidelines for creating and maintaining Roo Code rules to ensure co
 globs: .roo/rules/*.md
 alwaysApply: true
 ---
-
 - **Required Rule Structure:**
   ```markdown
   ---
@@ -19,8 +18,9 @@ alwaysApply: true
 
 - **File References:**
   - Use `[filename](mdc:path/to/file)` ([filename](mdc:filename)) to reference files
-  - Example: [prisma.md](mdc:.roo/rules/prisma.md) for rule references
-  - Example: [schema.prisma](mdc:prisma/schema.prisma) for code references
+  - Example: [docker_server_check.md](mdc:.roo/rules/docker_server_check.md) for Docker rules
+  - Example: [dev_workflow.md](mdc:.roo/rules/dev_workflow.md) for workflow references
+  - Example: [taskmaster.md](mdc:.roo/rules/taskmaster.md) for task management
 
 - **Code Examples:**
   - Use language-specific code blocks
@@ -50,4 +50,10 @@ alwaysApply: true
   - Keep descriptions concise
   - Include both DO and DON'T examples
   - Reference actual code over theoretical examples
-  - Use consistent formatting across rules 
+  - Use consistent formatting across rules
+
+- **Available Rules:**
+  - [docker_server_check.md](mdc:.roo/rules/docker_server_check.md) - Verificação de containers Docker ativos
+  - [dev_workflow.mcd](mdc:.roo/rules/dev_workflow.md) - Fluxo de desenvolvimento com Task Master
+  - [taskmaster.md](mdc:.roo/rules/taskmaster.md) - Referência de comandos Task Master
+  - [self_improve.md](mdc:.roo/rules/self_improve.md) - Melhorias contínuas de regras 
