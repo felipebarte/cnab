@@ -3,6 +3,7 @@ import { getWelcome, getStatus } from '../controllers/apiController.js';
 import cnabRoutes from './cnabRoutes.js';
 import cnab240Routes from './cnab240Routes.js';
 import cnabUnifiedRoutes from './cnabUnifiedRoutes.js';
+import resultadosRoutes from './resultadosRoutes.js';
 import universalRoutes from './universal/universalRoutes.js';
 import compatibilityRoutes from './compatibilityRoutes.js';
 import swapRoutes from './swapRoutes.js';
@@ -33,6 +34,9 @@ router.use('/cnab240', cnab240Routes);
 
 // Rotas unificadas com detecção automática (novos endpoints inteligentes)
 router.use('/cnab', cnabUnifiedRoutes);
+
+// 🎯 ROTAS DE RESULTADOS (PRD) ✨
+router.use('/cnab/resultados', resultadosRoutes);
 
 // ✨ NOVAS ROTAS UNIVERSAIS ✨
 router.use('/cnab/universal', universalRoutes);

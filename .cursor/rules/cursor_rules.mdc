@@ -56,4 +56,5 @@ alwaysApply: true
   - [docker_server_check.mdc](mdc:.cursor/rules/docker_server_check.mdc) - Verificação de containers Docker ativos
   - [dev_workflow.mcd](mdc:.cursor/rules/dev_workflow.mdc) - Fluxo de desenvolvimento com Task Master
   - [taskmaster.mdc](mdc:.cursor/rules/taskmaster.mdc) - Referência de comandos Task Master
-  - [self_improve.mdc](mdc:.cursor/rules/self_improve.mdc) - Melhorias contínuas de regras 
+  - [self_improve.mdc](mdc:.cursor/rules/self_improve.mdc) - Melhorias contínuas de regras
+  - [component_verification.mdc](mdc:.cursor/rules/component_verification.mdc) - Verificação obrigatória de componentes existentes 

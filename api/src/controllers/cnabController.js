@@ -874,7 +874,7 @@ export class CnabController {
       if (file) {
         registros = await CnabRecord.findAll({
           where: { file_id: file.id },
-          order: [['sequencia', 'ASC']],
+          order: [['registro_sequencia', 'ASC']],
           limit: 100 // Limitar para não sobrecarregar
         });
       }
