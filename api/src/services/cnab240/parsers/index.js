@@ -22,9 +22,15 @@ export class CNAB240Parser {
    * @returns {Object} Informações sobre o tipo de registro
    */
   static detectType(linha) {
-    if (!linha || linha.length !== 240) {
-      throw new Error('Linha deve ter 240 caracteres');
+    // Normalizar linha removendo caracteres extras (como \r\n)
+    linha = linha.trim();
+
+    if (!linha || linha.length < 240) {
+      throw new Error(`Linha deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
     }
+
+    // Garantir exatamente 240 caracteres
+    linha = linha.substring(0, 240);
 
     const tipoRegistro = linha[7];
     const lote = linha.substring(3, 7);

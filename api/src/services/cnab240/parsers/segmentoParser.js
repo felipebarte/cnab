@@ -16,9 +16,15 @@ export class SegmentoParser {
    * @returns {Object} Dados do segmento A parseados
    */
   static parseSegmentoA(linha) {
-    if (!linha || linha.length !== 240) {
-      throw new Error('Linha de segmento A deve ter 240 caracteres');
+    // Normalizar linha removendo caracteres extras (como \r\n)
+    linha = linha.trim();
+
+    if (!linha || linha.length < 240) {
+      throw new Error(`Linha de segmento A deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
     }
+
+    // Garantir exatamente 240 caracteres
+    linha = linha.substring(0, 240);
 
     // Verificar se é realmente segmento A
     const segmento = linha[13];
@@ -125,9 +131,15 @@ export class SegmentoParser {
    * @returns {string} Subtipo identificado (J01, J02, etc.)
    */
   static identifyJSubtype(linha) {
-    if (!linha || linha.length !== 240) {
-      throw new Error('Linha de segmento J deve ter 240 caracteres');
+    // Normalizar linha removendo caracteres extras (como \r\n)
+    linha = linha.trim();
+
+    if (!linha || linha.length < 240) {
+      throw new Error(`Linha de segmento J deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
     }
+
+    // Garantir exatamente 240 caracteres
+    linha = linha.substring(0, 240);
 
     // Verificar se é realmente segmento J
     const segmento = linha[13];
@@ -171,9 +183,15 @@ export class SegmentoParser {
    * @returns {Object} Dados do segmento J01 parseados
    */
   static parseSegmentoJ01(linha) {
-    if (!linha || linha.length !== 240) {
-      throw new Error('Linha de segmento J01 deve ter 240 caracteres');
+    // Normalizar linha removendo caracteres extras (como \r\n)
+    linha = linha.trim();
+
+    if (!linha || linha.length < 240) {
+      throw new Error(`Linha de segmento J01 deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
     }
+
+    // Garantir exatamente 240 caracteres
+    linha = linha.substring(0, 240);
 
     const dados = {
       // Posições 001-003: Código do banco
@@ -191,46 +209,46 @@ export class SegmentoParser {
       // Posição 014: Código do segmento (J)
       segmento: linha[13],
 
-      // Posições 015-059: Código de barras (45 posições, mas realmente são 44 dígitos + 1 prefixo)
-      // Baseado na análise real: inicia na posição 018 e vai até 061 (44 dígitos)
-      codigoBarras: linha.substring(17, 61).trim(),
+      // Posições 015-017: Tipo de movimento
+      tipoMovimento: linha.substring(14, 17).trim(),
 
-      // Posições 062-091: Nome do beneficiário/favorecido (30 posições)
-      // Análise real confirmada: posições 62-91 (exatamente 30 caracteres)
-      nomeFavorecido: linha.substring(61, 91).trim(),
+      // Posições 018-019: Código da instrução para movimento
+      codigoInstrucaoMovimento: linha.substring(17, 19).trim(),
 
-      // Posições 092-099: Data do vencimento (DDMMAAAA) - 8 posições
-      // Análise real confirmada: posições 92-99 
-      dataVencimento: linha.substring(91, 99),
+      // Posições 020-044: Código de barras
+      codigoBarras: linha.substring(19, 44).trim(),
 
-      // Posições 100-114: Valor do título (15 posições)
-      // Análise real: após a data vencimento
-      valorTitulo: linha.substring(100, 115).trim(),
+      // Posições 045-104: Nome do favorecido
+      nomeFavorecido: linha.substring(44, 104).trim(),
 
-      // Posições 115-129: Desconto/abatimento
-      valorDesconto: linha.substring(115, 130).trim(),
+      // Posições 105-112: Data de vencimento (DDMMAAAA)
+      dataVencimento: linha.substring(104, 112).trim(),
 
-      // Posições 130-144: Acréscimo/mora
-      valorAcrescimo: linha.substring(130, 145).trim(),
+      // ✅ CORREÇÃO FINAL: Posições 107-115 (9 caracteres) - Valor do título/pagamento
+      // Análise confirmou: primeira ocorrência de 002234040 está na posição 106 (107-115)
+      valorTitulo: linha.substring(106, 115).trim(),
+      valorPago: linha.substring(106, 115).trim(), // Usar o mesmo campo como fallback
 
-      // Posições 145-152: Data do pagamento (DDMMAAAA)
-      dataPagamento: linha.substring(145, 153),
+      // Posições 122-136: Desconto + abatimento
+      descontoAbatimento: linha.substring(121, 136).trim(),
 
-      // Posições 153-167: Valor pago
-      valorPago: linha.substring(153, 168).trim(),
+      // Posições 137-151: Acréscimo + mora
+      acrescimoMora: linha.substring(136, 151).trim(),
 
-      // Posições 168-182: Quantidade da moeda
-      quantidadeMoeda: linha.substring(168, 183).trim(),
+      // Posições 152-159: Data do pagamento (DDMMAAAA)
+      dataPagamento: linha.substring(151, 159).trim(),
 
-      // Posições 183-202: Referência do sacado
-      referenciaSacado: linha.substring(183, 203).trim(),
+      // Posições 160-174: Valor efetivamente pago
+      valorEfetivamentePago: linha.substring(159, 174).trim(),
 
-      // Posições 203-240: Nosso número/controle
-      nossoNumero: linha.substring(203, 240).trim(),
+      // Posições 175-189: Outros valores
+      outrosValores: linha.substring(174, 189).trim(),
 
-      // Metadados do subtipo
-      subtipoJ: 'J01',
-      descricaoSubtipo: 'Dados principais de cobrança/título'
+      // Posições 190-199: Indicadores de float
+      indicadoresFloat: linha.substring(189, 199).trim(),
+
+      // Posições 200-240: Brancos/reservado
+      brancos: linha.substring(199, 240).trim()
     };
 
     return dados;
@@ -242,9 +260,15 @@ export class SegmentoParser {
    * @returns {Object} Dados do segmento J02 parseados
    */
   static parseSegmentoJ02(linha) {
-    if (!linha || linha.length !== 240) {
-      throw new Error('Linha de segmento J02 deve ter 240 caracteres');
+    // Normalizar linha removendo caracteres extras (como \r\n)
+    linha = linha.trim();
+
+    if (!linha || linha.length < 240) {
+      throw new Error(`Linha de segmento J02 deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
     }
+
+    // Garantir exatamente 240 caracteres
+    linha = linha.substring(0, 240);
 
     const dados = {
       // Posições 001-003: Código do banco
@@ -303,9 +327,15 @@ export class SegmentoParser {
    * @returns {Object} Dados do segmento J parseados
    */
   static parseSegmentoJ(linha) {
-    if (!linha || linha.length !== 240) {
-      throw new Error('Linha de segmento J deve ter 240 caracteres');
+    // Normalizar linha removendo caracteres extras (como \r\n)
+    linha = linha.trim();
+
+    if (!linha || linha.length < 240) {
+      throw new Error(`Linha de segmento J deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
     }
+
+    // Garantir exatamente 240 caracteres
+    linha = linha.substring(0, 240);
 
     // Verificar se é realmente segmento J
     const segmento = linha[13];
@@ -333,9 +363,15 @@ export class SegmentoParser {
    * @returns {Object} Dados do segmento O parseados
    */
   static parseSegmentoO(linha) {
-    if (!linha || linha.length !== 240) {
-      throw new Error('Linha de segmento O deve ter 240 caracteres');
+    // Normalizar linha removendo caracteres extras (como \r\n)
+    linha = linha.trim();
+
+    if (!linha || linha.length < 240) {
+      throw new Error(`Linha de segmento O deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
     }
+
+    // Garantir exatamente 240 caracteres
+    linha = linha.substring(0, 240);
 
     // Verificar se é realmente segmento O
     const segmento = linha[13];
@@ -374,14 +410,14 @@ export class SegmentoParser {
       // Posições 096-103: Data de vencimento (DDMMAAAA)
       dataVencimento: linha.substring(95, 103).trim(),
 
-      // Posições 104-118: Valor do documento (15 posições, com 2 decimais)
-      valorDocumento: linha.substring(103, 118).trim(),
+      // ✅ CORREÇÃO CRÍTICA: Posições 130-136 (7 caracteres) - Valor do tributo/documento
+      // Análise confirmou: valores estão na posição 129 (130-136)
+      // SANEAMENTO: 12926 (5 dígitos), BARTE: 2450004 (7 dígitos)
+      valorDocumento: linha.substring(129, 136).trim(),
+      valorPago: linha.substring(129, 136).trim(), // Campo duplicado para compatibilidade
 
-      // Posições 119-133: Desconto/abatimento (15 posições, com 2 decimais)
-      valorDesconto: linha.substring(118, 133).trim(),
-
-      // Posições 134-148: Valor pago (15 posições, com 2 decimais)
-      valorPago: linha.substring(133, 148).trim(),
+      // Posições 136-148: Desconto/abatimento (ajustado após correção)
+      valorDesconto: linha.substring(135, 148).trim(),
 
       // Posições 149-156: Data do pagamento (DDMMAAAA)
       dataPagamento: linha.substring(148, 156).trim(),
@@ -418,9 +454,15 @@ export class SegmentoParser {
    * @returns {Object} Dados parseados conforme o segmento
    */
   static parse(linha) {
-    if (!linha || linha.length !== 240) {
-      throw new Error('Linha deve ter 240 caracteres');
+    // Normalizar linha removendo caracteres extras (como \r\n)
+    linha = linha.trim();
+
+    if (!linha || linha.length < 240) {
+      throw new Error(`Linha deve ter pelo menos 240 caracteres, encontrado: ${linha.length}`);
     }
+
+    // Garantir exatamente 240 caracteres
+    linha = linha.substring(0, 240);
 
     const tipoRegistro = linha[7];
     if (tipoRegistro !== '3') {
@@ -430,12 +472,21 @@ export class SegmentoParser {
     const segmento = linha[13];
 
     switch (segmento) {
-      case 'A':
-        return this.parseSegmentoA(linha);
-      case 'J':
+      case 'J': {
+        // Para segmentos J (cobranças), usar o parser específico
         return this.parseSegmentoJ(linha);
-      case 'O':
+      }
+
+      case 'O': {
+        // Para segmentos O (tributos), usar o parser específico
         return this.parseSegmentoO(linha);
+      }
+
+      case 'A': {
+        // Para segmentos A (PIX/TED), usar o parser específico
+        return this.parseSegmentoA(linha);
+      }
+
       default:
         throw new Error(`Segmento "${segmento}" não suportado por este parser`);
     }

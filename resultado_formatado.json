@@ -1,0 +1,114 @@
+{
+  "sucesso": true,
+  "mensagem": "Arquivo CNAB 240 processado com sucesso via detecção automática",
+  "dados": {
+    "arquivo": {
+      "header": null,
+      "trailer": null,
+      "totalizadores": {
+        "quantidadeLotes": 0,
+        "quantidadeRegistros": 0,
+        "valorTotalArquivo": 0,
+        "dataProcessamento": "2025-06-03T17:13:36.075Z"
+      }
+    },
+    "lotes": [],
+    "estatisticas": {
+      "totalLotes": 0,
+      "totalDetalhes": 0,
+      "tiposSegmento": {},
+      "codigosOperacao": {},
+      "banco": "Não identificado"
+    }
+  },
+  "formatoDetectado": {
+    "codigo": "CNAB_240",
+    "nome": "CNAB 240",
+    "tamanhoLinha": 240,
+    "servicoProcessamento": "cnab240Service",
+    "confianca": 100,
+    "motivo": "Linhas com 240 caracteres identificadas"
+  },
+  "deteccao": {
+    "detectado": true,
+    "analise": {
+      "totalLinhas": 36,
+      "tamanhoMaisComum": 240,
+      "consistencia": {
+        "todasIguais": true,
+        "percentualMaisComum": 100
+      }
+    },
+    "validacao": {
+      "consistente": true,
+      "erros": [],
+      "avisos": [],
+      "linhasIncorretas": [],
+      "percentualCorreto": 100,
+      "detalhesValidacao": {
+        "totalLinhas": 36,
+        "linhasCorretas": 36,
+        "linhasIncorretas": 0
+      }
+    },
+    "recomendacao": {
+      "tipo": "SUCESSO",
+      "mensagem": "Arquivo identificado como CNAB 240 com alta confiança",
+      "acao": "PROCESSAR",
+      "servicoRecomendado": "cnab240Service"
+    }
+  },
+  "validacao": {
+    "valido": false,
+    "erros": [
+      "Header de arquivo não encontrado",
+      "Trailer de arquivo não encontrado"
+    ],
+    "avisos": [
+      "Nenhum lote encontrado no arquivo"
+    ]
+  },
+  "somatorias": {
+    "totalRegistros": 2,
+    "totalLotes": 0,
+    "valorTotalGeral": 0,
+    "totalSegmentosA": 0,
+    "totalSegmentosB": 0,
+    "totalSegmentosJ": 0,
+    "totalSegmentosO": 0
+  },
+  "resumoProcessamento": {
+    "arquivo": {
+      "totalLinhas": 2,
+      "totalLotes": 0,
+      "banco": "Não identificado"
+    },
+    "financeiro": {
+      "valorTotalGeral": 0,
+      "quantidadePagamentos": 0,
+      "ticketMedio": 0
+    },
+    "distribuicao": {
+      "segmentosA": 0,
+      "segmentosB": 0,
+      "segmentosJ": 0,
+      "segmentosO": 0,
+      "outrosSegmentos": 0
+    },
+    "dataProcessamento": "2025-06-03T17:13:36.075Z"
+  },
+  "informacoesArquivo": {
+    "tamanhoOriginal": 8712,
+    "totalLinhas": 36,
+    "formato": "CNAB 240",
+    "nomeBanco": "Banco não identificado",
+    "versaoLayout": "Não identificada"
+  },
+  "arquivo": {
+    "nome": "rem58685.txt",
+    "tamanho": 8712,
+    "tipo": "text/plain"
+  },
+  "operationId": "op_1748970815767_hl652xmiu",
+  "dataProcessamento": "2025-06-03T17:13:36.117Z"
+}

@@ -432,7 +432,7 @@ class Cnab240Service {
 
     // Dividir em linhas e limpar caracteres de quebra de linha
     const linhas = cnabContent.split('\n')
-      .map(linha => linha.replace(/\r?\n?$/g, '')) // Remove \r e \n do final
+      .map(linha => linha.replace(/\r?\n?$/g, '')) // Remove apenas quebras de linha
       .filter(linha => linha.trim() !== '');
 
     // Verificar se tem pelo menos 3 linhas (header arquivo, header lote, trailer arquivo)
@@ -442,8 +442,12 @@ class Cnab240Service {
 
     // Verificar tamanho das linhas
     linhas.forEach((linha, index) => {
-      if (linha.length !== 240) {
-        erros.push(`Linha ${index + 1}: deve ter exatamente 240 caracteres, encontrado ${linha.length}`);
+      // CORREÇÃO: Não usar trim() pois remove espaços que são parte do formato CNAB 240
+      // Os espaços no final das linhas são importantes e fazem parte da estrutura
+      const linhaSemQuebra = linha.replace(/\r?\n?$/g, ''); // Remove apenas quebras de linha
+
+      if (linhaSemQuebra.length < 240) {
+        erros.push(`Linha ${index + 1}: deve ter pelo menos 240 caracteres, encontrado ${linhaSemQuebra.length}`);
       }
     });
 
@@ -694,30 +698,75 @@ class Cnab240Service {
     let valorTotalGeral = 0;
     let totalSegmentosA = 0;
     let totalSegmentosB = 0;
+    let totalSegmentosJ = 0;
+    let totalSegmentosO = 0;
 
     dadosProcessados.lotes.forEach(lote => {
       totalRegistros += lote.detalhes.length + 2; // +2 para header e trailer do lote
 
       lote.detalhes.forEach(detalhe => {
-        if (detalhe.segmento === 'A') {
+        if (detalhe.segmento === 'A' && detalhe.valorPagamento) {
+          // Converter valor para número se ainda for string
+          const valor = typeof detalhe.valorPagamento === 'string'
+            ? this.parseValorCNAB(detalhe.valorPagamento)
+            : (detalhe.valorPagamento || 0);
+          valorTotalGeral += valor;
           totalSegmentosA++;
-          // Usar o valor já processado do pagamento se disponível
-          if (detalhe.pagamento && typeof detalhe.pagamento.valorPagamento === 'number') {
-            valorTotalGeral += detalhe.pagamento.valorPagamento;
-          } else if (detalhe.valorPagamento) {
-            // Fallback para dados brutos se necessário
-            const valor = typeof detalhe.valorPagamento === 'string'
-              ? this.parseValorCNAB(detalhe.valorPagamento)
-              : (detalhe.valorPagamento || 0);
-            valorTotalGeral += valor;
+
+        } else if (detalhe.segmento === 'J') {
+          // ✅ CORRIGIDO: Processar apenas registros J que realmente contêm valores
+          let valorProcessado = 0;
+
+          // Tentar valorPago primeiro, depois valorTitulo
+          if (detalhe.valorPago && detalhe.valorPago !== '000000000000000') {
+            valorProcessado = typeof detalhe.valorPago === 'string'
+              ? this.parseValorCNAB(detalhe.valorPago)
+              : (detalhe.valorPago || 0);
+          } else if (detalhe.valorTitulo && detalhe.valorTitulo !== '000000000000000') {
+            valorProcessado = typeof detalhe.valorTitulo === 'string'
+              ? this.parseValorCNAB(detalhe.valorTitulo)
+              : (detalhe.valorTitulo || 0);
           }
+
+          // ✅ CRUCIAL: Só somar se realmente houver valor válido (> 0)
+          if (valorProcessado > 0) {
+            valorTotalGeral += valorProcessado;
+            totalSegmentosJ++;
+            console.log(`[DEBUG] Segmento J VÁLIDO - valorTitulo: ${detalhe.valorTitulo}, valorPago: ${detalhe.valorPago}, valorProcessado: ${valorProcessado}`);
+          } else {
+            console.log(`[DEBUG] Segmento J IGNORADO - valorTitulo: ${detalhe.valorTitulo}, valorPago: ${detalhe.valorPago}, valorProcessado: ${valorProcessado}`);
+          }
+
+        } else if (detalhe.segmento === 'O') {
+          // ✅ NOVO: Processar Segmentos O (tributos)
+          let valorProcessado = 0;
+
+          if (detalhe.valorPago && detalhe.valorPago !== '000000000000000') {
+            valorProcessado = typeof detalhe.valorPago === 'string'
+              ? this.parseValorCNAB(detalhe.valorPago)
+              : (detalhe.valorPago || 0);
+          } else if (detalhe.valorDocumento && detalhe.valorDocumento !== '000000000000000') {
+            valorProcessado = typeof detalhe.valorDocumento === 'string'
+              ? this.parseValorCNAB(detalhe.valorDocumento)
+              : (detalhe.valorDocumento || 0);
+          }
+
+          if (valorProcessado > 0) {
+            valorTotalGeral += valorProcessado;
+            totalSegmentosO++;
+            console.log(`[DEBUG] Segmento O VÁLIDO - valorDocumento: ${detalhe.valorDocumento}, valorPago: ${detalhe.valorPago}, valorProcessado: ${valorProcessado}`);
+          } else {
+            console.log(`[DEBUG] Segmento O IGNORADO - valorDocumento: ${detalhe.valorDocumento}, valorPago: ${detalhe.valorPago}, valorProcessado: ${valorProcessado}`);
+          }
+
         } else if (detalhe.segmento === 'B') {
           totalSegmentosB++;
         }
       });
     });
 
-    totalRegistros += 2; // +2 para header e trailer do arquivo
+    // Adicionar 2 registros para header e trailer do arquivo
+    totalRegistros += 2;
 
     return {
       totalRegistros,
@@ -725,11 +774,8 @@ class Cnab240Service {
       valorTotalGeral,
       totalSegmentosA,
       totalSegmentosB,
-      validacaoTrailer: this.validarSomatoriasTrailer(dadosProcessados, {
-        totalRegistros,
-        totalLotes,
-        valorTotalGeral
-      })
+      totalSegmentosJ,
+      totalSegmentosO
     };
   }
 
@@ -772,6 +818,9 @@ class Cnab240Service {
    * @returns {Object} Resumo do processamento
    */
   static gerarResumoProcessamento(dadosProcessados, somatorias) {
+    // ✅ NOVO: Calcular total de pagamentos incluindo todos os segmentos relevantes
+    const totalPagamentos = somatorias.totalSegmentosA + (somatorias.totalSegmentosJ || 0) + (somatorias.totalSegmentosO || 0);
+
     return {
       arquivo: {
         totalLinhas: somatorias.totalRegistros,
@@ -782,13 +831,15 @@ class Cnab240Service {
       },
       financeiro: {
         valorTotalGeral: somatorias.valorTotalGeral,
-        quantidadePagamentos: somatorias.totalSegmentosA,
-        ticketMedio: somatorias.totalSegmentosA > 0 ? somatorias.valorTotalGeral / somatorias.totalSegmentosA : 0
+        quantidadePagamentos: totalPagamentos, // ✅ ATUALIZADO: Incluir todos os tipos de pagamento
+        ticketMedio: totalPagamentos > 0 ? somatorias.valorTotalGeral / totalPagamentos : 0
       },
       distribuicao: {
         segmentosA: somatorias.totalSegmentosA,
         segmentosB: somatorias.totalSegmentosB,
-        outrosSegmentos: somatorias.totalRegistros - somatorias.totalSegmentosA - somatorias.totalSegmentosB - (somatorias.totalLotes * 2) - 2
+        segmentosJ: somatorias.totalSegmentosJ || 0, // ✅ NOVO: Incluir Segmentos J
+        segmentosO: somatorias.totalSegmentosO || 0, // ✅ NOVO: Incluir Segmentos O
+        outrosSegmentos: somatorias.totalRegistros - somatorias.totalSegmentosA - somatorias.totalSegmentosB - (somatorias.totalSegmentosJ || 0) - (somatorias.totalSegmentosO || 0) - (somatorias.totalLotes * 2) - 2
       },
       validacao: somatorias.validacaoTrailer,
       dataProcessamento: new Date().toISOString()
@@ -847,6 +898,40 @@ class Cnab240Service {
           : (detalhe.valorPagamento || 0);
         valorTotal += valor;
         quantidadePagamentos++;
+      } else if (segmento === 'J') {
+        // ✅ NOVO: Processar Segmentos J (títulos de cobrança)
+        let valorJ = 0;
+        if (detalhe.valorPago && detalhe.valorPago.trim() !== '000000000000000') {
+          valorJ = typeof detalhe.valorPago === 'string'
+            ? this.parseValorCNAB(detalhe.valorPago)
+            : (detalhe.valorPago || 0);
+        } else if (detalhe.valorTitulo) {
+          valorJ = typeof detalhe.valorTitulo === 'string'
+            ? this.parseValorCNAB(detalhe.valorTitulo)
+            : (detalhe.valorTitulo || 0);
+        }
+
+        if (valorJ > 0) {
+          valorTotal += valorJ;
+          quantidadePagamentos++;
+        }
+      } else if (segmento === 'O') {
+        // ✅ NOVO: Processar Segmentos O (pagamento de tributos)
+        let valorO = 0;
+        if (detalhe.valorPago && detalhe.valorPago.trim() !== '000000000000000') {
+          valorO = typeof detalhe.valorPago === 'string'
+            ? this.parseValorCNAB(detalhe.valorPago)
+            : (detalhe.valorPago || 0);
+        } else if (detalhe.valorDocumento) {
+          valorO = typeof detalhe.valorDocumento === 'string'
+            ? this.parseValorCNAB(detalhe.valorDocumento)
+            : (detalhe.valorDocumento || 0);
+        }
+
+        if (valorO > 0) {
+          valorTotal += valorO;
+          quantidadePagamentos++;
+        }
       }
     });
 
