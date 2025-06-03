@@ -4,12 +4,31 @@
       "id": 1,
       "title": "Setup Project Repository",
       "description": "Initialize the project repository with the necessary configurations and dependencies.",
-      "details": "Create a new Git repository and set up the project with React 18, TypeScript, Vite, TanStack Query, Axios, Shadcn/UI, React Router, and Sonner. Ensure TypeScript strict mode is enabled and configure ESLint and Prettier for code quality.",
-      "testStrategy": "Verify that the project builds successfully and all dependencies are correctly installed.",
-      "priority": "medium",
+      "status": "done",
       "dependencies": [],
-      "status": "pending",
-      "subtasks": []
+      "priority": "medium",
+      "details": "The project setup is fully functional with a Docker environment. The frontend React project is configured and complete with React 18, TypeScript, Vite, TanStack Query, Axios, Shadcn/UI, React Router, Sonner, and TypeScript strict mode. ESLint and Prettier are configured for code quality. The project structure includes a complete frontend in `/frontend/` and a backend Node.js with functioning CNAB APIs in `/api/`. Docker containers are running: `cnab-frontend` on port 3000, `cnab-api` on port 8080, and `cnab-mysql` on port 3306. All health checks are passing.",
+      "testStrategy": "Verify that the project builds successfully and all dependencies are correctly installed. Ensure the Docker environment is active and all services are running. Confirm that the frontend and backend are accessible and responding correctly.",
+      "subtasks": [
+        {
+          "id": 101,
+          "title": "Verify Project Build",
+          "description": "Ensure that the project builds successfully with the current configurations and dependencies.",
+          "status": "done"
+        },
+        {
+          "id": 102,
+          "title": "Check API Integration",
+          "description": "Focus on integrating with the missing result endpoints: `/api/v1/cnab/resultados` and `/api/v1/cnab/resultados/:operationId`.",
+          "status": "done"
+        },
+        {
+          "id": 103,
+          "title": "Verify Docker Environment",
+          "description": "Ensure all Docker containers are running and healthy. Confirm that the frontend, backend, and database are accessible.",
+          "status": "done"
+        }
+      ]
     },
     {
       "id": 2,
@@ -21,15 +40,15 @@
       "dependencies": [
         1
       ],
-      "status": "pending",
+      "status": "done",
       "subtasks": [
         {
           "id": 1,
           "title": "Set Up Axios for API Calls",
           "description": "Install and configure Axios in the frontend project to handle API requests.",
           "dependencies": [],
-          "details": "Ensure Axios is installed via npm or yarn and configure a base URL for the API endpoints.",
-          "status": "pending",
+          "details": "Ensure Axios is installed via npm or yarn and configure a base URL for the API endpoints.\n<info added on 2025-06-03T13:20:37.608Z>\nPROBLEMA RESOLVIDO!\n\nErro Corrigido:\n- Erro original: `TypeError: Cannot read properties of undefined (reading 'length')`\n- Causa: Frontend esperava `listaResponse.dados.resultados.length` mas API retorna `listaResponse.dados` (array direto)\n- Localização: `frontend/src/pages/Index.tsx` linha ~carregarResultadosHistoricos\n\nSolução Implementada:\n1. Verificação defensiva: Adicionado `Array.isArray(listaResponse.dados)` antes de acessar `.length`\n2. Estrutura correta: Corrigido para `listaResponse.dados.length` (não `resultados.length`)\n3. Fallback melhorado: Se falhar ao buscar detalhes, cria entrada básica ao invés de quebrar\n4. Debug melhorado: Adicionado logs detalhados para diagnosticar problemas futuros\n\nResultado:\n- Erro `TypeError` eliminado\n- Integração defensiva contra estruturas inesperadas  \n- Frontend não quebra mais ao carregar página\n- Sistema pronto para processar CNABs e exibir histórico\n\nO sistema agora carrega corretamente mesmo sem dados históricos, e funcionará perfeitamente quando houver arquivos CNAB processados.\n</info added on 2025-06-03T13:20:37.608Z>",
+          "status": "done",
           "testStrategy": "Verify Axios is correctly installed and can make a simple GET request to a test endpoint."
         },
         {
@@ -39,8 +58,8 @@
           "dependencies": [
             1
           ],
-          "details": "Use Axios to send a GET request to the endpoint and handle the response data appropriately.",
-          "status": "pending",
+          "details": "Use Axios to send a GET request to the endpoint and handle the response data appropriately.\n<info added on 2025-06-03T12:38:44.239Z>\nImplement the `GET /api/v1/cnab/resultados/:operationId` endpoint by creating a new controller `resultadosController.js` following the existing pattern. Ensure the endpoint integrates with the current infrastructure, reusing the `Operation` model and maintaining compatibility with the existing system.\n</info added on 2025-06-03T12:38:44.239Z>\n<info added on 2025-06-03T12:58:09.048Z>\nBuscar outras referências a 'sequencia' em consultas SQL ou métodos do modelo que ainda estão usando o campo antigo. Verificar se há algum uso residual de 'sequencia' que possa estar causando o erro \"Unknown column 'CnabRecord.sequencia' in 'order clause'\".\n</info added on 2025-06-03T12:58:09.048Z>\n<info added on 2025-06-03T13:02:51.252Z>\nIntegrate the unified endpoints for processing and uploading CNAB files into the frontend, ensuring seamless operation with the existing backend infrastructure. Implement auto-detection for CNAB 240/400 formats and ensure `OperationId` tracking is consistent across all operations. Additionally, address the \"Unknown column 'CnabRecord.sequencia' in 'order clause'\" error by resolving any residual usage of the 'sequencia' field in SQL queries or model methods.\n</info added on 2025-06-03T13:02:51.252Z>\n<info added on 2025-06-03T13:04:59.159Z>\nTestes realizados confirmaram que os endpoints unificados estão funcionando perfeitamente. Principais endpoints testados incluem `GET /api/v1/cnab/info-auto`, `POST /api/v1/cnab/detectar-formato`, `POST /api/v1/cnab/validar-auto`, e `POST /api/v1/cnab/processar-auto/upload`, todos operando com sucesso. Recursos como auto-detecção de CNAB 240/400, validação completa, tracking de OperationId, análise de consistência, e middleware de compatibilidade foram confirmados. Próximos passos incluem implementar a integração no frontend React, usar TanStack Query para cache e sincronização, implementar polling para atualizações em tempo real, e desenvolver uma UI com upload, progresso e resultados. Backend está pronto para integração com o frontend.\n</info added on 2025-06-03T13:04:59.159Z>",
+          "status": "done",
           "testStrategy": "Mock the API response and ensure the function correctly processes and returns the data."
         },
         {
@@ -51,7 +70,7 @@
             1
           ],
           "details": "Use Axios to send a GET request with a dynamic operationId and handle the response data.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test with various operationId values and mock responses to ensure correct data retrieval."
         },
         {
@@ -63,7 +82,7 @@
             3
           ],
           "details": "Decide between localStorage and IndexedDB based on data size and complexity, and implement the storage solution.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Check that operationIds are correctly stored and retrieved from the chosen storage method."
         },
         {
@@ -76,7 +95,7 @@
             4
           ],
           "details": "Ensure the frontend components call the API functions and display the results to the user.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Perform end-to-end testing to ensure data flows from the API to the UI correctly."
         }
       ]
@@ -172,7 +191,61 @@
         1
       ],
       "status": "pending",
-      "subtasks": []
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Design API Endpoints",
+          "description": "Design the structure and specifications for the API endpoints required for batch approval creation and management.",
+          "dependencies": [],
+          "details": "Define the endpoints for creating approval batches, managing approval/rejection flows, and logging.",
+          "status": "pending",
+          "testStrategy": "Review endpoint designs with stakeholders and validate against requirements."
+        },
+        {
+          "id": 2,
+          "title": "Develop Batch Approval Creation Endpoint",
+          "description": "Implement the API endpoint for creating approval batches.",
+          "dependencies": [
+            1
+          ],
+          "details": "Develop the backend logic and database interactions for creating new approval batches.",
+          "status": "pending",
+          "testStrategy": "Unit test the endpoint with various input scenarios to ensure correct batch creation."
+        },
+        {
+          "id": 3,
+          "title": "Implement Approval/Rejection Flows",
+          "description": "Develop the API logic for handling approval and rejection actions within a batch.",
+          "dependencies": [
+            2
+          ],
+          "details": "Create the necessary logic to update approval states and manage transitions between approved and rejected states.",
+          "status": "pending",
+          "testStrategy": "Simulate approval and rejection actions to verify state transitions and persistence."
+        },
+        {
+          "id": 4,
+          "title": "Develop Logging Mechanism",
+          "description": "Implement logging for all actions performed through the approval system API.",
+          "dependencies": [
+            3
+          ],
+          "details": "Ensure that all API interactions are logged for audit and debugging purposes.",
+          "status": "pending",
+          "testStrategy": "Verify that logs are correctly recorded for each API action and contain necessary details."
+        },
+        {
+          "id": 5,
+          "title": "Ensure State Persistence",
+          "description": "Verify and ensure that the state of approvals is consistently persisted across the system.",
+          "dependencies": [
+            4
+          ],
+          "details": "Implement mechanisms to maintain state consistency and recoverability in case of failures.",
+          "status": "pending",
+          "testStrategy": "Conduct stress tests and simulate failures to ensure state persistence and recovery."
+        }
+      ]
     },
     {
       "id": 6,
@@ -432,6 +505,19 @@
         1
       ],
       "status": "pending",
+      "subtasks": []
+    },
+    {
+      "id": 26,
+      "title": "Develop CNAB Data Display System with Payment Verification Modal",
+      "description": "Implement a frontend system to display CNAB data with a detailed modal for payment verification.",
+      "details": "Create a React component to display CNAB data in a card format, including details such as Lotes, Registros, Total, Operation ID, and more. Implement a modal that appears when a user clicks a 'Ver Detalhes' button on each payment entry, showing detailed information for payment verification. Ensure the frontend uses the CNAB file name and integrates with the backend API to send data for approval and payment processing via the Swap API. Include additional features such as total values of processed files, identified company names, financial analysis, metrics by period, operation details, transaction listing, and movement categorization. Use React, TypeScript, and Axios for API calls, and ensure the UI is responsive and user-friendly.",
+      "testStrategy": "1. Verify that the CNAB data is correctly displayed in the frontend with all required fields.\n2. Test the 'Ver Detalhes' modal to ensure it opens correctly and displays all necessary payment verification details.\n3. Check the integration with the backend API to confirm data is sent correctly for approval and payment processing.\n4. Validate additional features such as financial analysis, metrics by period, and transaction listing are functioning as expected.\n5. Perform UI/UX testing to ensure the interface is intuitive and responsive across different devices.",
+      "status": "pending",
+      "dependencies": [
+        2
+      ],
+      "priority": "high",
       "subtasks": []
     }
   ]
