@@ -1,9 +1,12 @@
 import ExternalAPIService from './ExternalAPIService.js';
+import TokenManager from '../auth/TokenManager.js';
+import TokenScheduler from '../auth/TokenScheduler.js';
 import { Timer, metricsCollector } from '../../utils/metrics.js';
 
 /**
  * Serviço de integração com a API da Swap Financial
  * Implementa autenticação OAuth 2.0 e operações de boleto
+ * Agora usa TokenManager centralizado para gerenciamento de tokens
  */
 class SwapFinancialService extends ExternalAPIService {
   constructor(options = {}) {
@@ -34,7 +37,22 @@ class SwapFinancialService extends ExternalAPIService {
     this.baseURL = this.apiUrls[this.environment];
     this.httpClient.defaults.baseURL = this.baseURL;
 
-    // Cache de tokens (formato compatível com testes)
+    // NOVO: Inicializar TokenManager centralizado
+    this.tokenManager = new TokenManager({
+      name: 'SwapFinancial-TokenManager',
+      apiClient: this, // Passar referência para métodos de token
+      refreshMargin: options.tokenRefreshMargin || 300, // 5 minutos
+      maxRetries: options.tokenMaxRetries || 3
+    });
+
+    // NOVO: Inicializar TokenScheduler para renovação automática
+    this.tokenScheduler = new TokenScheduler(this.tokenManager, {
+      strategy: options.tokenStrategy || 'adaptive',
+      enabled: options.autoTokenRefresh !== false, // Habilitado por padrão
+      healthCheckInterval: options.tokenHealthCheckInterval || 60000 // 1 minuto
+    });
+
+    // Cache de tokens (mantido para compatibilidade com testes existentes)
     this.tokenCache = null;
     this.tokenExpiry = null;
     this.refreshToken = null;
@@ -51,61 +69,64 @@ class SwapFinancialService extends ExternalAPIService {
 
     // Configurar métricas do circuit breaker
     metricsCollector.setGauge('swap.circuit_breaker.state', this.circuitBreakerState);
+
+    // Iniciar renovação automática se habilitada
+    if (options.autoTokenRefresh !== false) {
+      this.startAutoTokenRefresh();
+    }
+
+    this.log('info', 'SwapFinancialService initialized with TokenManager', {
+      environment: this.environment,
+      autoTokenRefresh: options.autoTokenRefresh !== false,
+      tokenStrategy: options.tokenStrategy || 'adaptive'
+    });
   }
 
   /**
-   * Autenticar e obter token de acesso (compatível com testes)
+   * NOVO: Iniciar renovação automática de tokens
+   */
+  startAutoTokenRefresh() {
+    try {
+      this.tokenScheduler.start();
+      this.log('info', 'Auto token refresh started');
+      metricsCollector.incrementCounter('swap.auto_refresh.started');
+    } catch (error) {
+      this.log('error', 'Failed to start auto token refresh', { error: error.message });
+    }
+  }
+
+  /**
+   * NOVO: Parar renovação automática de tokens
+   */
+  stopAutoTokenRefresh() {
+    try {
+      this.tokenScheduler.stop();
+      this.log('info', 'Auto token refresh stopped');
+      metricsCollector.incrementCounter('swap.auto_refresh.stopped');
+    } catch (error) {
+      this.log('error', 'Failed to stop auto token refresh', { error: error.message });
+    }
+  }
+
+  /**
+   * Autenticar e obter token de acesso (REFATORADO para usar TokenManager)
    */
   async authenticate() {
     try {
       const timer = new Timer('swap.auth.duration');
       metricsCollector.incrementCounter('swap.auth.attempts');
 
-      // Verificar se token existe e ainda é válido (com margem de 60 segundos)
-      if (this.isTokenValid()) {
-        this.log('debug', 'Using cached access token');
-        metricsCollector.incrementCounter('swap.auth.success');
-        timer.end();
-        return this.tokenCache;
-      }
+      // NOVO: Usar TokenManager ao invés de lógica local
+      const token = await this.tokenManager.getValidToken();
 
-      // Solicitar novo token
-      this.log('debug', 'Requesting new access token');
-      const tokenData = {
-        grant_type: 'client_credentials',
-        client_id: this.clientId,
-        client_secret: this.clientSecret
-      };
+      // Sincronizar cache local para compatibilidade
+      this._syncLocalTokenCache();
 
-      const response = await this.post('/oauth/token', tokenData, {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey
-        }
-      });
-
-      if (!response || !response.access_token) {
-        throw new Error('Token de acesso não recebido');
-      }
-
-      const now = Date.now();
-      this.tokenCache = response.access_token;
-      this.tokenExpiry = now + (response.expires_in * 1000);
-
-      if (response.refresh_token) {
-        this.refreshToken = response.refresh_token;
-        this.refreshExpiry = now + (response.refresh_expires_in * 1000);
-      }
-
-      this.log('info', 'Access token obtained successfully', {
-        expiresIn: response.expires_in,
-        tokenType: response.token_type
-      });
-
+      this.log('debug', 'Token obtained via TokenManager');
       metricsCollector.incrementCounter('swap.auth.success');
       timer.end();
 
-      return this.tokenCache;
+      return token;
     } catch (error) {
       metricsCollector.incrementCounter('swap.auth.failures');
       this.log('error', 'Authentication failed', { error: error.message });
@@ -114,12 +135,27 @@ class SwapFinancialService extends ExternalAPIService {
   }
 
   /**
-   * Fazer requisição autenticada
+   * NOVO: Sincronizar cache local com TokenManager (para compatibilidade)
+   */
+  _syncLocalTokenCache() {
+    const tokenInfo = this.tokenManager.getTokenInfo();
+
+    if (tokenInfo.hasToken) {
+      this.tokenCache = this.tokenManager.tokenCache.accessToken;
+      this.tokenExpiry = this.tokenManager.tokenCache.expiresAt;
+      this.refreshToken = this.tokenManager.tokenCache.refreshToken;
+      this.refreshExpiry = this.tokenManager.tokenCache.refreshExpiresAt;
+    }
+  }
+
+  /**
+   * Fazer requisição autenticada (MANTIDO, mas usa TokenManager internamente)
    */
   async authenticatedRequest(method, url, data = null) {
     this.checkCircuitBreaker();
 
     try {
+      // MUDANÇA: Agora usa authenticate() que internamente usa TokenManager
       const token = await this.authenticate();
 
       const config = {
@@ -147,14 +183,15 @@ class SwapFinancialService extends ExternalAPIService {
   }
 
   /**
-   * Obter token de acesso válido (com cache automático)
+   * Obter token de acesso válido (REFATORADO para usar TokenManager)
    */
   async getAccessToken() {
-    return await this.authenticate();
+    return await this.tokenManager.getValidToken();
   }
 
   /**
-   * Solicitar novo token de acesso
+   * Solicitar novo token de acesso (REFATORADO para uso pelo TokenManager)
+   * Este método é chamado pelo TokenManager quando precisa de um novo token
    */
   async requestNewToken() {
     const tokenData = {
@@ -163,76 +200,63 @@ class SwapFinancialService extends ExternalAPIService {
       client_secret: this.clientSecret
     };
 
-    const response = await this.makeRequest({
-      method: 'POST',
-      url: `/auth/${this.clientId}/token`,
-      data: tokenData,
+    const response = await this.post('/oauth/token', tokenData, {
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': this.apiKey
       }
     });
 
-    const tokenResponse = response.data;
-    const now = Date.now();
-
-    // Cache dos tokens
-    this.tokenCache = tokenResponse.access_token;
-    this.tokenExpiry = now + (tokenResponse.expires_in * 1000);
-
-    if (tokenResponse.refresh_token) {
-      this.refreshToken = tokenResponse.refresh_token;
-      this.refreshExpiry = now + (tokenResponse.refresh_expires_in * 1000);
+    if (!response || !response.access_token) {
+      throw new Error('Token de acesso não recebido');
     }
 
     this.log('info', 'New access token obtained successfully', {
-      expiresIn: tokenResponse.expires_in,
-      tokenType: tokenResponse.token_type
+      expiresIn: response.expires_in,
+      tokenType: response.token_type
     });
 
-    return tokenResponse.access_token;
+    // Retornar token para o TokenManager processar
+    return response.access_token;
   }
 
   /**
-   * Renovar token usando refresh token
+   * Renovar token usando refresh token (REFATORADO para uso pelo TokenManager)
+   * Este método é chamado pelo TokenManager quando tem refresh token válido
    */
   async refreshAccessToken() {
-    if (!this.refreshToken) {
+    if (!this.tokenManager.tokenCache.refreshToken) {
       throw new Error('No refresh token available');
     }
 
     const refreshData = {
       grant_type: 'refresh_token',
-      refresh_token: this.refreshToken,
+      refresh_token: this.tokenManager.tokenCache.refreshToken,
       client_id: this.clientId,
       client_secret: this.clientSecret
     };
 
-    const response = await this.makeRequest({
-      method: 'POST',
-      url: `/auth/${this.clientId}/token`,
-      data: refreshData,
+    const response = await this.post('/oauth/token', refreshData, {
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': this.apiKey
       }
     });
 
-    const tokenResponse = response.data;
-    const now = Date.now();
-
-    // Atualizar cache
-    this.tokenCache = tokenResponse.access_token;
-    this.tokenExpiry = now + (tokenResponse.expires_in * 1000);
-
-    if (tokenResponse.refresh_token) {
-      this.refreshToken = tokenResponse.refresh_token;
-      this.refreshExpiry = tokenResponse.refresh_expires_in ?
-        now + (tokenResponse.refresh_expires_in * 1000) : this.refreshExpiry;
+    if (!response || !response.access_token) {
+      throw new Error('Failed to refresh token');
     }
 
     this.log('info', 'Access token refreshed successfully');
-    return tokenResponse.access_token;
+
+    // Retornar dados completos para o TokenManager processar
+    return {
+      access_token: response.access_token,
+      expires_in: response.expires_in,
+      refresh_token: response.refresh_token,
+      refresh_expires_in: response.refresh_expires_in,
+      token_type: response.token_type
+    };
   }
 
   /**
@@ -467,33 +491,64 @@ class SwapFinancialService extends ExternalAPIService {
 
   /**
    * Obter informações de configuração (sem dados sensíveis)
+   * ATUALIZADO: Inclui informações do TokenManager
    */
   getConfiguration() {
+    const tokenManagerInfo = this.tokenManager.getTokenInfo();
+    const tokenSchedulerMetrics = this.tokenScheduler.getMetrics();
+
     return {
       environment: this.environment,
       baseURL: this.baseURL,
       hasClientId: !!this.clientId,
       hasClientSecret: !!this.clientSecret,
       hasApiKey: !!this.apiKey,
+      hasAccountId: !!this.accountId,
+      // Legacy cache status (mantido para compatibilidade)
       tokenCacheStatus: {
         hasAccessToken: !!this.tokenCache,
         accessTokenExpired: this.tokenExpiry ? Date.now() > this.tokenExpiry : true,
         hasRefreshToken: !!this.refreshToken,
         refreshTokenExpired: this.refreshExpiry ? Date.now() > this.refreshExpiry : true
       },
+      // NOVO: Informações do TokenManager
+      tokenManager: {
+        hasToken: tokenManagerInfo.hasToken,
+        isValid: tokenManagerInfo.isValid,
+        expiresAt: tokenManagerInfo.expiresAt,
+        expiresIn: tokenManagerInfo.expiresIn,
+        isExpiringSoon: tokenManagerInfo.isExpiringSoon,
+        hasRefreshToken: tokenManagerInfo.hasRefreshToken,
+        isRefreshTokenValid: tokenManagerInfo.isRefreshTokenValid,
+        metrics: tokenManagerInfo.metrics
+      },
+      // NOVO: Informações do TokenScheduler
+      tokenScheduler: {
+        isRunning: tokenSchedulerMetrics.isRunning,
+        strategy: tokenSchedulerMetrics.strategy,
+        consecutiveFailures: tokenSchedulerMetrics.consecutiveFailures,
+        healthScore: tokenSchedulerMetrics.healthScore,
+        hasRefreshScheduled: tokenSchedulerMetrics.hasRefreshScheduled,
+        nextRefreshIn: tokenSchedulerMetrics.nextRefreshIn
+      },
       circuitBreaker: this.getCircuitBreakerStatus()
     };
   }
 
   /**
-   * Limpar cache de tokens (compatível com testes)
+   * Limpar cache de tokens (ATUALIZADO para usar TokenManager)
    */
   clearCache() {
+    // Limpar TokenManager
+    this.tokenManager.clearCache();
+
+    // Limpar cache local (mantido para compatibilidade)
     this.tokenCache = null;
     this.tokenExpiry = null;
     this.refreshToken = null;
     this.refreshExpiry = null;
-    this.log('info', 'Token cache cleared');
+
+    this.log('info', 'Token cache cleared (TokenManager + local)');
   }
 
   /**
@@ -501,6 +556,163 @@ class SwapFinancialService extends ExternalAPIService {
    */
   clearTokenCache() {
     this.clearCache();
+  }
+
+  /**
+   * NOVO: Destruir serviço e limpar recursos
+   */
+  destroy() {
+    // Parar renovação automática
+    this.stopAutoTokenRefresh();
+
+    // Destruir TokenManager
+    this.tokenManager.destroy();
+
+    // Limpar circuit breaker
+    this.resetCircuitBreaker();
+
+    this.log('info', 'SwapFinancialService destroyed');
+  }
+
+  /**
+   * Health check do serviço (ATUALIZADO para incluir TokenManager)
+   * @returns {Object} Status de saúde
+   */
+  async healthCheck() {
+    try {
+      const tokenManagerInfo = this.tokenManager.getTokenInfo();
+      const tokenSchedulerMetrics = this.tokenScheduler.getMetrics();
+
+      // Verificar se precisa de token
+      let tokenStatus = 'valid';
+      if (!tokenManagerInfo.hasToken || !tokenManagerInfo.isValid) {
+        try {
+          await this.authenticate();
+          tokenStatus = 'refreshed';
+        } catch (error) {
+          tokenStatus = 'failed';
+          throw error;
+        }
+      }
+
+      return {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        circuitBreaker: this.circuitBreakerState,
+        token: {
+          status: tokenStatus,
+          isValid: this.tokenManager.getTokenInfo().isValid,
+          expiresIn: this.tokenManager.getTokenInfo().expiresIn,
+          managerMetrics: tokenManagerInfo.metrics
+        },
+        scheduler: {
+          isRunning: tokenSchedulerMetrics.isRunning,
+          healthScore: tokenSchedulerMetrics.healthScore,
+          consecutiveFailures: tokenSchedulerMetrics.consecutiveFailures
+        },
+        service: {
+          environment: this.environment,
+          baseURL: this.baseURL
+        }
+      };
+
+    } catch (error) {
+      const tokenSchedulerMetrics = this.tokenScheduler.getMetrics();
+
+      return {
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: error.message,
+        circuitBreaker: this.circuitBreakerState,
+        token: {
+          status: 'failed',
+          isValid: false,
+          managerMetrics: this.tokenManager.getTokenInfo().metrics
+        },
+        scheduler: {
+          isRunning: tokenSchedulerMetrics.isRunning,
+          healthScore: tokenSchedulerMetrics.healthScore,
+          consecutiveFailures: tokenSchedulerMetrics.consecutiveFailures
+        },
+        service: {
+          environment: this.environment,
+          baseURL: this.baseURL
+        }
+      };
+    }
+  }
+
+  /**
+   * Verificar se token atual é válido (ATUALIZADO para usar TokenManager)
+   * @returns {boolean} True se token é válido
+   */
+  isTokenValid() {
+    // Verificar via TokenManager (mais confiável)
+    const tokenManagerValid = this.tokenManager.isTokenValid();
+
+    // Verificar cache local (para compatibilidade)
+    const localCacheValid = this.tokenCache && this.tokenExpiry && Date.now() < this.tokenExpiry;
+
+    // Log se há discrepância entre os métodos
+    if (tokenManagerValid !== localCacheValid) {
+      this.log('debug', 'Token validity mismatch', {
+        tokenManager: tokenManagerValid,
+        localCache: localCacheValid,
+        willSyncCache: true
+      });
+
+      // Sincronizar cache local
+      this._syncLocalTokenCache();
+    }
+
+    // Retornar resultado do TokenManager (mais confiável)
+    return tokenManagerValid;
+  }
+
+  /**
+   * NOVO: Obter métricas detalhadas do serviço
+   */
+  getDetailedMetrics() {
+    return {
+      service: this.name,
+      timestamp: new Date().toISOString(),
+      tokenManager: this.tokenManager.getMetrics(),
+      tokenScheduler: this.tokenScheduler.getMetrics(),
+      circuitBreaker: this.getCircuitBreakerStatus(),
+      configuration: {
+        environment: this.environment,
+        autoTokenRefresh: this.tokenScheduler.isRunning,
+        refreshStrategy: this.tokenScheduler.strategy
+      }
+    };
+  }
+
+  /**
+   * NOVO: Forçar renovação de token
+   */
+  async forceTokenRefresh() {
+    this.log('info', 'Force token refresh requested');
+
+    try {
+      const result = await this.tokenScheduler.forceRefresh();
+      this._syncLocalTokenCache(); // Sincronizar cache local
+      return result;
+    } catch (error) {
+      this.log('error', 'Force token refresh failed', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * NOVO: Alterar estratégia de renovação de token
+   */
+  setTokenRefreshStrategy(strategy) {
+    this.log('info', 'Changing token refresh strategy', {
+      from: this.tokenScheduler.strategy,
+      to: strategy
+    });
+
+    this.tokenScheduler.setStrategy(strategy);
   }
 
   /**
@@ -547,45 +759,6 @@ class SwapFinancialService extends ExternalAPIService {
       this.lastFailureTime = null;
       metricsCollector.setGauge('swap.circuit_breaker.state', 'closed');
     }
-  }
-
-  /**
-   * Health check do serviço
-   * @returns {Object} Status de saúde
-   */
-  async healthCheck() {
-    try {
-      const isTokenValid = this.isTokenValid();
-
-      // Se não tem token válido, tentar autenticar
-      if (!isTokenValid) {
-        await this.authenticate();
-      }
-
-      return {
-        status: 'healthy',
-        circuitBreaker: this.circuitBreakerState,
-        tokenValid: this.isTokenValid(),
-        lastCheck: new Date().toISOString()
-      };
-
-    } catch (error) {
-      return {
-        status: 'unhealthy',
-        error: error.message,
-        circuitBreaker: this.circuitBreakerState,
-        tokenValid: false,
-        lastCheck: new Date().toISOString()
-      };
-    }
-  }
-
-  /**
-   * Verificar se token atual é válido
-   * @returns {boolean} True se token é válido
-   */
-  isTokenValid() {
-    return this.tokenCache && this.tokenExpiry && Date.now() < this.tokenExpiry;
   }
 }
 

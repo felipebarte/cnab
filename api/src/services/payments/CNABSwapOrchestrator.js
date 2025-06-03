@@ -740,6 +740,492 @@ class CNABSwapOrchestrator {
     const current = metricsCollector.metrics.gauges['cnab.active_processes'] || 0;
     metricsCollector.setGauge('cnab.active_processes', Math.max(0, current - 1));
   }
+
+  /**
+   * NOVO: Processar fluxo completo CNAB-Check-Pagamento
+   * @param {string|Buffer} cnabContent - Conteúdo do arquivo CNAB
+   * @param {Object} options - Opções de processamento
+   * @returns {Object} Resultado do processamento completo
+   */
+  async processCompletePaymentFlow(cnabContent, options = {}) {
+    const timer = new Timer('cnab.complete_flow.duration');
+    metricsCollector.incrementCounter('cnab.complete_flow.attempts');
+
+    const startTime = Date.now();
+    const flowId = `flow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      this.log('info', 'Starting complete CNAB-Check-Payment flow', { flowId });
+
+      // Verificar se Swap service está disponível
+      if (!this.swapService) {
+        throw new Error('Swap Financial service is not available');
+      }
+
+      // 1. FASE: Extrair dados de pagamento do CNAB
+      this.log('info', 'Phase 1: Extracting payment data from CNAB', { flowId });
+      const cnabResult = await this.paymentExtractor.extractPaymentData(cnabContent, options);
+
+      if (!cnabResult.success) {
+        throw new Error(`CNAB extraction failed: ${cnabResult.error?.message}`);
+      }
+
+      // 2. FASE: Filtrar boletos válidos
+      const validBoletos = this.filterValidBoletos(cnabResult.data.payments);
+      this.log('info', `Phase 2: Filtered ${validBoletos.length} valid boletos`, { flowId });
+
+      if (validBoletos.length === 0) {
+        return {
+          success: true,
+          flowId,
+          message: 'No valid boletos found for payment processing',
+          phases: {
+            extraction: { success: true, boletos: 0 },
+            verification: { success: true, verified: 0 },
+            payment: { success: true, processed: 0 }
+          },
+          processingTime: `${Date.now() - startTime}ms`
+        };
+      }
+
+      // 3. FASE: Verificar boletos e preparar para pagamento
+      this.log('info', 'Phase 3: Verifying boletos and preparing payment data', { flowId });
+      const verificationResults = await this.verifyAndMapForPayment(validBoletos, options, flowId);
+
+      // 4. FASE: Executar pagamentos
+      this.log('info', 'Phase 4: Processing payments', { flowId });
+      const paymentResults = await this.processPaymentBatch(verificationResults.payableboletos, options, flowId);
+
+      // 5. CONSOLIDAR RESULTADOS
+      const result = {
+        success: true,
+        flowId,
+        data: {
+          cnabSummary: cnabResult.summary,
+          cnabMetadata: cnabResult.metadata,
+          phases: {
+            extraction: {
+              success: true,
+              totalRecords: cnabResult.summary.totalRecords,
+              boletosFound: cnabResult.summary.paymentsFound,
+              validBoletos: validBoletos.length
+            },
+            verification: verificationResults.summary,
+            payment: paymentResults.summary
+          },
+          verificationDetails: verificationResults.details,
+          paymentDetails: paymentResults.details,
+          compatibility: this.analyzeCompatibility(cnabResult.data.payments, verificationResults.details)
+        },
+        processingTime: `${Date.now() - startTime}ms`,
+        timestamp: new Date().toISOString()
+      };
+
+      this.log('info', 'Complete flow finished successfully', {
+        flowId,
+        processed: paymentResults.summary.processed,
+        successful: paymentResults.summary.successful
+      });
+
+      metricsCollector.incrementCounter('cnab.complete_flow.success');
+      timer.end();
+
+      return result;
+
+    } catch (error) {
+      this.log('error', 'Complete flow failed', { flowId, error: error.message });
+
+      metricsCollector.incrementCounter('cnab.complete_flow.failures');
+      timer.end();
+
+      return {
+        success: false,
+        flowId,
+        error: {
+          message: error.message,
+          type: error.constructor.name,
+          timestamp: new Date().toISOString()
+        },
+        processingTime: `${Date.now() - startTime}ms`
+      };
+    }
+  }
+
+  /**
+   * NOVO: Verificar boletos e mapear dados para pagamento
+   * @param {Array} boletos - Lista de boletos para verificar
+   * @param {Object} options - Opções de verificação
+   * @param {string} flowId - ID do fluxo para logs
+   * @returns {Object} Resultados da verificação e mapeamento
+   */
+  async verifyAndMapForPayment(boletos, options = {}, flowId) {
+    const results = {
+      summary: {
+        total: boletos.length,
+        verified: 0,
+        compatible: 0,
+        payable: 0,
+        failed: 0
+      },
+      details: [],
+      payableboletos: []
+    };
+
+    const batchSize = options.batchSize || this.config.batchSize;
+    const maxConcurrent = options.maxConcurrentRequests || this.config.maxConcurrentRequests;
+
+    // Processar em lotes
+    for (let i = 0; i < boletos.length; i += batchSize) {
+      const batch = boletos.slice(i, i + batchSize);
+      this.log('debug', `Processing verification batch ${Math.floor(i / batchSize) + 1}`, {
+        flowId,
+        batchSize: batch.length
+      });
+
+      // Processar lote com controle de concorrência
+      const batchPromises = batch.map(boleto =>
+        this.verifyAndMapSingleBoleto(boleto, flowId)
+      );
+
+      const batchResults = await this.limitConcurrency(batchPromises, maxConcurrent);
+
+      // Consolidar resultados do lote
+      for (const result of batchResults) {
+        results.details.push(result);
+
+        if (result.success) {
+          results.summary.verified++;
+
+          if (result.compatibility?.isCompatible) {
+            results.summary.compatible++;
+
+            if (result.paymentData) {
+              results.summary.payable++;
+              results.payableboletos.push(result);
+            }
+          }
+        } else {
+          results.summary.failed++;
+        }
+      }
+
+      // Pequena pausa entre lotes para não sobrecarregar a API
+      if (i + batchSize < boletos.length) {
+        await this.sleep(100);
+      }
+    }
+
+    this.log('info', 'Verification and mapping completed', {
+      flowId,
+      verified: results.summary.verified,
+      payable: results.summary.payable
+    });
+
+    return results;
+  }
+
+  /**
+   * NOVO: Verificar e mapear um único boleto para pagamento
+   * @param {Object} boleto - Dados do boleto CNAB
+   * @param {string} flowId - ID do fluxo para logs
+   * @returns {Object} Resultado da verificação e mapeamento
+   */
+  async verifyAndMapSingleBoleto(boleto, flowId) {
+    const barcode = boleto.barcode;
+
+    try {
+      // 1. Verificar boleto com Swap API (get ID and data)
+      const swapData = await this.swapService.checkBoleto(barcode);
+
+      // 2. Mapear dados CNAB com dados Swap
+      const mappedData = this.mapCNABToSwapData(boleto, swapData);
+
+      // 3. Analisar compatibilidade
+      const compatibility = this.analyzeBoletoCompatibility(boleto, swapData);
+
+      // 4. Preparar dados de pagamento se compatível
+      let paymentData = null;
+      if (compatibility.isCompatible && mappedData.canPayNow) {
+        paymentData = this.preparePaymentData(boleto, swapData, mappedData);
+      }
+
+      const result = {
+        cnabId: boleto.id,
+        barcode,
+        success: true,
+        cnabData: boleto,
+        swapData,
+        mappedData,
+        compatibility,
+        paymentData,
+        canPay: !!paymentData,
+        timestamp: new Date().toISOString()
+      };
+
+      this.log('debug', 'Boleto verified and mapped successfully', {
+        flowId,
+        barcode: this.maskBarcode(barcode),
+        canPay: !!paymentData
+      });
+
+      return result;
+
+    } catch (error) {
+      const result = {
+        cnabId: boleto.id,
+        barcode,
+        success: false,
+        cnabData: boleto,
+        error: error.message,
+        errorType: this.classifySwapError(error),
+        timestamp: new Date().toISOString()
+      };
+
+      this.log('warn', 'Boleto verification failed during mapping', {
+        flowId,
+        barcode: this.maskBarcode(barcode),
+        error: error.message
+      });
+
+      return result;
+    }
+  }
+
+  /**
+   * NOVO: Preparar dados de pagamento conforme API Swap Financial
+   * @param {Object} cnabData - Dados do boleto CNAB
+   * @param {Object} swapData - Dados do boleto Swap
+   * @param {Object} mappedData - Dados mapeados
+   * @returns {Object} Dados preparados para pagamento
+   */
+  preparePaymentData(cnabData, swapData, mappedData) {
+    // Extrair document do CNAB ou usar fallback
+    const payerDocument = cnabData.payer?.document ||
+      cnabData.beneficiary?.document ||
+      process.env.COMPANY_CNPJ || '';
+
+    return {
+      // Dados para API Swap Financial
+      boletoId: swapData.id,
+      amount: swapData.amount,  // Valor em centavos da Swap API
+      document: payerDocument.replace(/[^\d]/g, ''), // Limpar formatação
+      account_id: process.env.SWAP_ACCOUNT_ID || '',
+
+      // Metadados para tracking
+      cnabId: cnabData.id,
+      barcode: cnabData.barcode,
+      originalValue: cnabData.value,
+      dueDate: swapData.due_date,
+
+      // Dados para logs e auditoria
+      paymentMethod: 'swap_financial',
+      preparedAt: new Date().toISOString()
+    };
+  }
+
+  /**
+   * NOVO: Processar lote de pagamentos
+   * @param {Array} payableboletos - Boletos preparados para pagamento
+   * @param {Object} options - Opções de processamento
+   * @param {string} flowId - ID do fluxo para logs
+   * @returns {Object} Resultados dos pagamentos
+   */
+  async processPaymentBatch(payableboletos, options = {}, flowId) {
+    const results = {
+      summary: {
+        total: payableboletos.length,
+        processed: 0,
+        successful: 0,
+        failed: 0
+      },
+      details: []
+    };
+
+    if (payableboletos.length === 0) {
+      this.log('info', 'No boletos available for payment processing', { flowId });
+      return results;
+    }
+
+    const batchSize = options.paymentBatchSize || 5; // Menor para pagamentos
+    const maxConcurrent = options.paymentMaxConcurrent || 2; // Menor para pagamentos
+
+    // Processar pagamentos em lotes menores
+    for (let i = 0; i < payableboletos.length; i += batchSize) {
+      const batch = payableboletos.slice(i, i + batchSize);
+      this.log('info', `Processing payment batch ${Math.floor(i / batchSize) + 1}`, {
+        flowId,
+        batchSize: batch.length
+      });
+
+      // Processar lote com controle de concorrência
+      const batchPromises = batch.map(boletoData =>
+        this.processSinglePayment(boletoData, flowId)
+      );
+
+      const batchResults = await this.limitConcurrency(batchPromises, maxConcurrent);
+
+      // Consolidar resultados do lote
+      for (const result of batchResults) {
+        results.details.push(result);
+        results.summary.processed++;
+
+        if (result.success) {
+          results.summary.successful++;
+        } else {
+          results.summary.failed++;
+        }
+      }
+
+      // Pausa maior entre lotes de pagamento
+      if (i + batchSize < payableboletos.length) {
+        await this.sleep(500);
+      }
+    }
+
+    this.log('info', 'Payment batch processing completed', {
+      flowId,
+      processed: results.summary.processed,
+      successful: results.summary.successful
+    });
+
+    return results;
+  }
+
+  /**
+   * NOVO: Processar um único pagamento
+   * @param {Object} boletoData - Dados do boleto preparado para pagamento
+   * @param {string} flowId - ID do fluxo para logs
+   * @returns {Object} Resultado do pagamento
+   */
+  async processSinglePayment(boletoData, flowId) {
+    const paymentId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const startTime = Date.now();
+
+    try {
+      this.log('info', 'Processing payment', {
+        flowId,
+        paymentId,
+        boletoId: boletoData.paymentData.boletoId,
+        amount: boletoData.paymentData.amount
+      });
+
+      // Validações pré-pagamento
+      const validationResult = this.validatePrePayment(boletoData);
+      if (!validationResult.valid) {
+        throw new Error(`Pre-payment validation failed: ${validationResult.reasons.join(', ')}`);
+      }
+
+      // Executar pagamento via Swap Financial API
+      const paymentResult = await this.swapService.payBoleto(
+        boletoData.barcode,
+        {
+          document: boletoData.paymentData.document,
+          // Pode adicionar outros dados do pagador se necessário
+        }
+      );
+
+      const result = {
+        paymentId,
+        cnabId: boletoData.cnabId,
+        boletoId: boletoData.paymentData.boletoId,
+        barcode: boletoData.barcode,
+        success: true,
+        amount: boletoData.paymentData.amount,
+        paymentData: boletoData.paymentData,
+        swapResponse: paymentResult,
+        processingTime: `${Date.now() - startTime}ms`,
+        timestamp: new Date().toISOString()
+      };
+
+      this.log('info', 'Payment processed successfully', {
+        flowId,
+        paymentId,
+        amount: boletoData.paymentData.amount,
+        authenticationCode: paymentResult.authentication
+      });
+
+      // Métricas de sucesso
+      metricsCollector.incrementCounter('swap.payments.successful');
+      metricsCollector.incrementCounter('swap.payments.amount', boletoData.paymentData.amount);
+
+      return result;
+
+    } catch (error) {
+      const result = {
+        paymentId,
+        cnabId: boletoData.cnabId,
+        boletoId: boletoData.paymentData?.boletoId,
+        barcode: boletoData.barcode,
+        success: false,
+        error: error.message,
+        errorType: this.classifySwapError(error),
+        paymentData: boletoData.paymentData,
+        processingTime: `${Date.now() - startTime}ms`,
+        timestamp: new Date().toISOString()
+      };
+
+      this.log('error', 'Payment processing failed', {
+        flowId,
+        paymentId,
+        barcode: this.maskBarcode(boletoData.barcode),
+        error: error.message
+      });
+
+      // Métricas de falha
+      metricsCollector.incrementCounter('swap.payments.failed');
+
+      return result;
+    }
+  }
+
+  /**
+   * NOVO: Validar se boleto pode ser pago
+   * @param {Object} boletoData - Dados do boleto para validação
+   * @returns {Object} Resultado da validação
+   */
+  validatePrePayment(boletoData) {
+    const reasons = [];
+
+    // Verificar se tem ID do boleto
+    if (!boletoData.paymentData?.boletoId) {
+      reasons.push('Missing boleto ID');
+    }
+
+    // Verificar se tem valor
+    if (!boletoData.paymentData?.amount || boletoData.paymentData.amount <= 0) {
+      reasons.push('Invalid payment amount');
+    }
+
+    // Verificar se tem document
+    if (!boletoData.paymentData?.document) {
+      reasons.push('Missing payer document');
+    }
+
+    // Verificar se tem account_id
+    if (!boletoData.paymentData?.account_id) {
+      reasons.push('Missing account ID');
+    }
+
+    // Verificar compatibilidade
+    if (!boletoData.compatibility?.isCompatible) {
+      reasons.push('Boleto is not compatible for payment');
+    }
+
+    // Verificar se pode pagar agora
+    if (!boletoData.mappedData?.canPayNow) {
+      reasons.push('Boleto cannot be paid at this time');
+    }
+
+    // Verificar status do boleto
+    if (boletoData.swapData?.status === 'paid') {
+      reasons.push('Boleto is already paid');
+    }
+
+    return {
+      valid: reasons.length === 0,
+      reasons
+    };
+  }
 }
 
 export default CNABSwapOrchestrator; 

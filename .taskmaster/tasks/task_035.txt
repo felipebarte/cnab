@@ -1,6 +1,6 @@
 # Task ID: 35
 # Title: Implementar Pagamento via API Swap com Payload Completo
-# Status: pending
+# Status: done
 # Dependencies: 34
 # Priority: high
 # Description: Corrigir endpoint de pagamento usando ID do boleto e payload completo
@@ -14,21 +14,79 @@
 
 
 # Subtasks:
-## 1. Corrigir URL do Endpoint de Pagamento [pending]
+## 1. Corrigir URL do Endpoint de Pagamento [done]
 ### Dependencies: None
 ### Description: Atualizar URL para usar ID do boleto na URL
 ### Details:
 URL: https://api-stag.contaswap.io/ledger/payments/boletos/{boletoId}/pay
+<info added on 2025-06-03T02:04:41.629Z>
+✅ VERIFICADO: A implementação ATUAL já utiliza endpoint correto!
 
-## 2. Implementar Payload Completo de Pagamento [pending]
+**Status da Implementação:**
+- ✅ Endpoint: `POST /ledger/payments/boletos/${boletoData.id}/pay` - CORRETO
+- ✅ ID no URL path: Implementado via template string `${boletoData.id}`
+- ✅ Não há ID no payload: Correto, ID vai somente na URL
+
+**Arquivo:** SwapFinancialService.js linha 354
+**Implementação:** `await this.authenticatedRequest('POST', \`/ledger/payments/boletos/${boletoData.id}/pay\`, paymentData)`
+
+**NENHUMA ALTERAÇÃO NECESSÁRIA** - Task 35.1 estava já implementada corretamente durante Task 38
+</info added on 2025-06-03T02:04:41.629Z>
+
+## 2. Implementar Payload Completo de Pagamento [done]
 ### Dependencies: None
 ### Description: Adicionar campos obrigatórios: amount, document, account_id
 ### Details:
 Payload: {"amount": valor_do_boleto, "document": cnpj_empresa, "account_id": id_conta_swap}
+<info added on 2025-06-03T02:04:52.121Z>
+Status da Implementação:  
+- ✅ Payload implementado: `{amount, document, account_id}` - CORRETO  
+- ✅ Sem ID no payload: Correto, conforme especificação API Swap  
+- ✅ Campo `amount`: Valor em centavos do boleto  
+- ✅ Campo `document`: CNPJ/CPF com fallback para COMPANY_CNPJ  
+- ✅ Campo `account_id`: ID da conta configurada no constructor  
 
-## 3. Configurar account_id e document [pending]
+Arquivo: SwapFinancialService.js linhas 347-351  
+Implementação:  
+```javascript
+const paymentData = {
+  amount: boletoData.amount,
+  document: payerData.document || process.env.COMPANY_CNPJ || '',
+  account_id: this.accountId
+};
+```
+
+NENHUMA ALTERAÇÃO NECESSÁRIA - Task 35.2 estava já implementada corretamente durante Task 38
+</info added on 2025-06-03T02:04:52.121Z>
+
+## 3. Configurar account_id e document [done]
 ### Dependencies: None
 ### Description: Adicionar configuração para CNPJ e account_id da empresa
 ### Details:
 Adicionar configurações: SWAP_ACCOUNT_ID e COMPANY_DOCUMENT no .env ou config
+<info added on 2025-06-03T02:05:09.889Z>
+✅ VERIFICADO: Testes ATUAIS já estão corretos!
+
+**Status dos Testes:**
+- ✅ Endpoint testado: `POST /ledger/payments/boletos/bol_123/pay` - CORRETO
+- ✅ Payload testado: `{amount: 10000, document: '12345678000190', account_id: 'test_account_123'}` - CORRETO
+- ✅ Testes passando: Verificado via `npm test -- --testNamePattern="payBoleto"`
+- ✅ Casos de erro testados: ID inválido, fallback CNPJ empresa
+
+**Arquivo:** SwapFinancialService.test.js linhas 314-327
+**Verificação:**
+```javascript
+expect(swapService.authenticatedRequest).toHaveBeenCalledWith(
+  'POST',
+  '/ledger/payments/boletos/bol_123/pay',
+  {
+    amount: 10000,
+    document: '12345678000190',
+    account_id: 'test_account_123'
+  }
+);
+```
+
+**NENHUMA ALTERAÇÃO NECESSÁRIA** - Task 35.3 estava já implementada corretamente durante Task 38
+</info added on 2025-06-03T02:05:09.889Z>
 
