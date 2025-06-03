@@ -82,7 +82,7 @@ describe.skipIf(skipIntegrationTests)('Swap Financial Integration Tests', () => 
 
         expect(result).toBeDefined();
         expect(result.id).toBeDefined();
-        expect(result.amountInReais).toBeGreaterThan(0);
+        expect(result.amount).toBeGreaterThan(0);
         expect(result.due_date).toBeDefined();
         expect(result.status).toBeDefined();
         expect(result.canPayToday).toBeDefined();
@@ -90,10 +90,21 @@ describe.skipIf(skipIntegrationTests)('Swap Financial Integration Tests', () => 
 
         console.log('✅ Boleto verificado:', {
           id: result.id,
-          amount: result.amountInReais,
+          amount: result.amount,
           status: result.status,
           canPay: result.canPayToday
         });
+
+        // Testar pagamento se possível
+        if (result.canPayToday && result.isInPaymentWindow) {
+          const paymentResult = await swapService.payBoleto(testBarcode, {
+            document: process.env.COMPANY_CNPJ || '12345678000190'
+          });
+
+          expect(paymentResult).toBeDefined();
+          // Verificar se o pagamento foi processado
+          expect(paymentResult.status).toBeDefined();
+        }
       } catch (error) {
         // Se o boleto não for encontrado, isso é esperado em ambiente de teste
         if (error.message.includes('not found') || error.message.includes('404')) {

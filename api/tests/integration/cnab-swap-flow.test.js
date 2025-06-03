@@ -64,17 +64,17 @@ describe('CNAB-Swap Integration Flow Tests', () => {
       // Mock das respostas do Swap para os boletos
       mockSwapService.checkBoleto
         .mockResolvedValueOnce({
-          id: 'bol_123',
-          amountInReais: 120.00,
+          id: 'bol_success_1',
+          amount: 12000, // valor em centavos
           due_date: '2024-12-21',
           status: 'pending',
           canPayToday: true,
           isInPaymentWindow: true
         })
         .mockResolvedValueOnce({
-          id: 'bol_456',
-          amountInReais: 150.00,
-          due_date: '2024-12-21',
+          id: 'bol_success_2',
+          amount: 15000, // valor em centavos
+          due_date: '2024-12-22',
           status: 'pending',
           canPayToday: true,
           isInPaymentWindow: true
@@ -137,7 +137,7 @@ describe('CNAB-Swap Integration Flow Tests', () => {
       // Mock de resposta padrão
       mockSwapService.checkBoleto.mockResolvedValue({
         id: 'bol_test',
-        amountInReais: 100.00,
+        amount: 10000, // valor em centavos
         due_date: '2024-12-21',
         status: 'pending'
       });
@@ -180,13 +180,13 @@ describe('CNAB-Swap Integration Flow Tests', () => {
       mockSwapService.checkBoleto
         .mockResolvedValueOnce({
           id: 'bol_1',
-          amountInReais: 100.00,
+          amount: 10000, // valor em centavos
           status: 'pending',
           canPayToday: true
         })
         .mockResolvedValueOnce({
           id: 'bol_2',
-          amountInReais: 200.00,
+          amount: 20000, // valor em centavos
           status: 'pending',
           canPayToday: true
         })
@@ -233,8 +233,8 @@ describe('CNAB-Swap Integration Flow Tests', () => {
 
       // Mock que só deve ser chamado para códigos válidos
       mockSwapService.checkBoleto.mockResolvedValue({
-        id: 'bol_valid',
-        amountInReais: 100.00,
+        id: 'bol_success',
+        amount: 10000, // valor em centavos
         status: 'pending'
       });
 
@@ -263,7 +263,7 @@ describe('CNAB-Swap Integration Flow Tests', () => {
       // Processar alguns dados para gerar estatísticas
       mockSwapService.checkBoleto.mockResolvedValue({
         id: 'bol_stats',
-        amountInReais: 100.00,
+        amount: 10000, // valor em centavos
         status: 'pending'
       });
 
@@ -307,8 +307,8 @@ describe('CNAB-Swap Integration Flow Tests', () => {
       };
 
       mockSwapService.checkBoleto.mockResolvedValue({
-        id: 'bol_cached',
-        amountInReais: 100.00,
+        id: 'bol_success',
+        amount: 10000, // valor em centavos
         status: 'pending'
       });
 
@@ -371,7 +371,7 @@ describe('CNAB-Swap Integration Flow Tests', () => {
 
       // Mock: primeiro sucesso, segundo falha
       mockSwapService.checkBoleto
-        .mockResolvedValueOnce({ id: 'bol_success', amountInReais: 100.00, status: 'pending' })
+        .mockResolvedValueOnce({ id: 'bol_success', amount: 10000, status: 'pending' })
         .mockRejectedValueOnce(new Error('Service unavailable'));
 
       const result = await orchestrator.verifyBoletosWithSwap(mockBoletos);

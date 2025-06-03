@@ -182,7 +182,7 @@ describe('SwapFinancialService - Consolidado', () => {
       const testBarcode = '12345678901234567890123456789012345678901234567';
       const mockBoletoResponse = {
         id: 'bol_123456789',
-        amountInReais: 150.75,
+        amount: 15075, // valor em centavos
         due_date: '2024-12-31',
         status: 'PENDING',
         payee: {
@@ -201,10 +201,16 @@ describe('SwapFinancialService - Consolidado', () => {
 
       expect(result).toBeDefined();
       expect(result.id).toBe(mockBoletoResponse.id);
-      expect(result.amountInReais).toBe(mockBoletoResponse.amountInReais);
+      expect(result.amount).toBe(mockBoletoResponse.amount);
       expect(result.canPayToday).toBeDefined();
       expect(result.isInPaymentWindow).toBeDefined();
-      expect(swapService.authenticatedRequest).toHaveBeenCalledWith('GET', `/boletos/check/${testBarcode}`);
+
+      // CORREÇÃO: Verificar endpoint correto POST /ledger/payments/boletos com barcode no payload
+      expect(swapService.authenticatedRequest).toHaveBeenCalledWith(
+        'POST',
+        '/ledger/payments/boletos',
+        { barcode: testBarcode }
+      );
     });
 
     test('deve falhar com código de barras inválido', async () => {
@@ -232,7 +238,7 @@ describe('SwapFinancialService - Consolidado', () => {
       const testBarcode = '12345678901234567890123456789012345678901234567';
       const mockResponse = {
         id: 'bol_123',
-        amountInReais: 100.00,
+        amount: 10000, // valor em centavos
         due_date: '2024-12-31',
         status: 'PENDING',
         discountAmount: 10.00,
@@ -258,7 +264,7 @@ describe('SwapFinancialService - Consolidado', () => {
 
       const mockResponse = {
         id: 'bol_123',
-        amountInReais: 100.00,
+        amount: 10000, // valor em centavos
         due_date: futureDate.toISOString().split('T')[0],
         status: 'PENDING'
       };
@@ -277,13 +283,15 @@ describe('SwapFinancialService - Consolidado', () => {
       // Mock de token válido
       swapService.tokenCache = 'test_access_token';
       swapService.tokenExpiry = Date.now() + 3600000;
+      // Configurar accountId para testes
+      swapService.accountId = 'test_account_123';
     });
 
     test('deve pagar boleto com sucesso', async () => {
       const testBarcode = '12345678901234567890123456789012345678901234567';
       const mockBoletoData = {
         id: 'bol_123',
-        amountInReais: 100.00,
+        amount: 10000, // valor em centavos
         due_date: '2024-12-31',
         status: 'PENDING',
         canPayToday: true,
@@ -293,51 +301,84 @@ describe('SwapFinancialService - Consolidado', () => {
       const mockPaymentResponse = {
         id: 'pay_789',
         boleto_id: 'bol_123',
-        amount: 100.00,
+        amount: 10000,
         status: 'PAID',
         paid_at: '2024-01-15T10:30:00Z'
       };
 
       // Mock do checkBoleto
       jest.spyOn(swapService, 'checkBoleto').mockResolvedValue(mockBoletoData);
+
+      // Mock da requisição autenticada com novo endpoint
       swapService.authenticatedRequest = jest.fn().mockResolvedValue(mockPaymentResponse);
 
-      const result = await swapService.payBoleto(testBarcode);
+      const result = await swapService.payBoleto(testBarcode, { document: '12345678000190' });
 
       expect(result).toBeDefined();
       expect(result.id).toBe(mockPaymentResponse.id);
       expect(result.status).toBe('PAID');
       expect(swapService.checkBoleto).toHaveBeenCalledWith(testBarcode);
+
+      // Verificar se foi chamado com endpoint correto
+      expect(swapService.authenticatedRequest).toHaveBeenCalledWith(
+        'POST',
+        '/ledger/payments/boletos/bol_123/pay',
+        {
+          amount: 10000,
+          document: '12345678000190',
+          account_id: 'test_account_123'
+        }
+      );
     });
 
-    test('deve falhar quando boleto não pode ser pago hoje', async () => {
+    test('deve falhar quando boleto não tem ID válido', async () => {
       const testBarcode = '12345678901234567890123456789012345678901234567';
       const mockBoletoData = {
-        id: 'bol_123',
-        amountInReais: 100.00,
-        canPayToday: false,
-        isInPaymentWindow: true
+        // id ausente ou inválido
+        amount: 10000,
+        status: 'PENDING'
       };
 
       jest.spyOn(swapService, 'checkBoleto').mockResolvedValue(mockBoletoData);
 
       await expect(swapService.payBoleto(testBarcode))
-        .rejects.toThrow('Boleto não pode ser pago hoje');
+        .rejects.toThrow('Boleto não encontrado ou ID inválido');
     });
 
-    test('deve falhar quando boleto está fora da janela de pagamento', async () => {
+    test('deve usar CNPJ da empresa como fallback quando document não fornecido', async () => {
       const testBarcode = '12345678901234567890123456789012345678901234567';
       const mockBoletoData = {
         id: 'bol_123',
-        amountInReais: 100.00,
-        canPayToday: true,
-        isInPaymentWindow: false
+        amount: 10000,
+        status: 'PENDING'
       };
 
-      jest.spyOn(swapService, 'checkBoleto').mockResolvedValue(mockBoletoData);
+      const mockPaymentResponse = {
+        id: 'pay_789',
+        status: 'PAID'
+      };
 
-      await expect(swapService.payBoleto(testBarcode))
-        .rejects.toThrow('Boleto está fora da janela de pagamento');
+      // Configurar variável de ambiente para teste
+      process.env.COMPANY_CNPJ = '11222333000144';
+
+      jest.spyOn(swapService, 'checkBoleto').mockResolvedValue(mockBoletoData);
+      swapService.authenticatedRequest = jest.fn().mockResolvedValue(mockPaymentResponse);
+
+      await swapService.payBoleto(testBarcode);
+
+      // Verificar se usou CNPJ da empresa como fallback
+      expect(swapService.authenticatedRequest).toHaveBeenCalledWith(
+        'POST',
+        '/ledger/payments/boletos/bol_123/pay',
+        {
+          amount: 10000,
+          document: '11222333000144',
+          account_id: 'test_account_123'
+        }
+      );
+
+      // Limpar variável de ambiente
+      delete process.env.COMPANY_CNPJ;
     });
   });
 
@@ -350,7 +391,7 @@ describe('SwapFinancialService - Consolidado', () => {
 
       const mockResponse = {
         id: 'bol_123',
-        amountInReais: 100.00,
+        amount: 10000, // valor em centavos
         due_date: '2024-12-31',
         status: 'PENDING'
       };
@@ -471,7 +512,7 @@ describe('SwapFinancialService - Consolidado', () => {
     test('deve enriquecer dados do boleto com informações adicionais', () => {
       const boletoData = {
         id: 'bol_123',
-        amountInReais: 100.00,
+        amount: 10000, // valor em centavos
         due_date: '2024-12-31',
         discountAmount: 5.00,
         fineAmount: 2.50,

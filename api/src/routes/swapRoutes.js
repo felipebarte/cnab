@@ -209,10 +209,8 @@ router.delete('/auth', checkServiceAvailability, clearAuthCache);
  *                       example: "bol_1234567890"
  *                     amount:
  *                       type: number
+ *                       description: Valor em centavos
  *                       example: 26000
- *                     amountInReais:
- *                       type: number
- *                       example: 260.00
  *                     due_date:
  *                       type: string
  *                       format: date

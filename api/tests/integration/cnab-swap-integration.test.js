@@ -78,9 +78,9 @@ describe('CNAB-Swap Financial Integration Tests', () => {
                 barcode: '12345678901234567890123456789012345678901234567',
                 result: {
                   valid: true,
-                  id: 'bol_123',
-                  amountInReais: 120.00,
-                  due_date: '2024-12-21',
+                  id: 'bol_12345',
+                  amount: 12000,
+                  due_date: '2024-12-31',
                   status: 'pending',
                   canPayToday: true,
                   isInPaymentWindow: true

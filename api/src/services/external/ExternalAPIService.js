@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
+import { setTimeout } from 'node:timers';
 
 /**
  * Serviço base para integração com APIs externas
@@ -257,7 +258,8 @@ class ExternalAPIService {
   /**
    * Helper para sleep
    */
-  sleep(ms) {
+  async sleep(ms) {
+
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 

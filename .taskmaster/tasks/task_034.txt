@@ -1,6 +1,6 @@
 # Task ID: 34
 # Title: Implementar Check de Boleto via API Swap
-# Status: pending
+# Status: done
 # Dependencies: 28
 # Priority: high
 # Description: Implementar endpoint correto para checagem de boletos usando barcode extraído do CNAB
@@ -14,21 +14,60 @@
 
 
 # Subtasks:
-## 1. Corrigir URL do Endpoint de Check [pending]
+## 1. Corrigir URL do Endpoint de Check [done]
 ### Dependencies: None
 ### Description: Atualizar URL para o endpoint correto da API Swap
 ### Details:
 Alterar de '/boletos/check' para 'https://api-stag.contaswap.io/ledger/payments/boletos'
+<info added on 2025-06-03T01:41:28.848Z>
+✅ CONCLUÍDO: Endpoint corrigido com sucesso de GET `/boletos/check/${barcode}` para POST `/ledger/payments/boletos`
 
-## 2. Implementar Payload Correto para Check [pending]
+**Implementação Realizada:**
+- Alterado método HTTP de GET para POST no SwapFinancialService.js linha 254
+- Corrigido URL de `/boletos/check/${barcode}` para `/ledger/payments/boletos`
+- Implementado conforme documentação oficial da API Swap Financial
+
+**Verificação:**
+- Testes passando com novo endpoint
+- Integração com authenticatedRequest funcionando corretamente
+- Headers corretos já configurados (Authorization, Content-Type, x-api-key)
+</info added on 2025-06-03T01:41:28.848Z>
+
+## 2. Implementar Payload Correto para Check [done]
 ### Dependencies: None
 ### Description: Ajustar payload para enviar apenas barcode
 ### Details:
 Payload deve ser: {"barcode": "codigo_de_barras_extraido_do_cnab"}
+<info added on 2025-06-03T01:41:40.654Z>
+✅ CONCLUÍDO: Payload corrigido com sucesso para JSON {"barcode": "codigo_de_barras"}
 
-## 3. Configurar Headers Corretos [pending]
+**Implementação Realizada:**
+- Removido barcode do URL path parameter 
+- Implementado barcode no body como JSON: `{barcode: barcode}`
+- Corrigido na chamada `authenticatedRequest('POST', '/ledger/payments/boletos', {barcode: barcode})`
+- Segue exatamente a documentação Swap Financial
+
+**Teste Atualizado:**
+- Corrigido teste para verificar novo formato: `expect().toHaveBeenCalledWith('POST', '/ledger/payments/boletos', { barcode: testBarcode })`
+- Teste passando com novo payload
+</info added on 2025-06-03T01:41:40.654Z>
+
+## 3. Configurar Headers Corretos [done]
 ### Dependencies: None
 ### Description: Implementar headers obrigatórios para API Swap
 ### Details:
 Headers: Authorization: Bearer {token}, Content-Type: application/json
+<info added on 2025-06-03T01:41:59.130Z>
+✅ VERIFICADO: Headers já estavam corretos no authenticatedRequest
+
+**Headers Confirmados:**
+- ✅ `Authorization: Bearer ${token}` - Token OAuth correto
+- ✅ `Content-Type: application/json` - Para envio de JSON
+- ✅ `x-api-key: ${this.apiKey}` - API key da Swap Financial
+
+**Localização:**
+- Implementados no método `authenticatedRequest()` linhas 124-128 do SwapFinancialService.js
+- Aplicados automaticamente a todas as chamadas autenticadas
+- Nenhuma alteração necessária - já seguindo documentação da API
+</info added on 2025-06-03T01:41:59.130Z>
 

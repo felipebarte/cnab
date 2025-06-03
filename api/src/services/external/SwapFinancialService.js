@@ -22,6 +22,7 @@ class SwapFinancialService extends ExternalAPIService {
     this.clientId = options.clientId;
     this.clientSecret = options.clientSecret;
     this.apiKey = options.apiKey;
+    this.accountId = options.accountId || process.env.SWAP_ACCOUNT_ID; // ID da conta para pagamentos
 
     // URLs por ambiente
     this.apiUrls = {
@@ -251,14 +252,19 @@ class SwapFinancialService extends ExternalAPIService {
     }
 
     try {
-      const response = await this.authenticatedRequest('GET', `/boletos/check/${barcode}`);
+      // CORREÇÃO CRÍTICA: Usar endpoint correto da API Swap Financial
+      // Endpoint: POST /ledger/payments/boletos
+      // Payload: {"barcode": "codigo_de_barras"}
+      const response = await this.authenticatedRequest('POST', '/ledger/payments/boletos', {
+        barcode: barcode
+      });
 
       if (!response) {
         throw new Error('Resposta vazia da API Swap Financial');
       }
 
       // Verificar campos obrigatórios
-      const requiredFields = ['id', 'amountInReais', 'due_date', 'status'];
+      const requiredFields = ['id', 'amount', 'due_date', 'status'];
       for (const field of requiredFields) {
         if (response[field] === undefined || response[field] === null) {
           throw new Error(`Campo obrigatório ausente na resposta: ${field}`);
@@ -270,7 +276,7 @@ class SwapFinancialService extends ExternalAPIService {
 
       this.log('info', 'Boleto checked successfully', {
         boletoId: response.id,
-        amount: response.amountInReais,
+        amount: response.amount,
         dueDate: response.due_date,
         status: response.status
       });
@@ -292,45 +298,45 @@ class SwapFinancialService extends ExternalAPIService {
   }
 
   /**
-   * Pagar boleto
+   * Realizar pagamento de boleto via Swap Financial
+   * @param {string} barcode - Código de barras do boleto
+   * @param {Object} payerData - Dados do pagador (opcional, para validação extra)
+   * @returns {Promise<Object>} Resultado do pagamento
    */
-  async payBoleto(barcode) {
-    const timer = new Timer('swap.boleto.pay.duration');
-    metricsCollector.incrementCounter('swap.boleto.pay.attempts');
+  async payBoleto(barcode, payerData = {}) {
+    const timer = new Timer('swap.payment.duration');
+    metricsCollector.incrementCounter('swap.payment.attempts');
 
     try {
-      // Primeiro verificar o boleto
+      // Primeiro, verificar o boleto para obter ID e dados necessários
       const boletoData = await this.checkBoleto(barcode);
 
-      // Validar se pode ser pago
-      if (!boletoData.canPayToday) {
-        throw new Error('Boleto não pode ser pago hoje');
+      if (!boletoData || !boletoData.id) {
+        throw new Error('Boleto não encontrado ou ID inválido');
       }
 
-      if (!boletoData.isInPaymentWindow) {
-        throw new Error('Boleto está fora da janela de pagamento');
-      }
-
-      // Fazer o pagamento
+      // Fazer o pagamento usando endpoint correto da API Swap
       const paymentData = {
-        barcode,
-        amount: boletoData.amountInReais
+        amount: boletoData.amount,                    // Valor em centavos
+        document: payerData.document || process.env.COMPANY_CNPJ || '', // CNPJ do pagador
+        account_id: this.accountId                    // ID da conta do pagador
       };
 
-      const response = await this.authenticatedRequest('POST', '/boletos/pay', paymentData);
+      // Usar endpoint correto: POST /ledger/payments/boletos/{id}/pay
+      const response = await this.authenticatedRequest('POST', `/ledger/payments/boletos/${boletoData.id}/pay`, paymentData);
 
       this.log('info', 'Boleto paid successfully', {
-        paymentId: response.id,
-        transactionId: response.transactionId,
-        amount: response.amount
+        boletoId: boletoData.id,
+        amount: boletoData.amount,
+        status: response.status || 'paid'
       });
 
-      metricsCollector.incrementCounter('swap.boleto.pay.success');
+      metricsCollector.incrementCounter('swap.payment.success');
       timer.end();
 
       return response;
     } catch (error) {
-      metricsCollector.incrementCounter('swap.boleto.pay.failures');
+      metricsCollector.incrementCounter('swap.payment.failures');
 
       this.log('error', 'Failed to pay boleto', {
         barcode: this.maskBarcode(barcode),
@@ -358,7 +364,6 @@ class SwapFinancialService extends ExternalAPIService {
    */
   enrichBoletoData(boletoData) {
     const now = new Date();
-    const dueDate = new Date(boletoData.due_date);
 
     return {
       ...boletoData,
@@ -381,7 +386,7 @@ class SwapFinancialService extends ExternalAPIService {
   /**
    * Verificar se boleto pode ser pago hoje
    */
-  canPayToday(boletoData) {
+  canPayToday(_boletoData) {
     // Lógica simplificada para testes - assumir que pode pagar durante horário comercial
     const now = new Date();
     const hour = now.getHours();

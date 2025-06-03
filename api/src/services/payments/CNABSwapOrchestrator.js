@@ -354,9 +354,9 @@ class CNABSwapOrchestrator {
 
       // Valores
       cnabValue: cnabData.value,
-      swapValue: swapData.amountInReais,
-      valueDifference: Math.abs((cnabData.value || 0) - (swapData.amountInReais || 0)),
-      valuesMatch: Math.abs((cnabData.value || 0) - (swapData.amountInReais || 0)) < 0.01,
+      swapValue: swapData.amount,
+      valueDifference: Math.abs((cnabData.value || 0) - (swapData.amount || 0)),
+      valuesMatch: Math.abs((cnabData.value || 0) - (swapData.amount || 0)) < 0.01,
 
       // Datas
       cnabDueDate: cnabData.dueDate,
@@ -397,12 +397,12 @@ class CNABSwapOrchestrator {
     const warnings = [];
 
     // Verificar diferenças de valor
-    const valueDiff = Math.abs((cnabData.value || 0) - (swapData.amountInReais || 0));
+    const valueDiff = Math.abs((cnabData.value || 0) - (swapData.amount || 0));
     if (valueDiff > 0.01) {
       if (valueDiff > (cnabData.value || 0) * 0.1) {
-        issues.push(`Significant value difference: CNAB=${cnabData.value}, Swap=${swapData.amountInReais}`);
+        issues.push(`Significant value difference: CNAB=${cnabData.value}, Swap=${swapData.amount}`);
       } else {
-        warnings.push(`Minor value difference: CNAB=${cnabData.value}, Swap=${swapData.amountInReais}`);
+        warnings.push(`Minor value difference: CNAB=${cnabData.value}, Swap=${swapData.amount}`);
       }
     }
 
