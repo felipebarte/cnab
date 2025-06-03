@@ -1,0 +1,760 @@
+{
+  "project": {
+    "name": "Refatoração Sistema CNAB Universal",
+    "version": "2.0.0",
+    "description": "Refatoração completa do sistema CNAB para suportar múltiplos bancos usando cnab_yaml como fonte única de verdade"
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Configurar Estrutura Base e Dependências",
+      "description": "Configurar a estrutura do projeto e adicionar as dependências necessárias para o sistema CNAB universal",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [],
+      "details": "- Adicionar @banco-br/cnab_yaml v2.1.0+\n- Adicionar @banco-br/nodejs-cnab\n- Adicionar js-yaml para parsing de schemas\n- Manter cnab400-itau-parser para compatibilidade\n- Configurar estrutura de pastas conforme RT003",
+      "testStrategy": "Verificar se todas as dependências foram instaladas corretamente e se a estrutura de pastas está conforme especificado",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Configurar Infraestrutura MySQL com Docker",
+          "description": "Implementar a infraestrutura do banco de dados MySQL para persistência dos dados CNAB processados",
+          "details": "- Adicionar serviço MySQL no docker-compose.yml\n- Configurar volumes para persistência de dados  \n- Definir variáveis de ambiente para conexão\n- Configurar rede entre containers\n- Criar scripts de inicialização do banco\n- Configurar backup e recovery básico",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 1
+        },
+        {
+          "id": 2,
+          "title": "Implementar Estrutura de Banco de Dados MySQL",
+          "description": "Criar toda a estrutura de banco de dados para persistir dados CNAB processados",
+          "details": "- Criar schema do banco de dados\n- Implementar tabelas principais (cnab_arquivos, cnab_registros, etc.)\n- Configurar relacionamentos e chaves estrangeiras\n- Criar índices para performance\n- Implementar constraints e validações\n- Criar scripts de migração",
+          "status": "pending",
+          "dependencies": [
+            "1.1"
+          ],
+          "parentTaskId": 1
+        },
+        {
+          "id": 3,
+          "title": "Configurar ORM e Dependências",
+          "description": "Configurar Sequelize ORM e dependências necessárias para conexão com MySQL",
+          "details": "- Instalar dependências: mysql2, sequelize\n- Configurar conexão com banco de dados\n- Criar arquivo de configuração do Sequelize\n- Configurar variáveis de ambiente\n- Testar conexão inicial\n- Configurar pool de conexões",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 1
+        },
+        {
+          "id": 4,
+          "title": "Criar Modelos Sequelize",
+          "description": "Implementar todos os modelos Sequelize para as entidades CNAB",
+          "details": "- Modelo CnabArquivo (arquivo processado)\n- Modelo CnabCabecalho (header do arquivo)\n- Modelo CnabRegistro (registros de detalhe)\n- Modelo CnabPagador (dados do pagador)\n- Modelo CnabDadosFinanceiros (informações financeiras)\n- Modelo CnabBoleto (dados específicos de boletos)\n- Modelo CnabResumo (resumos por arquivo)\n- Configurar associações entre modelos",
+          "status": "pending",
+          "dependencies": [
+            "1.2",
+            "1.3"
+          ],
+          "parentTaskId": 1
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Implementar CnabSchemaLoader",
+      "description": "Criar serviço para carregar e cachear schemas YAML dos bancos suportados",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [
+        1
+      ],
+      "details": "- Implementar carregamento dinâmico de schemas do cnab_yaml\n- Adicionar cache para schemas carregados\n- Suportar todos os 8 bancos: BB (001), Santander (033), Banrisul (041), Caixa (104), Bradesco (237), Itaú (341), Sicredi (748), Sicoob (756)\n- Implementar validação de schema",
+      "testStrategy": "Testar carregamento de schemas de todos os bancos suportados e verificar cache",
+      "subtasks": []
+    },
+    {
+      "id": 3,
+      "title": "Implementar CnabUniversalService",
+      "description": "Criar serviço principal que detecta automaticamente formato e banco",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [
+        2
+      ],
+      "details": "- Detectar automaticamente formato CNAB (240/400)\n- Identificar banco automaticamente\n- Aplicar padrão Factory para instâncias CNAB\n- Implementar Strategy Pattern para diferentes bancos\n- Integrar com CnabSchemaLoader",
+      "testStrategy": "Testar detecção automática de formato e banco com arquivos CNAB reais de diferentes bancos",
+      "subtasks": []
+    },
+    {
+      "id": 4,
+      "title": "Implementar CnabValidatorService",
+      "description": "Criar sistema de validação universal baseado em schemas YAML",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [
+        2,
+        3
+      ],
+      "details": "- Validação estrutural (tamanho de linhas)\n- Validação de campos usando schemas YAML\n- Validação de integridade (checksums, totalizadores)\n- Validação de regras de negócio\n- Aplicar Decorator Pattern para validações",
+      "testStrategy": "Testar validação com arquivos CNAB válidos e inválidos de todos os bancos suportados"
+    },
+    {
+      "id": 5,
+      "title": "Implementar CnabParserService",
+      "description": "Criar parser universal para extrair dados estruturados dos arquivos CNAB",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [
+        3,
+        4
+      ],
+      "details": "- Parser universal para CNAB 240 e 400\n- Extração estruturada de dados\n- Suporte a todos os bancos do cnab_yaml\n- Otimização para arquivos grandes\n- Integração com validador",
+      "testStrategy": "Verificar parsing correto de arquivos CNAB de diferentes tamanhos e bancos"
+    },
+    {
+      "id": 6,
+      "title": "Implementar PaymentExtractorService",
+      "description": "Serviço para extrair dados de pagamento dos arquivos CNAB processados",
+      "status": "done",
+      "priority": "medium",
+      "dependencies": [
+        5
+      ],
+      "details": "- Extrair códigos de barras dos registros CNAB\n- Extrair linhas digitáveis\n- Estruturar dados para APIs externas\n- Identificar tipos de pagamento\n- Validar códigos extraídos",
+      "testStrategy": "Verificar extração correta de códigos de barras e linhas digitáveis com precisão ≥99%",
+      "subtasks": []
+    },
+    {
+      "id": 7,
+      "title": "Implementar PaymentValidatorService",
+      "description": "Validador específico para códigos de barras e dados de pagamento",
+      "status": "done",
+      "priority": "medium",
+      "dependencies": [
+        6
+      ],
+      "details": "- Validar códigos de barras com algoritmos corretos\n- Validar linhas digitáveis\n- Verificar consistência de dados de pagamento\n- Implementar checksums específicos\n- Validar valores e datas",
+      "testStrategy": "Testar validação de códigos de barras conhecidos válidos e inválidos"
+    },
+    {
+      "id": 8,
+      "title": "Implementar ExternalAPIService",
+      "description": "Serviço de integração com APIs externas para envio de lotes de pagamento",
+      "status": "done",
+      "priority": "medium",
+      "dependencies": [
+        7
+      ],
+      "details": "- Integração com APIs SWAP Financial\n- Implementar retry logic\n- Error handling robusto\n- Logging completo de integrações\n- Circuit breaker pattern\n- Webhook handling",
+      "testStrategy": "Testar integração com API externa mock e verificar retry logic e error handling"
+    },
+    {
+      "id": 9,
+      "title": "Implementar Endpoints Universais - Processamento",
+      "description": "Criar novos endpoints universais para processamento CNAB",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [
+        5
+      ],
+      "details": "- POST /api/v1/cnab/universal/processar\n- POST /api/v1/cnab/universal/upload\n- POST /api/v1/cnab/universal/validar\n- GET /api/v1/cnab/universal/bancos\n- GET /api/v1/cnab/universal/schemas/{banco}\n- Documentação Swagger",
+      "testStrategy": "Testar todos os endpoints com arquivos CNAB de diferentes bancos"
+    },
+    {
+      "id": 10,
+      "title": "Implementar Endpoints de Pagamento",
+      "description": "Criar endpoints para extração e envio de pagamentos",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": [
+        8
+      ],
+      "details": "- POST /api/v1/cnab/universal/pagamentos\n- POST /api/v1/pagamentos/lote\n- GET /api/v1/pagamentos/status/{loteId}\n- POST /api/v1/pagamentos/webhook\n- Integração completa com ExternalAPIService",
+      "testStrategy": "Testar fluxo completo de extração e envio de pagamentos para API externa",
+      "subtasks": []
+    },
+    {
+      "id": 11,
+      "title": "Implementar Cache e Performance",
+      "description": "Otimizar performance com cache de schemas e instâncias CNAB",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": [
+        3
+      ],
+      "details": "- Cache de schemas carregados\n- Cache de instâncias CNAB por banco\n- Otimização para arquivos grandes (>100MB)\n- Profiling e monitoramento de performance\n- Target: processar 100MB em <30s",
+      "testStrategy": "Testar performance com arquivos de diferentes tamanhos e verificar cache hit rate >80%"
+    },
+    {
+      "id": 12,
+      "title": "Garantir Backwards Compatibility",
+      "description": "Manter compatibilidade com endpoints e funcionalidades atuais",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [
+        9
+      ],
+      "details": "- Manter todos os endpoints atuais funcionando\n- Implementar camada de compatibilidade\n- Testes de regressão extensivos\n- Path de migração gradual\n- Zero breaking changes",
+      "testStrategy": "Executar suite completa de testes de regressão com endpoints legados"
+    },
+    {
+      "id": 13,
+      "title": "Implementar Logging Estruturado",
+      "description": "Sistema de logging completo para todas as operações",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": [
+        8
+      ],
+      "details": "- Logging estruturado com Winston\n- Logs de integração com APIs externas\n- Logs de processamento CNAB\n- Logs de performance e erros\n- Configuração de níveis de log",
+      "testStrategy": "Verificar logs estruturados em todas as operações críticas"
+    },
+    {
+      "id": 14,
+      "title": "Criar Testes de Integração",
+      "description": "Suite completa de testes de integração com arquivos CNAB reais",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": [
+        5,
+        8
+      ],
+      "details": "- Testes com arquivos CNAB reais de todos os bancos\n- Testes de performance para arquivos grandes\n- Testes de integração com API externa\n- Cobertura mínima de 90%\n- Testes de carga (1000 req/min)",
+      "testStrategy": "Executar suite completa de testes e verificar cobertura ≥90%"
+    },
+    {
+      "id": 15,
+      "title": "Atualizar Documentação Swagger",
+      "description": "Documentação completa da API refatorada com novos recursos",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": [
+        10
+      ],
+      "details": "- Documentar todos os novos endpoints universais\n- Documentar endpoints de pagamento\n- Exemplos de uso para cada banco\n- Schemas de request/response\n- Guias de migração",
+      "testStrategy": "Verificar se toda funcionalidade está documentada e exemplos funcionam"
+    },
+    {
+      "id": 16,
+      "title": "Implementar Monitoramento e Métricas",
+      "description": "Sistema de monitoramento para performance e uptime",
+      "status": "pending",
+      "priority": "low",
+      "dependencies": [
+        13
+      ],
+      "details": "- Métricas de performance de processamento\n- Monitoramento de uptime da API externa\n- Alertas para falhas de integração\n- Dashboard de métricas\n- Health checks",
+      "testStrategy": "Verificar coleta de métricas e funcionamento de alertas"
+    },
+    {
+      "id": 17,
+      "title": "Otimização Final e Deployment",
+      "description": "Otimizações finais, deploy e configuração de produção",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": [
+        14,
+        15
+      ],
+      "details": "- Otimizações de performance final\n- Configuração de ambiente de produção\n- Deploy gradual com feature flags\n- Configuração de monitoramento em produção\n- Plano de rollback",
+      "testStrategy": "Verificar deployment bem-sucedido e funcionamento em produção"
+    },
+    {
+      "id": 18,
+      "title": "Validação Final e Critérios de Sucesso",
+      "description": "Validação final de todos os critérios de sucesso do projeto",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": [
+        17
+      ],
+      "details": "- Verificar processamento de todos os 8 bancos\n- Validar precisão ≥99% na extração de códigos\n- Confirmar uptime ≥99.9% da integração\n- Verificar redução de 50% no tempo de processamento\n- Validar 100% compatibilidade com endpoints atuais",
+      "testStrategy": "Executar checklist completo de critérios de sucesso e validar métricas"
+    },
+    {
+      "id": 19,
+      "title": "Integrar Persistência nos Serviços CNAB",
+      "description": "Modificar serviços existentes para incluir persistência de dados no MySQL",
+      "details": "Integrar a camada de persistência nos serviços CNAB existentes",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        1
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Modificar CnabService para Persistência",
+          "description": "Atualizar CnabService para salvar dados processados no banco",
+          "details": "- Integrar modelos Sequelize no CnabService\n- Implementar transações atômicas para processamento\n- Salvar arquivo, cabeçalho e registros em uma transação\n- Implementar verificação de duplicatas por hash\n- Adicionar logs de persistência\n- Tratar erros de banco de dados adequadamente",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 19
+        },
+        {
+          "id": 2,
+          "title": "Modificar Cnab240Service para Persistência",
+          "description": "Atualizar Cnab240Service para salvar dados CNAB 240 no banco",
+          "details": "- Integrar modelos Sequelize no Cnab240Service\n- Adaptar estrutura de dados CNAB 240 para modelos\n- Implementar persistência de lotes e segmentos\n- Salvar dados PIX específicos\n- Implementar transações para processamento CNAB 240\n- Manter compatibilidade com estrutura atual",
+          "status": "pending",
+          "dependencies": [
+            "19.1"
+          ],
+          "parentTaskId": 19
+        },
+        {
+          "id": 3,
+          "title": "Atualizar Controllers para Incluir Dados Persistidos",
+          "description": "Modificar controllers para retornar informações de persistência",
+          "details": "- Atualizar CnabController para incluir ID do registro salvo\n- Atualizar Cnab240Controller para incluir dados de persistência\n- Adicionar endpoints para consultar dados históricos\n- Implementar paginação para consultas\n- Adicionar filtros por data, banco, status\n- Manter backwards compatibility completa",
+          "status": "pending",
+          "dependencies": [
+            "19.2"
+          ],
+          "parentTaskId": 19
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Implementar APIs de Consulta e Relatórios",
+      "description": "Criar endpoints para consultar dados CNAB armazenados e gerar relatórios",
+      "details": "Desenvolver APIs RESTful para consulta de dados históricos CNAB",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        19
+      ],
+      "priority": "medium",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Criar Endpoints de Consulta Básica",
+          "description": "Implementar endpoints básicos para consultar arquivos e registros CNAB",
+          "details": "- GET /api/v1/cnab/arquivos - Listar arquivos processados\n- GET /api/v1/cnab/arquivos/:id - Detalhes de um arquivo\n- GET /api/v1/cnab/registros - Listar registros com filtros\n- GET /api/v1/cnab/registros/:id - Detalhes de um registro\n- Implementar paginação padrão\n- Adicionar filtros por data, banco, status\n- Incluir contadores e totalizadores",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 20
+        },
+        {
+          "id": 2,
+          "title": "Implementar Endpoints de Relatórios",
+          "description": "Criar endpoints para gerar relatórios e estatísticas dos dados CNAB",
+          "details": "- GET /api/v1/cnab/relatorios/resumo - Resumo geral por período\n- GET /api/v1/cnab/relatorios/banco/:codigo - Relatório por banco\n- GET /api/v1/cnab/relatorios/financeiro - Relatório financeiro\n- GET /api/v1/cnab/relatorios/pagamentos - Status de pagamentos\n- Implementar agregações e totalizadores\n- Suporte a exportação JSON/CSV\n- Cache de relatórios pesados",
+          "status": "pending",
+          "dependencies": [
+            "20.1"
+          ],
+          "parentTaskId": 20
+        },
+        {
+          "id": 3,
+          "title": "Implementar Busca Avançada e Filtros",
+          "description": "Criar sistema de busca avançada com múltiplos filtros e ordenação",
+          "details": "- Busca por documento/CPF/CNPJ do pagador\n- Filtros por valor (faixa de valores)\n- Filtros por data de vencimento e pagamento\n- Busca por nosso número e número do documento\n- Filtros por status de pagamento\n- Ordenação por múltiplos campos\n- Filtros combinados com operadores AND/OR",
+          "status": "pending",
+          "dependencies": [
+            "20.1"
+          ],
+          "parentTaskId": 20
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Implementar Testes e Otimizações de Performance",
+      "description": "Criar testes de integração e implementar otimizações de performance para o banco de dados",
+      "details": "Desenvolver suite de testes e otimizações para banco de dados CNAB",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        20
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Criar Testes de Integração com Banco",
+          "description": "Implementar testes de integração para todas as operações de banco de dados",
+          "details": "- Configurar banco de dados de teste\n- Testes de criação, leitura, atualização de registros\n- Testes de transações e rollback\n- Testes de consultas complexas e relatórios\n- Testes de performance com grandes volumes\n- Testes de integridade referencial\n- Mocks e fixtures para dados de teste",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 21
+        },
+        {
+          "id": 2,
+          "title": "Implementar Otimizações de Performance",
+          "description": "Criar índices e otimizações para melhorar performance das consultas",
+          "details": "- Criar índices compostos para consultas frequentes\n- Índices para documento, data, valor, status\n- Otimizar consultas com EXPLAIN PLAN\n- Implementar paginação eficiente\n- Cache de consultas frequentes\n- Análise de query performance\n- Configurar connection pooling otimizado",
+          "status": "pending",
+          "dependencies": [
+            "21.1"
+          ],
+          "parentTaskId": 21
+        },
+        {
+          "id": 3,
+          "title": "Implementar Monitoramento e Logs de Banco",
+          "description": "Criar sistema de monitoramento e logs específicos para operações de banco",
+          "details": "- Logs estruturados para operações de banco\n- Métricas de performance de queries\n- Alertas para queries lentas\n- Monitoramento de conexões ativas\n- Dashboard de performance do banco\n- Logs de transações e rollbacks\n- Auditoria de operações críticas",
+          "status": "pending",
+          "dependencies": [
+            "21.2"
+          ],
+          "parentTaskId": 21
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "title": "Documentação e Deployment da Implementação MySQL",
+      "description": "Finalizar documentação e preparar deployment da implementação com banco de dados",
+      "details": "Documentar e preparar para produção a implementação completa com MySQL",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        21
+      ],
+      "priority": "medium",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Atualizar Documentação da API",
+          "description": "Atualizar documentação Swagger e README com novos endpoints de banco",
+          "details": "- Atualizar Swagger com novos endpoints de consulta\n- Documentar modelos de dados e relacionamentos\n- Atualizar README com instruções de setup do banco\n- Documentar variáveis de ambiente\n- Criar guia de migração de dados\n- Documentar estratégias de backup\n- Exemplos de uso das novas APIs",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 22
+        },
+        {
+          "id": 2,
+          "title": "Preparar Ambiente de Produção",
+          "description": "Configurar ambiente de produção com MySQL otimizado",
+          "details": "- Configuração de produção do Docker Compose\n- Variáveis de ambiente para produção\n- Configuração de SSL para MySQL\n- Setup de backup automatizado\n- Configuração de logging para produção\n- Health checks específicos para banco\n- Configuração de recursos (CPU/Memory) otimizada",
+          "status": "pending",
+          "dependencies": [
+            "22.1"
+          ],
+          "parentTaskId": 22
+        },
+        {
+          "id": 3,
+          "title": "Validação Final e Testes de Produção",
+          "description": "Executar validação final e testes de carga antes do deployment",
+          "details": "- Testes de carga com grandes volumes de dados\n- Validação de backup e recovery\n- Testes de failover e alta disponibilidade\n- Validação de performance em produção\n- Testes de migração de dados existentes\n- Validação de compatibilidade com todos endpoints\n- Checklist final de deployment",
+          "status": "pending",
+          "dependencies": [
+            "22.2"
+          ],
+          "parentTaskId": 22
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "title": "Implementar Integração com Swap Financial API",
+      "description": "Implementar sistema completo de integração com a API da Swap Financial para processamento e pagamento de boletos extraídos dos arquivos CNAB",
+      "details": "Sistema deve incluir autenticação OAuth 2.0, verificação de boletos, processamento de pagamentos, gestão de erros e monitoramento completo",
+      "testStrategy": "",
+      "status": "done",
+      "dependencies": [
+        8
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implementar Sistema de Autenticação Swap Financial",
+          "description": "Criar serviço de autenticação OAuth 2.0 para API da Swap Financial",
+          "details": "Implementar SwapAuthService com gestão de tokens, cache automático, renovação e suporte a STG/PROD. Incluir tratamento de erros 400, retry logic e validação de credenciais.",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 23
+        },
+        {
+          "id": 2,
+          "title": "Implementar Serviço de Verificação de Boletos",
+          "description": "Criar SwapBoletoService para verificar e validar boletos via API",
+          "details": "Implementar verificação de boletos via código de barras, validação de dados (payee, amount, due_date), suporte a tipos generic/utility_bill, tratamento de horários comerciais e validação de janela de pagamento.",
+          "status": "done",
+          "dependencies": [
+            "23.1"
+          ],
+          "parentTaskId": 23
+        },
+        {
+          "id": 3,
+          "title": "Criar Orquestrador CNAB-Swap",
+          "description": "Implementar CNABSwapOrchestrator para integrar dados CNAB com API Swap",
+          "details": "Criar orquestrador que processa boletos extraídos do CNAB, valida com Swap API, agenda pagamentos e gerencia o fluxo completo. Incluir mapeamento de dados CNAB para formato Swap, validação de compatibilidade e tratamento de inconsistências.",
+          "status": "done",
+          "dependencies": [
+            "23.2"
+          ],
+          "parentTaskId": 23
+        },
+        {
+          "id": 4,
+          "title": "Implementar Sistema de Tratamento de Erros",
+          "description": "Criar sistema robusto para tratamento de erros da API Swap Financial",
+          "details": "Implementar tratamento específico para códigos 422 (fora de horário, boleto já pago), 503 (serviço indisponível), 504 (timeout). Incluir retry logic inteligente, fallback strategies, logging estruturado e alertas de monitoramento.",
+          "status": "done",
+          "dependencies": [
+            "23.3"
+          ],
+          "parentTaskId": 23
+        },
+        {
+          "id": 5,
+          "title": "Configurar Sistema de Monitoramento e Métricas",
+          "description": "Implementar monitoramento completo para integração Swap Financial",
+          "details": "Configurar métricas para taxa de sucesso de autenticação, tempo de resposta da API, taxa de pagamentos bem-sucedidos, erros por tipo. Implementar dashboards, alertas e relatórios de performance. Integrar com Winston + Prometheus para coleta de métricas.",
+          "status": "done",
+          "dependencies": [
+            "23.4"
+          ],
+          "parentTaskId": 23
+        },
+        {
+          "id": 6,
+          "title": "Implementar Endpoints da API Swap Integration",
+          "description": "Criar endpoints REST para gerenciar a integração com Swap Financial",
+          "details": "Implementar endpoints para: /swap/auth (autenticação), /swap/boletos/check (verificação), /swap/boletos/pay (pagamento), /swap/status (status de pagamentos), /swap/health (health check). Incluir validação de entrada, documentação Swagger e tratamento de erros.",
+          "status": "done",
+          "dependencies": [
+            "23.3"
+          ],
+          "parentTaskId": 23
+        },
+        {
+          "id": 7,
+          "title": "Criar Testes de Integração e Unitários",
+          "description": "Implementar suite completa de testes para integração Swap Financial",
+          "details": "Criar testes unitários para todos os serviços (SwapAuthService, SwapBoletoService, CNABSwapOrchestrator), testes de integração com API real em ambiente de teste, mocks para desenvolvimento local, testes de carga e stress, validação de cenários de erro e recovery.",
+          "status": "done",
+          "dependencies": [
+            "23.6"
+          ],
+          "parentTaskId": 23
+        },
+        {
+          "id": 8,
+          "title": "Configurar Ambiente e Deployment",
+          "description": "Configurar ambientes de desenvolvimento, staging e produção",
+          "details": "Configurar variáveis de ambiente para STG/PROD, setup de Docker para desenvolvimento local, CI/CD pipeline para deployment automático, configuração de segurança para API keys, backup e recovery procedures, documentação de deployment.",
+          "status": "done",
+          "dependencies": [
+            "23.7"
+          ],
+          "parentTaskId": 23
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Implementar Funcionalidades Avançadas Swap Financial",
+      "description": "Implementar funcionalidades avançadas para otimização e escalabilidade da integração Swap Financial",
+      "details": "Incluir sistema de filas para processamento assíncrono, cache distribuído, auditoria completa, relatórios analíticos e otimizações de performance",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        23
+      ],
+      "priority": "medium",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implementar Sistema de Filas para Processamento Assíncrono",
+          "description": "Criar sistema de filas com BullMQ para processamento assíncrono de boletos",
+          "details": "Implementar filas para: verificação de boletos, processamento de pagamentos, retry de falhas, notificações. Incluir dashboard de monitoramento de filas, priority queues, workers escaláveis e dead letter queues para erros persistentes.",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 24
+        },
+        {
+          "id": 2,
+          "title": "Implementar Cache Distribuído Redis",
+          "description": "Configurar cache distribuído para otimização de performance",
+          "details": "Implementar cache para tokens de autenticação, dados de boletos verificados, resultados de consultas frequentes. Incluir estratégias de invalidação, TTL inteligente, cache warming e fallback para casos de falha do cache.",
+          "status": "pending",
+          "dependencies": [
+            "24.1"
+          ],
+          "parentTaskId": 24
+        },
+        {
+          "id": 3,
+          "title": "Implementar Sistema de Auditoria Completa",
+          "description": "Criar sistema de auditoria para todas as operações Swap Financial",
+          "details": "Implementar logs de auditoria para: tentativas de autenticação, verificações de boleto, pagamentos processados, erros e falhas. Incluir rastreabilidade completa, correlação de IDs, retention policies e compliance com regulamentações financeiras.",
+          "status": "pending",
+          "dependencies": [
+            "24.2"
+          ],
+          "parentTaskId": 24
+        },
+        {
+          "id": 4,
+          "title": "Criar Dashboard e Relatórios Analíticos",
+          "description": "Desenvolver dashboard para monitoramento e relatórios da integração",
+          "details": "Criar dashboard web com: status de pagamentos em tempo real, estatísticas de performance, análise de erros, relatórios financeiros, alertas visuais. Incluir exportação de relatórios, filtros avançados e visualizações interativas.",
+          "status": "pending",
+          "dependencies": [
+            "24.3"
+          ],
+          "parentTaskId": 24
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "title": "Implementar Segurança e Compliance Swap Financial",
+      "description": "Implementar medidas de segurança e compliance para integração financeira",
+      "details": "Incluir criptografia de dados sensíveis, validação de integridade, prevenção de fraudes, compliance PCI DSS e auditoria de segurança",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        24
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implementar Criptografia de Dados Sensíveis",
+          "description": "Configurar criptografia para API keys, tokens e dados de pagamento",
+          "details": "Implementar criptografia AES-256 para dados em repouso, TLS 1.3 para dados em trânsito, rotação automática de chaves, HSM para produção. Incluir criptografia de logs sensíveis e mascaramento de dados em desenvolvimento.",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 25
+        },
+        {
+          "id": 2,
+          "title": "Implementar Sistema de Detecção de Fraudes",
+          "description": "Criar sistema para detectar e prevenir transações fraudulentas",
+          "details": "Implementar validações de: limites de valor, frequência de transações, padrões suspeitos, validação cruzada de dados do beneficiário. Incluir blacklists automáticas, scoring de risco e alertas em tempo real para transações suspeitas.",
+          "status": "pending",
+          "dependencies": [
+            "25.1"
+          ],
+          "parentTaskId": 25
+        },
+        {
+          "id": 3,
+          "title": "Implementar Compliance PCI DSS",
+          "description": "Configurar sistema para compliance com padrões PCI DSS",
+          "details": "Implementar requisitos PCI DSS: tokenização de dados de pagamento, controle de acesso baseado em função, logging de segurança, testes de penetração regulares, políticas de senha robustas, segregação de ambientes.",
+          "status": "pending",
+          "dependencies": [
+            "25.2"
+          ],
+          "parentTaskId": 25
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "title": "Corrigir Mapeamento de Campos Swap Financial",
+      "description": "Corrigir mapeamento de campos na integração Swap Financial - O payload da API retorna 'amount' (em centavos) mas o código está esperando 'amountInReais'",
+      "details": "- Ajustar validação de campos obrigatórios em SwapFinancialService.js (linha ~264)\n- Corrigir mapeamento de dados em CNABSwapOrchestrator.js (linha ~355)\n- Verificar todos os locais que usam 'amountInReais' e ajustar para 'amount'",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        23
+      ],
+      "priority": "high",
+      "subtasks": []
+    },
+    {
+      "id": 27,
+      "title": "Implementar Uso do ID do Boleto no Pagamento",
+      "description": "Modificar método payBoleto() para usar o ID retornado pelo check ao invés de apenas barcode",
+      "details": "- Modificar payBoleto() em SwapFinancialService.js para usar boletoData.id\n- Ajustar payload de pagamento: {id: boletoData.id, amount: boletoData.amount}\n- Remover barcode do payload de pagamento\n- Validar que o ID está sendo preservado em todo o fluxo",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        26
+      ],
+      "priority": "high",
+      "subtasks": []
+    },
+    {
+      "id": 28,
+      "title": "Implementar Serviço de Renovação Automática de Tokens",
+      "description": "Criar sistema robusto de renovação automática de tokens OAuth para evitar expiração durante operações longas",
+      "details": "- Implementar TokenManager para controle centralizado de tokens\n- Adicionar renovação automática baseada em tempo de expiração\n- Implementar retry automático em caso de token expirado\n- Adicionar logs e métricas para monitoramento de renovação\n- Implementar cache de tokens com TTL adequado",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        27
+      ],
+      "priority": "high",
+      "subtasks": []
+    },
+    {
+      "id": 29,
+      "title": "Criar Endpoint para Pagamento Individual de Boletos",
+      "description": "Implementar endpoint REST para executar pagamento de boletos individuais usando ID do check",
+      "details": "- Criar endpoint POST /api/cnab-swap/pay-boleto/{id}\n- Implementar validações de status e janela de pagamento\n- Adicionar tratamento de erros específicos de pagamento\n- Implementar resposta padronizada com detalhes do pagamento\n- Adicionar documentação Swagger para novo endpoint",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        28
+      ],
+      "priority": "medium",
+      "subtasks": []
+    },
+    {
+      "id": 30,
+      "title": "Implementar Pagamento em Lote no Orquestrador",
+      "description": "Adicionar funcionalidade de pagamento em massa no CNABSwapOrchestrator após verificação dos boletos",
+      "details": "- Adicionar método payBoletosInBatch() no orquestrador\n- Implementar processamento em lotes com controle de concorrência\n- Adicionar validações pré-pagamento (status, janela, compatibilidade)\n- Implementar relatório consolidado de pagamentos executados\n- Adicionar opção de pagamento automático após verificação bem-sucedida",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        29
+      ],
+      "priority": "medium",
+      "subtasks": []
+    },
+    {
+      "id": 31,
+      "title": "Melhorar Validações de Janela de Pagamento",
+      "description": "Aprimorar sistema de validação de janela de pagamento usando dados reais da API Swap",
+      "details": "- Usar start_hour e end_hour do payload da API ao invés de valores fixos\n- Implementar validação de dias úteis e feriados\n- Adicionar suporte a diferentes fusos horários\n- Melhorar lógica de canPayToday() e isInPaymentWindow()\n- Implementar cache de configurações de horário por tipo de boleto",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        30
+      ],
+      "priority": "medium",
+      "subtasks": []
+    },
+    {
+      "id": 32,
+      "title": "Implementar Tratamento de Erros Específicos da API Swap",
+      "description": "Melhorar tratamento de erros específicos da API Swap Financial com retry inteligente",
+      "details": "- Implementar mapeamento detalhado de códigos de erro HTTP da Swap\n- Adicionar retry automático para erros temporários (503, 504, rate limit)\n- Implementar backoff exponencial para tentativas\n- Adicionar logs estruturados para debugging\n- Criar alertas para erros críticos e recorrentes",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        28
+      ],
+      "priority": "medium",
+      "subtasks": []
+    },
+    {
+      "id": 33,
+      "title": "Criar Testes de Integração para Fluxo Completo",
+      "description": "Implementar testes de integração completos para o fluxo CNAB-Swap com cenários reais",
+      "details": "- Criar testes end-to-end do upload CNAB até pagamento\n- Implementar mocks da API Swap com payloads reais\n- Adicionar testes de cenários de erro e recuperação\n- Criar testes de performance para lotes grandes\n- Implementar testes de renovação de token e timeout",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [
+        31,
+        32
+      ],
+      "priority": "high",
+      "subtasks": []
+    }
+  ]
+}

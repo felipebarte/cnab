@@ -1,0 +1,15 @@
+# Task ID: 10
+# Title: Implementar Endpoints de Pagamento
+# Status: pending
+# Dependencies: 8
+# Priority: medium
+# Description: Criar endpoints para extração e envio de pagamentos
+# Details:
+- POST /api/v1/cnab/universal/pagamentos
+- POST /api/v1/pagamentos/lote
+- GET /api/v1/pagamentos/status/{loteId}
+- POST /api/v1/pagamentos/webhook
+- Integração completa com ExternalAPIService
+
+# Test Strategy:
+Testar fluxo completo de extração e envio de pagamentos para API externa

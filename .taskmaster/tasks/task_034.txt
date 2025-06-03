@@ -1,0 +1,34 @@
+# Task ID: 34
+# Title: Implementar Check de Boleto via API Swap
+# Status: pending
+# Dependencies: 28
+# Priority: high
+# Description: Implementar endpoint correto para checagem de boletos usando barcode extraído do CNAB
+# Details:
+- URL: POST https://api-stag.contaswap.io/ledger/payments/boletos
+- Headers: Authorization Bearer + Content-Type: application/json
+- Payload: {"barcode": "codigo_de_barras_do_cnab"}
+- Retorna: ID do boleto + dados completos para uso no pagamento
+
+# Test Strategy:
+
+
+# Subtasks:
+## 1. Corrigir URL do Endpoint de Check [pending]
+### Dependencies: None
+### Description: Atualizar URL para o endpoint correto da API Swap
+### Details:
+Alterar de '/boletos/check' para 'https://api-stag.contaswap.io/ledger/payments/boletos'
+
+## 2. Implementar Payload Correto para Check [pending]
+### Dependencies: None
+### Description: Ajustar payload para enviar apenas barcode
+### Details:
+Payload deve ser: {"barcode": "codigo_de_barras_extraido_do_cnab"}
+
+## 3. Configurar Headers Corretos [pending]
+### Dependencies: None
+### Description: Implementar headers obrigatórios para API Swap
+### Details:
+Headers: Authorization: Bearer {token}, Content-Type: application/json
+

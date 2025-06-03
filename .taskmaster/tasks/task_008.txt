@@ -1,0 +1,16 @@
+# Task ID: 8
+# Title: Implementar ExternalAPIService
+# Status: done
+# Dependencies: 7
+# Priority: medium
+# Description: Serviço de integração com APIs externas para envio de lotes de pagamento
+# Details:
+- Integração com APIs SWAP Financial
+- Implementar retry logic
+- Error handling robusto
+- Logging completo de integrações
+- Circuit breaker pattern
+- Webhook handling
+
+# Test Strategy:
+Testar integração com API externa mock e verificar retry logic e error handling

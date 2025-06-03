@@ -1,0 +1,15 @@
+# Task ID: 11
+# Title: Implementar Cache e Performance
+# Status: pending
+# Dependencies: 3
+# Priority: medium
+# Description: Otimizar performance com cache de schemas e instâncias CNAB
+# Details:
+- Cache de schemas carregados
+- Cache de instâncias CNAB por banco
+- Otimização para arquivos grandes (>100MB)
+- Profiling e monitoramento de performance
+- Target: processar 100MB em <30s
+
+# Test Strategy:
+Testar performance com arquivos de diferentes tamanhos e verificar cache hit rate >80%

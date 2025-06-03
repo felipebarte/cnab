@@ -1,0 +1,11 @@
+# Task ID: 5
+# Title: Adicionar rota para endpoint processar-webhook
+# Status: done
+# Dependencies: 4
+# Priority: medium
+# Description: Configurar rota para o novo endpoint que processa e envia webhook
+# Details:
+Adicionar rota POST /processar-webhook no arquivo cnabRoutes.js apontando para o novo método do controller
+
+# Test Strategy:
+

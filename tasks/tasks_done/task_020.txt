@@ -1,0 +1,36 @@
+# Task ID: 20
+# Title: Atualizar documentação da API para incluir CNAB 240
+# Status: done
+# Dependencies: 16, 18, 25
+# Priority: low
+# Description: Expandir documentação atual para incluir todos os endpoints e funcionalidades CNAB 240
+# Details:
+Atualizar CNAB_API_DOCS.md:
+
+1. Novos endpoints CNAB 240:
+   - Documentar cada endpoint com exemplos
+   - Parâmetros de entrada e saída
+   - Códigos de erro específicos
+
+2. Diferenças CNAB 240 vs 400:
+   - Comparativo de estruturas
+   - Quando usar cada formato
+   - Bancos suportados
+
+3. Exemplos práticos:
+   - Payloads de requisição
+   - Respostas de sucesso e erro
+   - Estrutura de dados retornados
+
+4. Guia de integração:
+   - Como detectar formato do arquivo
+   - Melhores práticas
+   - Tratamento de erros
+
+5. Especificações técnicas:
+   - Formatos suportados por banco
+   - Limitações conhecidas
+   - Performance esperada
+
+# Test Strategy:
+Revisar documentação com desenvolvedores, testar exemplos fornecidos

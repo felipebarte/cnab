@@ -1,0 +1,15 @@
+# Task ID: 37
+# Title: Configurar Variáveis de Ambiente da API Swap
+# Status: pending
+# Dependencies: 28
+# Priority: high
+# Description: Adicionar todas as variáveis necessárias para integração com API Swap
+# Details:
+Variáveis necessárias:
+- SWAP_API_BASE_URL=https://api-stag.contaswap.io
+- SWAP_ACCOUNT_ID=80994e39-73d9-4bef-a261-12bcc25a95b0 (exemplo)
+- COMPANY_DOCUMENT=CNPJ da empresa
+- SWAP_CLIENT_ID e SWAP_CLIENT_SECRET para OAuth
+
+# Test Strategy:
+

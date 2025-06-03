@@ -1,0 +1,15 @@
+# Task ID: 6
+# Title: Implementar PaymentExtractorService
+# Status: done
+# Dependencies: 5
+# Priority: medium
+# Description: Serviço para extrair dados de pagamento dos arquivos CNAB processados
+# Details:
+- Extrair códigos de barras dos registros CNAB
+- Extrair linhas digitáveis
+- Estruturar dados para APIs externas
+- Identificar tipos de pagamento
+- Validar códigos extraídos
+
+# Test Strategy:
+Verificar extração correta de códigos de barras e linhas digitáveis com precisão ≥99%

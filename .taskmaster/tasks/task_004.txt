@@ -1,0 +1,15 @@
+# Task ID: 4
+# Title: Implementar CnabValidatorService
+# Status: done
+# Dependencies: 2, 3
+# Priority: high
+# Description: Criar sistema de validação universal baseado em schemas YAML
+# Details:
+- Validação estrutural (tamanho de linhas)
+- Validação de campos usando schemas YAML
+- Validação de integridade (checksums, totalizadores)
+- Validação de regras de negócio
+- Aplicar Decorator Pattern para validações
+
+# Test Strategy:
+Testar validação com arquivos CNAB válidos e inválidos de todos os bancos suportados

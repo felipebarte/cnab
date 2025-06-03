@@ -1,0 +1,15 @@
+# Task ID: 14
+# Title: Criar Testes de Integração
+# Status: pending
+# Dependencies: 5, 8
+# Priority: high
+# Description: Suite completa de testes de integração com arquivos CNAB reais
+# Details:
+- Testes com arquivos CNAB reais de todos os bancos
+- Testes de performance para arquivos grandes
+- Testes de integração com API externa
+- Cobertura mínima de 90%
+- Testes de carga (1000 req/min)
+
+# Test Strategy:
+Executar suite completa de testes e verificar cobertura ≥90%

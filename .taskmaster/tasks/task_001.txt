@@ -1,0 +1,63 @@
+# Task ID: 1
+# Title: Configurar Estrutura Base e Dependências
+# Status: done
+# Dependencies: None
+# Priority: high
+# Description: Configurar a estrutura do projeto e adicionar as dependências necessárias para o sistema CNAB universal
+# Details:
+- Adicionar @banco-br/cnab_yaml v2.1.0+
+- Adicionar @banco-br/nodejs-cnab
+- Adicionar js-yaml para parsing de schemas
+- Manter cnab400-itau-parser para compatibilidade
+- Configurar estrutura de pastas conforme RT003
+
+# Test Strategy:
+Verificar se todas as dependências foram instaladas corretamente e se a estrutura de pastas está conforme especificado
+
+# Subtasks:
+## 1. Configurar Infraestrutura MySQL com Docker [pending]
+### Dependencies: None
+### Description: Implementar a infraestrutura do banco de dados MySQL para persistência dos dados CNAB processados
+### Details:
+- Adicionar serviço MySQL no docker-compose.yml
+- Configurar volumes para persistência de dados  
+- Definir variáveis de ambiente para conexão
+- Configurar rede entre containers
+- Criar scripts de inicialização do banco
+- Configurar backup e recovery básico
+
+## 2. Implementar Estrutura de Banco de Dados MySQL [pending]
+### Dependencies: 1.1
+### Description: Criar toda a estrutura de banco de dados para persistir dados CNAB processados
+### Details:
+- Criar schema do banco de dados
+- Implementar tabelas principais (cnab_arquivos, cnab_registros, etc.)
+- Configurar relacionamentos e chaves estrangeiras
+- Criar índices para performance
+- Implementar constraints e validações
+- Criar scripts de migração
+
+## 3. Configurar ORM e Dependências [pending]
+### Dependencies: None
+### Description: Configurar Sequelize ORM e dependências necessárias para conexão com MySQL
+### Details:
+- Instalar dependências: mysql2, sequelize
+- Configurar conexão com banco de dados
+- Criar arquivo de configuração do Sequelize
+- Configurar variáveis de ambiente
+- Testar conexão inicial
+- Configurar pool de conexões
+
+## 4. Criar Modelos Sequelize [pending]
+### Dependencies: 1.2, 1.3
+### Description: Implementar todos os modelos Sequelize para as entidades CNAB
+### Details:
+- Modelo CnabArquivo (arquivo processado)
+- Modelo CnabCabecalho (header do arquivo)
+- Modelo CnabRegistro (registros de detalhe)
+- Modelo CnabPagador (dados do pagador)
+- Modelo CnabDadosFinanceiros (informações financeiras)
+- Modelo CnabBoleto (dados específicos de boletos)
+- Modelo CnabResumo (resumos por arquivo)
+- Configurar associações entre modelos
+

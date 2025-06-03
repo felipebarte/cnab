@@ -1,0 +1,15 @@
+# Task ID: 3
+# Title: Implementar CnabUniversalService
+# Status: done
+# Dependencies: 2
+# Priority: high
+# Description: Criar serviço principal que detecta automaticamente formato e banco
+# Details:
+- Detectar automaticamente formato CNAB (240/400)
+- Identificar banco automaticamente
+- Aplicar padrão Factory para instâncias CNAB
+- Implementar Strategy Pattern para diferentes bancos
+- Integrar com CnabSchemaLoader
+
+# Test Strategy:
+Testar detecção automática de formato e banco com arquivos CNAB reais de diferentes bancos

@@ -1,0 +1,15 @@
+# Task ID: 5
+# Title: Implementar CnabParserService
+# Status: done
+# Dependencies: 3, 4
+# Priority: high
+# Description: Criar parser universal para extrair dados estruturados dos arquivos CNAB
+# Details:
+- Parser universal para CNAB 240 e 400
+- Extração estruturada de dados
+- Suporte a todos os bancos do cnab_yaml
+- Otimização para arquivos grandes
+- Integração com validador
+
+# Test Strategy:
+Verificar parsing correto de arquivos CNAB de diferentes tamanhos e bancos

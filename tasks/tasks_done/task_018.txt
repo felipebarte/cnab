@@ -1,0 +1,32 @@
+# Task ID: 18
+# Title: Adaptar sistema de upload para suportar CNAB 240
+# Status: done
+# Dependencies: 15, 16
+# Priority: medium
+# Description: Modificar middleware de upload para detectar e processar automaticamente arquivos CNAB 240
+# Details:
+Modificar sistema de upload:
+
+1. Detecção automática de formato:
+   - Verificar tamanho das linhas (240 vs 400)
+   - Analisar estrutura de registros
+   - Identificar código do banco
+
+2. Roteamento inteligente:
+   - CNAB 400 → cnabService.js (atual)
+   - CNAB 240 → cnab240Service.js (novo)
+
+3. Validações de upload:
+   - Tamanho máximo de arquivo
+   - Formato de arquivo (.txt, .rem, .ret)
+   - Encoding (UTF-8, ISO-8859-1)
+
+4. Middleware unificado:
+   - uploadMiddleware.js atualizado
+   - Suporte a ambos os formatos
+   - Logs detalhados de processamento
+
+Manter compatibilidade com sistema atual CNAB 400.
+
+# Test Strategy:
+Testar upload de arquivos CNAB 240 e 400, verificar roteamento correto

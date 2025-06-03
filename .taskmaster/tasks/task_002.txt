@@ -1,0 +1,14 @@
+# Task ID: 2
+# Title: Implementar CnabSchemaLoader
+# Status: done
+# Dependencies: 1
+# Priority: high
+# Description: Criar serviço para carregar e cachear schemas YAML dos bancos suportados
+# Details:
+- Implementar carregamento dinâmico de schemas do cnab_yaml
+- Adicionar cache para schemas carregados
+- Suportar todos os 8 bancos: BB (001), Santander (033), Banrisul (041), Caixa (104), Bradesco (237), Itaú (341), Sicredi (748), Sicoob (756)
+- Implementar validação de schema
+
+# Test Strategy:
+Testar carregamento de schemas de todos os bancos suportados e verificar cache

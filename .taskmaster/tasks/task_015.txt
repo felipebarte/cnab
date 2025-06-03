@@ -1,0 +1,15 @@
+# Task ID: 15
+# Title: Atualizar Documentação Swagger
+# Status: pending
+# Dependencies: 10
+# Priority: medium
+# Description: Documentação completa da API refatorada com novos recursos
+# Details:
+- Documentar todos os novos endpoints universais
+- Documentar endpoints de pagamento
+- Exemplos de uso para cada banco
+- Schemas de request/response
+- Guias de migração
+
+# Test Strategy:
+Verificar se toda funcionalidade está documentada e exemplos funcionam

@@ -1,0 +1,11 @@
+# Task ID: 4
+# Title: Criar endpoint POST /cnab/processar-webhook no controller
+# Status: done
+# Dependencies: 1, 2
+# Priority: high
+# Description: Implementar novo endpoint que processa CNAB e envia para webhook
+# Details:
+Adicionar método processarCnabEEnviarWebhook no CnabController que aceita upload de arquivo ou texto, processa com CnabService, e envia dados estruturados via WebhookService
+
+# Test Strategy:
+

@@ -1,0 +1,33 @@
+# Task ID: 26
+# Title: Corrigir Mapeamento de Campos Swap Financial
+# Status: pending
+# Dependencies: 23
+# Priority: high
+# Description: Corrigir mapeamento de campos na integração Swap Financial - O payload da API retorna 'amount' (em centavos) mas o código está esperando 'amountInReais'
+# Details:
+- Ajustar validação de campos obrigatórios em SwapFinancialService.js (linha ~264)
+- Corrigir mapeamento de dados em CNABSwapOrchestrator.js (linha ~355)
+- Verificar todos os locais que usam 'amountInReais' e ajustar para 'amount'
+
+# Test Strategy:
+
+
+# Subtasks:
+## 1. Corrigir Validação de Campos Obrigatórios [pending]
+### Dependencies: None
+### Description: Ajustar validação em SwapFinancialService.js linha ~264
+### Details:
+Alterar requiredFields de ['id', 'amountInReais', 'due_date', 'status'] para ['id', 'amount', 'due_date', 'status']
+
+## 2. Corrigir Mapeamento no Orquestrador [pending]
+### Dependencies: None
+### Description: Ajustar mapeamento em CNABSwapOrchestrator.js linha ~355
+### Details:
+Alterar swapValue: swapData.amountInReais para swapValue: swapData.amount
+
+## 3. Ajustar Cálculos de Diferença de Valor [pending]
+### Dependencies: None
+### Description: Corrigir todos os cálculos que usam amountInReais
+### Details:
+Buscar todas as ocorrências de amountInReais e substituir por amount, ajustando lógica de conversão se necessário
+

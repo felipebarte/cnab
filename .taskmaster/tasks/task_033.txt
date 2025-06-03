@@ -1,0 +1,15 @@
+# Task ID: 33
+# Title: Criar Testes de Integração para Fluxo Completo
+# Status: pending
+# Dependencies: 31, 32
+# Priority: high
+# Description: Implementar testes de integração completos para o fluxo CNAB-Swap com cenários reais
+# Details:
+- Criar testes end-to-end do upload CNAB até pagamento
+- Implementar mocks da API Swap com payloads reais
+- Adicionar testes de cenários de erro e recuperação
+- Criar testes de performance para lotes grandes
+- Implementar testes de renovação de token e timeout
+
+# Test Strategy:
+

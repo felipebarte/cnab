@@ -1,0 +1,34 @@
+# Task ID: 21
+# Title: Implementar geração de arquivos CNAB 240
+# Status: pending
+# Dependencies: 15, 16, 24
+# Priority: low
+# Description: Criar funcionalidade para gerar arquivos CNAB 240 a partir de dados estruturados
+# Details:
+Implementar gerador CNAB 240:
+
+1. Cnab240Generator.js:
+   - Método gerarArquivo(dados)
+   - Formatação correta de registros 240 chars
+   - Cálculo automático de sequenciais
+   - Geração de trailers com somatórias
+
+2. Templates por banco:
+   - Layout específico de cada banco
+   - Preenchimento de campos obrigatórios
+   - Validação antes da geração
+
+3. Endpoint POST /api/v1/cnab240/gerar:
+   - Recebe dados estruturados JSON
+   - Retorna arquivo CNAB 240 para download
+   - Validação dos dados de entrada
+
+4. Validações de geração:
+   - Campos obrigatórios preenchidos
+   - Formatos corretos
+   - Integridade dos dados
+
+Esta funcionalidade permite não só processar mas também gerar arquivos CNAB 240.
+
+# Test Strategy:
+Gerar arquivos e validar com processamento, comparar com arquivos originais

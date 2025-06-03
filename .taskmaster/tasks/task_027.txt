@@ -1,0 +1,28 @@
+# Task ID: 27
+# Title: Implementar Uso do ID do Boleto no Pagamento
+# Status: pending
+# Dependencies: 26
+# Priority: high
+# Description: Modificar método payBoleto() para usar o ID retornado pelo check ao invés de apenas barcode
+# Details:
+- Modificar payBoleto() em SwapFinancialService.js para usar boletoData.id
+- Ajustar payload de pagamento: {id: boletoData.id, amount: boletoData.amount}
+- Remover barcode do payload de pagamento
+- Validar que o ID está sendo preservado em todo o fluxo
+
+# Test Strategy:
+
+
+# Subtasks:
+## 1. Modificar Método payBoleto() [pending]
+### Dependencies: None
+### Description: Alterar payload de pagamento para usar ID do boleto
+### Details:
+Modificar paymentData de {barcode, amount: boletoData.amountInReais} para {id: boletoData.id, amount: boletoData.amount}
+
+## 2. Ajustar URL do Endpoint de Pagamento [pending]
+### Dependencies: None
+### Description: Verificar se URL /boletos/pay está correta conforme documentação
+### Details:
+Confirmar se o endpoint é POST /boletos/pay ou se existe variação com ID na URL
+

@@ -1,0 +1,15 @@
+# Task ID: 30
+# Title: Implementar Pagamento em Lote no Orquestrador
+# Status: pending
+# Dependencies: 29
+# Priority: medium
+# Description: Adicionar funcionalidade de pagamento em massa no CNABSwapOrchestrator após verificação dos boletos
+# Details:
+- Adicionar método payBoletosInBatch() no orquestrador
+- Implementar processamento em lotes com controle de concorrência
+- Adicionar validações pré-pagamento (status, janela, compatibilidade)
+- Implementar relatório consolidado de pagamentos executados
+- Adicionar opção de pagamento automático após verificação bem-sucedida
+
+# Test Strategy:
+

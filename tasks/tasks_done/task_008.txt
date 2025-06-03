@@ -1,0 +1,11 @@
+# Task ID: 8
+# Title: Criar testes para funcionalidade de webhook
+# Status: done
+# Dependencies: 1, 4, 7
+# Priority: low
+# Description: Desenvolver testes unitários e de integração para webhook
+# Details:
+Criar testes para WebhookService, endpoint processar-webhook, mock do webhook externo, e cenários de falha/retry
+
+# Test Strategy:
+

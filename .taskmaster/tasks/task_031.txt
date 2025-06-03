@@ -1,0 +1,15 @@
+# Task ID: 31
+# Title: Melhorar Validações de Janela de Pagamento
+# Status: pending
+# Dependencies: 30
+# Priority: medium
+# Description: Aprimorar sistema de validação de janela de pagamento usando dados reais da API Swap
+# Details:
+- Usar start_hour e end_hour do payload da API ao invés de valores fixos
+- Implementar validação de dias úteis e feriados
+- Adicionar suporte a diferentes fusos horários
+- Melhorar lógica de canPayToday() e isInPaymentWindow()
+- Implementar cache de configurações de horário por tipo de boleto
+
+# Test Strategy:
+

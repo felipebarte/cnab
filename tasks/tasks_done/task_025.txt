@@ -1,0 +1,60 @@
+# Task ID: 25
+# Title: Implementar validadores avançados para CNAB 240 por código de operação
+# Status: done
+# Dependencies: 23, 24, 15
+# Priority: medium
+# Description: Criar sistema de validação específico para regras de negócio e integridade do CNAB 240 por tipo de operação
+# Details:
+Implementar validadores:
+
+1. EstruturaValidator:
+   - Sequência correta de registros
+   - Obrigatoriedade de header/trailer
+   - Relação entre lotes e detalhes
+
+2. IntegridadeValidator:
+   - Somatórias de trailers
+   - Quantidade de registros
+   - Sequencial de lotes
+
+3. NegocioValidator:
+   - CPF/CNPJ válidos
+   - Contas bancárias existentes
+   - Códigos de movimento válidos
+   - Datas de vencimento
+
+4. VALIDADORES POR CÓDIGO DE OPERAÇÃO:
+
+   a) 201303 (Tributos):
+      - Códigos de tributo válidos
+      - Datas de vencimento
+      - Valores mínimos/máximos
+
+   b) 203003/203103 (Cobrança):
+      - Nosso número único
+      - Datas de vencimento futuras
+      - Valores positivos
+
+   c) 204504 (PIX Transferência):
+      - Chaves PIX válidas por tipo
+      - Valores dentro de limites
+      - Dados obrigatórios do beneficiário
+
+   d) 204704 (PIX Programado):
+      - Data/hora agendamento futura
+      - Validações de PIX + agendamento
+      - Limites de valor programado
+
+   e) 221903/229103 (Especiais):
+      - Validações específicas por contexto
+      - Campos obrigatórios por operação
+
+5. BancoValidator:
+   - Validações específicas por banco
+   - Formatos de conta aceitos
+   - Códigos de serviço suportados
+
+Cada validador deve retornar erros detalhados com linha, campo e código de operação.
+
+# Test Strategy:
+Testar com arquivos inválidos de cada tipo de operação e verificar se erros específicos são detectados

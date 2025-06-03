@@ -1,0 +1,36 @@
+# Task ID: 23
+# Title: Implementar parsers específicos para cada tipo de registro CNAB 240
+# Status: done
+# Dependencies: 11, 12
+# Priority: high
+# Description: Criar parsers especializados para Header Arquivo, Header Lote, Segmentos (incluindo subtipos B) e Trailers
+# Details:
+Implementar parsers para cada tipo:
+
+1. headerArquivoParser.js:
+   - Extrai campos do header do arquivo (posições 1-240)
+   - Valida código banco, tipo registro, etc.
+
+2. headerLoteParser.js:
+   - Extrai dados do header do lote
+   - Valida tipo operação, forma lançamento
+
+3. segmentoParser.js:
+   - segmentoA: pagamentos/créditos PIX
+   - segmentoJ: títulos cobrança
+   - segmentoO: tributos
+
+4. segmentoBParser.js (SUBTIPOS IDENTIFICADOS):
+   - B01: Telefone (formato +5511999999999)
+   - B02: Email (validação formato email)
+   - B03: CNPJ/CPF (14 ou 11 dígitos)
+   - B04: Chave PIX UUID (formato UUID)
+
+5. trailerParser.js:
+   - Trailer lote e arquivo
+   - Validação de somatórias
+
+Cada parser deve seguir especificação FEBRABAN com posições exatas dos campos.
+
+# Test Strategy:
+Testar cada parser individualmente com registros de exemplo de cada tipo e subtipo

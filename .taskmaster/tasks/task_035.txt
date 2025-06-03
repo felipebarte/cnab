@@ -1,0 +1,34 @@
+# Task ID: 35
+# Title: Implementar Pagamento via API Swap com Payload Completo
+# Status: pending
+# Dependencies: 34
+# Priority: high
+# Description: Corrigir endpoint de pagamento usando ID do boleto e payload completo
+# Details:
+- URL: POST https://api-stag.contaswap.io/ledger/payments/boletos/{ID_DO_BOLETO}/pay
+- Headers: Authorization Bearer + Content-Type: application/json
+- Payload: {"amount": "valor", "document": "cnpj", "account_id": "id_conta"}
+- Usar ID retornado pelo check do boleto
+
+# Test Strategy:
+
+
+# Subtasks:
+## 1. Corrigir URL do Endpoint de Pagamento [pending]
+### Dependencies: None
+### Description: Atualizar URL para usar ID do boleto na URL
+### Details:
+URL: https://api-stag.contaswap.io/ledger/payments/boletos/{boletoId}/pay
+
+## 2. Implementar Payload Completo de Pagamento [pending]
+### Dependencies: None
+### Description: Adicionar campos obrigatórios: amount, document, account_id
+### Details:
+Payload: {"amount": valor_do_boleto, "document": cnpj_empresa, "account_id": id_conta_swap}
+
+## 3. Configurar account_id e document [pending]
+### Dependencies: None
+### Description: Adicionar configuração para CNPJ e account_id da empresa
+### Details:
+Adicionar configurações: SWAP_ACCOUNT_ID e COMPANY_DOCUMENT no .env ou config
+
