@@ -347,8 +347,8 @@ export class PaymentExtractorService {
 
     const payment = {
       id: detail.nossoNumero || detail.numeroSequencial || null,
-      barcode: barcode,
-      digitableLine: digitableLine,
+      barcode,
+      digitableLine,
       value: this._parseValue(detail.valor || detail.valorTitulo || detail.valorPago),
       dueDate: this._parseDate(detail.vencimento || detail.dataVencimento),
       paymentDate: this._parseDate(detail.dataPagamento),
@@ -439,15 +439,15 @@ export class PaymentExtractorService {
       const firstDigit = barcode.charAt(0);
 
       switch (firstDigit) {
-        case '8':
-          return 'tributo'; // Tributos municipais, estaduais e federais
-        case '9':
-          return 'concessionaria'; // Concessionárias de serviços públicos
-        default:
-          if (barcode.length === 44) {
-            return 'boleto'; // Boletos bancários
-          }
-          return 'other';
+      case '8':
+        return 'tributo'; // Tributos municipais, estaduais e federais
+      case '9':
+        return 'concessionaria'; // Concessionárias de serviços públicos
+      default:
+        if (barcode.length === 44) {
+          return 'boleto'; // Boletos bancários
+        }
+        return 'other';
       }
     }
 
@@ -564,11 +564,11 @@ export class PaymentExtractorService {
    */
   _structureForAPI(paymentData, apiFormat) {
     switch (apiFormat) {
-      case 'swap':
-        return this._structureForSwapAPI(paymentData);
-      case 'generic':
-      default:
-        return this._structureForGenericAPI(paymentData);
+    case 'swap':
+      return this._structureForSwapAPI(paymentData);
+    case 'generic':
+    default:
+      return this._structureForGenericAPI(paymentData);
     }
   }
 

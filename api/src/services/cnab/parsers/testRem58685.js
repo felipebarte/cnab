@@ -23,7 +23,7 @@ function loadRemessaFile() {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
     const lines = content.trim().split('\n');
-    console.log(`📁 Arquivo carregado: rem58685.txt`);
+    console.log('📁 Arquivo carregado: rem58685.txt');
     console.log(`📊 Total de linhas: ${lines.length}`);
     console.log(`📏 Primeira linha: ${lines[0].length} caracteres`);
 
@@ -134,16 +134,16 @@ async function testRem58685() {
 
       // Estrutura dos dados parseados
       console.log('\n📋 Estrutura dos dados parseados:');
-      console.log(`   📁 Header arquivo: ${!!parseResult.data.arquivo.header ? '✅' : '❌'}`);
-      console.log(`   📁 Trailer arquivo: ${!!parseResult.data.arquivo.trailer ? '✅' : '❌'}`);
+      console.log(`   📁 Header arquivo: ${parseResult.data.arquivo.header ? '✅' : '❌'}`);
+      console.log(`   📁 Trailer arquivo: ${parseResult.data.arquivo.trailer ? '✅' : '❌'}`);
       console.log(`   📦 Lotes: ${parseResult.data.lotes?.length || 0}`);
 
       // Detalhes dos lotes
       if (parseResult.data.lotes && parseResult.data.lotes.length > 0) {
         parseResult.data.lotes.forEach((lote, index) => {
           console.log(`   📄 Lote ${index + 1}:`);
-          console.log(`      - Header: ${!!lote.header ? '✅' : '❌'}`);
-          console.log(`      - Trailer: ${!!lote.trailer ? '✅' : '❌'}`);
+          console.log(`      - Header: ${lote.header ? '✅' : '❌'}`);
+          console.log(`      - Trailer: ${lote.trailer ? '✅' : '❌'}`);
           console.log(`      - Detalhes: ${lote.detalhes?.length || 0}`);
 
           if (lote.detalhes && lote.detalhes.length > 0) {

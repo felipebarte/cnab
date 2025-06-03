@@ -340,31 +340,31 @@ export class CnabParserService {
       const segmentChar = line.charAt(13); // 14ª posição para segmentos
 
       switch (recordTypeChar) {
-        case '0': return 'header_arquivo';
-        case '1': return 'header_lote';
-        case '3':
-          // Detalhes têm segmentos
-          switch (segmentChar) {
-            case 'P': return 'detalhe_segmento_p';
-            case 'Q': return 'detalhe_segmento_q';
-            case 'R': return 'detalhe_segmento_r';
-            case 'T': return 'detalhe_segmento_t';
-            case 'U': return 'detalhe_segmento_u';
-            case 'Y': return 'detalhe_segmento_y';
-            default: return 'detalhe';
-          }
-        case '5': return 'trailer_lote';
-        case '9': return 'trailer_arquivo';
-        default: return 'unknown';
+      case '0': return 'header_arquivo';
+      case '1': return 'header_lote';
+      case '3':
+        // Detalhes têm segmentos
+        switch (segmentChar) {
+        case 'P': return 'detalhe_segmento_p';
+        case 'Q': return 'detalhe_segmento_q';
+        case 'R': return 'detalhe_segmento_r';
+        case 'T': return 'detalhe_segmento_t';
+        case 'U': return 'detalhe_segmento_u';
+        case 'Y': return 'detalhe_segmento_y';
+        default: return 'detalhe';
+        }
+      case '5': return 'trailer_lote';
+      case '9': return 'trailer_arquivo';
+      default: return 'unknown';
       }
     } else if (detection.format === 'cnab400') {
       const recordTypeChar = line.charAt(0); // 1ª posição
 
       switch (recordTypeChar) {
-        case '0': return 'header_arquivo';
-        case '1': return 'detalhe';
-        case '9': return 'trailer_arquivo';
-        default: return 'unknown';
+      case '0': return 'header_arquivo';
+      case '1': return 'detalhe';
+      case '9': return 'trailer_arquivo';
+      default: return 'unknown';
       }
     }
 
@@ -377,14 +377,14 @@ export class CnabParserService {
   _getParser(format) {
     if (!this.parserCache.has(format)) {
       switch (format) {
-        case 'cnab240':
-          this.parserCache.set(format, new Cnab240Parser(this.config));
-          break;
-        case 'cnab400':
-          this.parserCache.set(format, new Cnab400Parser(this.config));
-          break;
-        default:
-          throw new Error(`Formato de parser desconhecido: ${format}`);
+      case 'cnab240':
+        this.parserCache.set(format, new Cnab240Parser(this.config));
+        break;
+      case 'cnab400':
+        this.parserCache.set(format, new Cnab400Parser(this.config));
+        break;
+      default:
+        throw new Error(`Formato de parser desconhecido: ${format}`);
       }
     }
 

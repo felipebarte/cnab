@@ -16,6 +16,11 @@ import {
   getDetectedFormat,
   isFormat
 } from '../middleware/unifiedUploadMiddleware.js';
+import crypto from 'crypto';
+import sequelize from '../config/database.js';
+import File from '../models/File.js';
+import Operation from '../models/Operation.js';
+import CnabDetector from '../utils/cnab/CnabDetector.js';
 
 /**
  * Controller unificado para operações CNAB
@@ -710,6 +715,272 @@ export class CnabUnifiedController {
         formatoDetectado: getDetectedFormat(req)?.codigo || null,
         operationId,
         timestamp: structuredError.timestamp
+      });
+    }
+  }
+
+  /**
+   * Processamento automático de arquivo CNAB com detecção de formato
+   * @param {Request} req - Objeto de requisição
+   * @param {Response} res - Objeto de resposta
+   */
+  static async processarAuto(req, res) {
+    const operationId = crypto.randomUUID();
+    let transaction;
+
+    try {
+      // Validar se há arquivo
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nenhum arquivo foi enviado'
+        });
+      }
+
+      console.log(`[INFO] Iniciando processamento automático - Operation ID: ${operationId}`);
+      console.log(`[INFO] Arquivo: ${req.file.originalname}, Tamanho: ${req.file.size} bytes`);
+
+      // Inicializar transação para controle de dados
+      transaction = await sequelize.transaction();
+
+      // Ler conteúdo do arquivo
+      const cnabContent = req.file.buffer.toString('utf8');
+
+      // Gerar hash do arquivo para verificação de duplicatas
+      const fileHash = crypto.createHash('sha256').update(cnabContent).digest('hex');
+
+      // Verificar se arquivo já foi processado
+      const existingFile = await File.findByHash(fileHash);
+      if (existingFile && !req.body.forceReprocess) {
+        await transaction.rollback();
+
+        console.log(`[INFO] Arquivo já processado - Hash: ${fileHash}`);
+        return res.status(200).json({
+          success: true,
+          message: 'Arquivo já foi processado anteriormente',
+          duplicado: true,
+          operationId,
+          arquivoId: existingFile.id,
+          dataProcessamentoOriginal: existingFile.created_at,
+          hash: fileHash
+        });
+      }
+
+      // Criar operação no banco
+      const operation = await Operation.create({
+        operation_id: operationId,
+        operation_type: 'cnab_auto',
+        status: 'processing',
+        request_data: {
+          file_name: req.file.originalname,
+          file_size: req.file.size,
+          auto_detect: true,
+          started_at: new Date().toISOString()
+        }
+      }, { transaction });
+
+      // Criar registro do arquivo
+      const file = await File.create({
+        operation_id: operationId,
+        file_hash: fileHash,
+        file_name: req.file.originalname,
+        file_size: req.file.size,
+        file_type: 'unknown', // Será detectado automaticamente
+        content_preview: File.generatePreview(cnabContent, 3),
+        validation_status: 'pending'
+      }, { transaction });
+
+      // Detectar formato do arquivo
+      const formatoDetectado = CnabDetector.detectarFormato(cnabContent);
+      console.log(`[INFO] Formato detectado: ${formatoDetectado.formato} (confiança: ${formatoDetectado.confianca}%)`);
+
+      // Atualizar tipo do arquivo com formato detectado
+      await file.update({
+        file_type: formatoDetectado.formato.toLowerCase()
+      }, { transaction });
+
+      let resultado;
+
+      // Processar baseado no formato detectado
+      switch (formatoDetectado.formato) {
+      case 'CNAB_240':
+        console.log('[INFO] Processando como CNAB 240...');
+
+        // ✅ NOVO: Passar fileId e operationId para o CNAB240Service
+        resultado = await Cnab240Service.processar(cnabContent, {
+          fileId: file.id,
+          operationId,
+          nomeArquivo: req.file.originalname,
+          forceReprocess: req.body.forceReprocess || false
+        });
+
+        break;
+
+      case 'CNAB_400':
+        console.log('[INFO] Processando como CNAB 400...');
+        resultado = await CnabService.processar(cnabContent, {
+          detectarFormato: false,
+          formato: 'CNAB_400'
+        });
+        break;
+
+      case 'CNAB_150':
+        console.log('[INFO] Processando como CNAB 150...');
+        resultado = await CnabService.processar(cnabContent, {
+          detectarFormato: false,
+          formato: 'CNAB_150'
+        });
+        break;
+
+      default:
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          error: `Formato não suportado ou não identificado: ${formatoDetectado.formato}`,
+          formatoDetectado,
+          operationId
+        });
+      }
+
+      // Verificar se processamento foi bem-sucedido
+      if (!resultado.sucesso) {
+        await transaction.rollback();
+
+        await operation.update({
+          status: 'error',
+          response_data: {
+            error: resultado.erro?.message || 'Erro no processamento',
+            completed_at: new Date().toISOString()
+          }
+        });
+
+        return res.status(400).json({
+          success: false,
+          error: resultado.erro?.message || 'Erro no processamento',
+          operationId,
+          formatoDetectado
+        });
+      }
+
+      // Atualizar arquivo como válido
+      await file.update({
+        validation_status: resultado.valido ? 'valid' : 'valid_with_warnings'
+      }, { transaction });
+
+      // ✅ NOVO: Capturar estatísticas de persistência
+      const estatisticasPersistencia = resultado.persistencia ? {
+        totalLotes: resultado.persistencia.estatisticas.totalLotes,
+        totalSegmentos: resultado.persistencia.estatisticas.totalSegmentos,
+        totalCodigosBarras: resultado.persistencia.estatisticas.totalCodigosBarras,
+        errosPersistencia: resultado.persistencia.estatisticas.erros.length
+      } : null;
+
+      // Atualizar operação como sucesso
+      await operation.update({
+        status: 'success',
+        response_data: {
+          file_id: file.id,
+          formato_detectado: formatoDetectado.formato,
+          confianca_deteccao: formatoDetectado.confianca,
+          valido: resultado.valido,
+          total_lotes: resultado.resumo?.totalLotes || 0,
+          total_registros: resultado.resumo?.totalRegistros || 0,
+          valor_total: resultado.resumo?.valorTotal || 0,
+          // ✅ NOVO: Adicionar estatísticas de persistência
+          persistencia: estatisticasPersistencia,
+          completed_at: new Date().toISOString()
+        }
+      }, { transaction });
+
+      // Commit da transação
+      await transaction.commit();
+
+      console.log(`[SUCCESS] Processamento automático concluído - Operation ID: ${operationId}`);
+
+      // ✅ NOVO: Incluir informações de códigos de barras na resposta
+      const resposta = {
+        success: true,
+        message: `Arquivo processado com sucesso como ${formatoDetectado.formato}`,
+        operationId,
+        formatoDetectado: {
+          formato: formatoDetectado.formato,
+          confianca: formatoDetectado.confianca,
+          detalhes: formatoDetectado.detalhes
+        },
+        arquivo: {
+          id: file.id,
+          nome: req.file.originalname,
+          tamanho: req.file.size,
+          hash: fileHash,
+          valido: resultado.valido
+        },
+        processamento: {
+          timestamp: new Date().toISOString(),
+          tempoProcessamento: Date.now() - operation.created_at.getTime()
+        },
+        dados: resultado.dados || resultado.dadosEstruturados,
+        resumo: resultado.resumo || resultado.resumoProcessamento,
+        validacao: resultado.validacao
+      };
+
+      // ✅ NOVO: Adicionar informações de persistência se disponível
+      if (resultado.persistencia) {
+        resposta.persistencia = {
+          dadosSalvos: true,
+          totalLotes: resultado.persistencia.estatisticas.totalLotes,
+          totalSegmentos: resultado.persistencia.estatisticas.totalSegmentos,
+          totalCodigosBarras: resultado.persistencia.estatisticas.totalCodigosBarras,
+          erros: resultado.persistencia.estatisticas.erros,
+          // ✅ CRÍTICO: Lista dos códigos de barras salvos para uso na API Swap
+          codigosBarras: resultado.persistencia.codigosBarras.map(cb => ({
+            id: cb.id,
+            codigo: cb.codigo_barras,
+            tipo: cb.tipo_documento,
+            valor: cb.valor_documento,
+            vencimento: cb.data_vencimento,
+            favorecido: cb.favorecido_nome,
+            status: cb.status_pagamento
+          }))
+        };
+
+        console.log(`[INFO] Códigos de barras disponíveis para API Swap: ${resposta.persistencia.totalCodigosBarras}`);
+      } else {
+        resposta.persistencia = {
+          dadosSalvos: false,
+          motivo: 'Dados de arquivo/operação não fornecidos para persistência'
+        };
+      }
+
+      return res.status(200).json(resposta);
+
+    } catch (error) {
+      // Rollback da transação em caso de erro
+      if (transaction) {
+        await transaction.rollback();
+      }
+
+      // Tentar marcar operação como erro
+      try {
+        const operation = await Operation.findByOperationId(operationId);
+        if (operation) {
+          await operation.markAsError({
+            error_message: error.message,
+            error_stack: error.stack,
+            failed_at: new Date().toISOString()
+          });
+        }
+      } catch (updateError) {
+        console.error('[ERROR] Erro ao atualizar operação com falha:', updateError);
+      }
+
+      console.error('[ERROR] Erro no processamento automático:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Erro interno no processamento do arquivo',
+        details: error.message,
+        operationId,
+        timestamp: new Date().toISOString()
       });
     }
   }

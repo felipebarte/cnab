@@ -322,29 +322,29 @@ export class CnabValidatorService {
       const segmentChar = line.charAt(13); // 14ª posição para segmentos
 
       switch (recordTypeChar) {
-        case '0': return 'header_arquivo';
-        case '1': return 'header_lote';
-        case '3':
-          // Detalhes têm segmentos
-          switch (segmentChar) {
-            case 'P': return 'detalhe_segmento_p';
-            case 'Q': return 'detalhe_segmento_q';
-            case 'R': return 'detalhe_segmento_r';
-            case 'T': return 'detalhe_segmento_t';
-            default: return 'detalhe';
-          }
-        case '5': return 'trailer_lote';
-        case '9': return 'trailer_arquivo';
-        default: return 'unknown';
+      case '0': return 'header_arquivo';
+      case '1': return 'header_lote';
+      case '3':
+        // Detalhes têm segmentos
+        switch (segmentChar) {
+        case 'P': return 'detalhe_segmento_p';
+        case 'Q': return 'detalhe_segmento_q';
+        case 'R': return 'detalhe_segmento_r';
+        case 'T': return 'detalhe_segmento_t';
+        default: return 'detalhe';
+        }
+      case '5': return 'trailer_lote';
+      case '9': return 'trailer_arquivo';
+      default: return 'unknown';
       }
     } else if (detection.format === 'cnab400') {
       const recordTypeChar = line.charAt(0); // 1ª posição
 
       switch (recordTypeChar) {
-        case '0': return 'header_arquivo';
-        case '1': return 'detalhe';
-        case '9': return 'trailer_arquivo';
-        default: return 'unknown';
+      case '0': return 'header_arquivo';
+      case '1': return 'detalhe';
+      case '9': return 'trailer_arquivo';
+      default: return 'unknown';
       }
     }
 
@@ -400,20 +400,20 @@ export class CnabValidatorService {
   _getValidator(type) {
     if (!this.validatorCache.has(type)) {
       switch (type) {
-        case 'structural':
-          this.validatorCache.set(type, new StructuralValidator(this.config));
-          break;
-        case 'field':
-          this.validatorCache.set(type, new FieldValidator(this.config));
-          break;
-        case 'integrity':
-          this.validatorCache.set(type, new IntegrityValidator(this.config));
-          break;
-        case 'business':
-          this.validatorCache.set(type, new BusinessRuleValidator(this.config));
-          break;
-        default:
-          throw new Error(`Tipo de validator desconhecido: ${type}`);
+      case 'structural':
+        this.validatorCache.set(type, new StructuralValidator(this.config));
+        break;
+      case 'field':
+        this.validatorCache.set(type, new FieldValidator(this.config));
+        break;
+      case 'integrity':
+        this.validatorCache.set(type, new IntegrityValidator(this.config));
+        break;
+      case 'business':
+        this.validatorCache.set(type, new BusinessRuleValidator(this.config));
+        break;
+      default:
+        throw new Error(`Tipo de validator desconhecido: ${type}`);
       }
     }
 

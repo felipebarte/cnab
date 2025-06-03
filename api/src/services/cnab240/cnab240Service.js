@@ -8,18 +8,12 @@
 import Cnab240BaseParser from './cnab240BaseParser.js';
 import { CNAB240Parser } from './parsers/index.js';
 import { BANCOS_240, UTILS_VALIDACAO } from '../../config/bancos240.js';
-import crypto from 'crypto';
 import sequelize from '../../config/database.js';
-import { ProcessingError, ValidationError } from './errors/cnab240Errors.js';
-import { SegmentoParser } from './parsers/segmentoParser.js';
 
 // Importar modelos MySQL para persistência
 import {
-  Operation,
   File,
   Cnab240File,
-  createOperationWithFile,
-  processCnab240File,
   getDatabaseStats,
   checkDatabaseHealth
 } from '../../models/index.js';
@@ -29,176 +23,132 @@ import {
  */
 class Cnab240Service {
   /**
-   * Processa um arquivo CNAB 240 completo com persistência no banco
-   * @param {string} cnabContent - Conteúdo do arquivo CNAB como string
+   * Processa um arquivo CNAB 240
+   * @param {string} cnabContent - Conteúdo do arquivo CNAB
    * @param {Object} options - Opções de processamento
-   * @returns {Object} Dados estruturados do arquivo CNAB 240 com informações de persistência
+   * @returns {Object} Dados processados
    */
   static async processar(cnabContent, options = {}) {
-    // Gerar operation ID único
-    const operationId = options.operationId || crypto.randomUUID();
-
-    // Inicializar transação
-    const transaction = await sequelize.transaction();
-
     try {
-      if (!cnabContent || typeof cnabContent !== 'string') {
-        throw new Error('Conteúdo do arquivo CNAB é obrigatório e deve ser uma string');
+      console.log('[INFO] Iniciando processamento CNAB 240');
+
+      // 1. Validar arquivo básico
+      const validacao = this.validarArquivo(cnabContent);
+      if (!validacao.valido) {
+        throw new Error(`Arquivo CNAB 240 inválido: ${validacao.erros.join(', ')}`);
       }
 
-      // Log início da operação
-      console.log(`[CNAB240] Iniciando processamento - Operation ID: ${operationId}`);
-
-      // Gerar hash do arquivo para verificação de duplicatas
-      const fileHash = crypto.createHash('sha256').update(cnabContent).digest('hex');
-
-      // Verificar se arquivo já foi processado
-      const existingFile = await File.findByHash(fileHash);
-      if (existingFile && !options.forceReprocess) {
-        await transaction.rollback();
-
-        console.log(`[CNAB240] Arquivo já processado - Hash: ${fileHash}`);
-        return {
-          sucesso: true,
-          mensagem: 'Arquivo já foi processado anteriormente',
-          duplicado: true,
-          operationId,
-          arquivoId: existingFile.id,
-          dataProcessamentoOriginal: existingFile.created_at,
-          hash: fileHash
-        };
-      }
-
-      // Validação inicial do arquivo
-      const validacaoInicial = this.validarArquivo(cnabContent);
-      if (!validacaoInicial.valido) {
-        throw new Error(`Arquivo CNAB 240 inválido: ${validacaoInicial.erros.join(', ')}`);
-      }
-
-      // Criar operação no banco
-      const operation = await Operation.create({
-        operation_id: operationId,
-        operation_type: 'cnab240',
-        status: 'processing',
-        request_data: {
-          file_size: cnabContent.length,
-          options: options,
-          started_at: new Date().toISOString()
-        }
-      }, { transaction });
-
-      // Criar registro do arquivo
-      const file = await File.create({
-        operation_id: operationId,
-        file_hash: fileHash,
-        file_name: options.fileName || 'cnab240_file.txt',
-        file_size: cnabContent.length,
-        file_type: 'cnab240',
-        content_preview: File.generatePreview(cnabContent, 3),
-        validation_status: 'valid'
-      }, { transaction });
-
-      // Processamento linha por linha
-      const linhas = cnabContent.split('\n')
-        .map(linha => linha.replace(/\r?\n?$/g, '')) // Remove \r e \n do final
-        .filter(linha => linha.length > 0); // ✅ CORRIGIDO: usar length ao invés de trim()
+      // 2. Processar linhas do arquivo
+      const linhas = cnabContent.split('\n').filter(linha => linha.trim().length > 0);
       const dadosProcessados = this.processarLinhas(linhas);
 
-      // Identificação do banco
-      const codigoBanco = dadosProcessados.headerArquivo?.codigoBanco;
-      const configuracaoBanco = BANCOS_240[codigoBanco];
+      // 3. Obter configuração do banco
+      const configuracaoBanco = BANCOS_240[dadosProcessados.headerArquivo?.codigoBanco] || {};
 
-      // Validação da estrutura
+      // 4. Validar estrutura
       const validacaoEstrutura = this.validarEstrutura(dadosProcessados, configuracaoBanco);
       if (!validacaoEstrutura.valido) {
-        console.warn('Avisos de estrutura:', validacaoEstrutura.avisos);
+        console.warn('[WARNING] Estrutura com problemas:', validacaoEstrutura.avisos);
       }
 
-      // Extração de dados completos
+      // 5. Calcular somatórias
+      const somatorias = this.calcularSomatorias(dadosProcessados);
+
+      // 6. Validar somatórias do trailer
+      const validacaoSomatorias = this.validarSomatoriasTrailer(dadosProcessados, somatorias);
+      if (!validacaoSomatorias.valido) {
+        console.warn('[WARNING] Somatórias divergentes:', validacaoSomatorias.divergencias);
+      }
+
+      // 7. Extrair dados completos
       const dadosCompletos = this.extrairDadosCompletos(dadosProcessados, configuracaoBanco);
 
-      // Cálculo de somatórias e validações
-      const somatorias = this.calcularSomatorias(dadosProcessados);
-      const resumoProcessamento = this.gerarResumoProcessamento(dadosProcessados, somatorias);
+      // 8. Gerar resumo
+      const resumo = this.gerarResumoProcessamento(dadosProcessados, somatorias);
 
-      // Extrair dados para persistência CNAB 240
-      const cnab240Data = this.extrairDadosParaPersistencia(dadosProcessados, configuracaoBanco, somatorias);
+      // ✅ NOVO: 9. Persistir dados no banco se fileId e operationId estiverem disponíveis
+      let resultadoPersistencia = null;
+      if (options.fileId && options.operationId) {
+        try {
+          console.log(`[INFO] Iniciando persistência no banco - FileID: ${options.fileId}, OperationID: ${options.operationId}`);
 
-      // Salvar dados CNAB 240 no banco
-      const cnab240File = await Cnab240File.create({
-        ...cnab240Data,
-        operation_id: operationId,
-        file_id: file.id
-      }, { transaction });
+          resultadoPersistencia = await this.persistirDadosCompletos(
+            options.fileId,
+            options.operationId,
+            dadosProcessados,
+            configuracaoBanco,
+            options.nomeArquivo || 'arquivo_cnab_240.txt'
+          );
 
-      // Atualizar operação como sucesso
-      await operation.update({
-        status: 'success',
-        response_data: {
-          file_id: file.id,
-          cnab240_file_id: cnab240File.id,
-          total_lotes: somatorias.totalLotes,
-          total_registros: somatorias.totalRegistros,
-          valor_total: somatorias.valorTotalGeral,
-          completed_at: new Date().toISOString()
+          console.log(`[SUCCESS] Dados persistidos com sucesso - ${resultadoPersistencia.estatisticas.totalCodigosBarras} códigos de barras salvos`);
+        } catch (persistenciaError) {
+          console.error('[ERROR] Erro na persistência, continuando com processamento:', persistenciaError.message);
+          // Não interromper o processamento se a persistência falhar
         }
-      }, { transaction });
-
-      // Commit da transação
-      await transaction.commit();
-
-      console.log(`[CNAB240] Processamento concluído com sucesso - Operation ID: ${operationId}`);
-
-      return {
-        sucesso: true,
-        dadosEstruturados: dadosCompletos,
-        validacao: validacaoEstrutura,
-        somatorias,
-        resumoProcessamento,
-        informacoesArquivo: {
-          tamanhoOriginal: cnabContent.length,
-          totalLinhas: linhas.length,
-          formato: 'CNAB 240',
-          banco: configuracaoBanco?.codigo || codigoBanco,
-          nomeBanco: configuracaoBanco?.nome || 'Banco não identificado',
-          versaoLayout: configuracaoBanco?.versaoLayout || 'Não identificada'
-        },
-        // Dados de persistência
-        persistencia: {
-          operationId,
-          fileId: file.id,
-          cnab240FileId: cnab240File.id,
-          hash: fileHash,
-          saved_at: new Date().toISOString()
-        },
-        dataProcessamento: new Date().toISOString(),
-        opcoes: options
-      };
-
-    } catch (error) {
-      // Rollback da transação em caso de erro
-      await transaction.rollback();
-
-      // Tentar atualizar operação como erro (se foi criada)
-      try {
-        const existingOperation = await Operation.findByOperationId(operationId);
-        if (existingOperation) {
-          await existingOperation.markAsError({
-            error_message: error.message,
-            error_stack: error.stack,
-            failed_at: new Date().toISOString()
-          });
-        }
-      } catch (updateError) {
-        console.error('Erro ao atualizar operação com falha:', updateError);
+      } else {
+        console.log('[INFO] Dados de persistência não fornecidos (fileId/operationId), pulando salvamento no banco');
       }
 
-      console.error('Erro ao processar arquivo CNAB 240:', error);
+      // 10. Retornar resultado completo
+      const resultado = {
+        sucesso: true,
+        valido: validacao.valido && validacaoEstrutura.valido,
+
+        // Dados processados
+        dados: dadosCompletos,
+
+        // Validações
+        validacao: {
+          arquivo: validacao,
+          estrutura: validacaoEstrutura,
+          somatorias: validacaoSomatorias
+        },
+
+        // Somatórias e estatísticas
+        somatorias,
+        resumo,
+
+        // ✅ NOVO: Resultado da persistência
+        persistencia: resultadoPersistencia,
+
+        // Metadados
+        processamento: {
+          timestamp: new Date().toISOString(),
+          linhasProcessadas: linhas.length,
+          configuracaoBanco: configuracaoBanco?.nome || 'Não identificada',
+          options: {
+            fileId: options.fileId,
+            operationId: options.operationId,
+            nomeArquivo: options.nomeArquivo
+          }
+        }
+      };
+
+      console.log('[SUCCESS] Processamento CNAB 240 concluído com sucesso');
+      console.log(`  - Arquivo válido: ${resultado.valido}`);
+      console.log(`  - Lotes processados: ${dadosCompletos.lotes.length}`);
+      console.log(`  - Total de registros: ${resumo.totalRegistros}`);
+      if (resultadoPersistencia) {
+        console.log(`  - Códigos de barras salvos: ${resultadoPersistencia.estatisticas.totalCodigosBarras}`);
+        console.log(`  - Segmentos persistidos: ${resultadoPersistencia.estatisticas.totalSegmentos}`);
+      }
+
+      return resultado;
+
+    } catch (error) {
+      console.error('[ERROR] Erro durante processamento CNAB 240:', error.message);
+
       return {
         sucesso: false,
-        erro: error.message,
-        operationId,
-        dataProcessamento: new Date().toISOString()
+        valido: false,
+        erro: {
+          message: error.message,
+          stack: error.stack
+        },
+        processamento: {
+          timestamp: new Date().toISOString(),
+          falhou: true
+        }
       };
     }
   }
@@ -262,7 +212,7 @@ class Cnab240Service {
 
     try {
       return new Date(`${year}-${month}-${day}`);
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -281,7 +231,7 @@ class Cnab240Service {
 
     try {
       return `${hour}:${minute}:${second}`;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -381,7 +331,7 @@ class Cnab240Service {
         switch (tipoRegistro) {
           case '0': // Header de arquivo
             estrutura.headerArquivo = dadosParsed;
-            console.log(`[DEBUG] Header de arquivo definido`);
+            console.log('[DEBUG] Header de arquivo definido');
             break;
 
           case '1': // Header de lote
@@ -407,12 +357,12 @@ class Cnab240Service {
               throw new Error(`Linha ${index + 1}: Trailer de lote encontrado sem header de lote`);
             }
             loteAtual.trailer = dadosParsed;
-            console.log(`[DEBUG] Trailer de lote definido`);
+            console.log('[DEBUG] Trailer de lote definido');
             break;
 
           case '9': // Trailer de arquivo
             estrutura.trailerArquivo = dadosParsed;
-            console.log(`[DEBUG] Trailer de arquivo definido`);
+            console.log('[DEBUG] Trailer de arquivo definido');
             break;
 
           default:
@@ -631,7 +581,7 @@ class Cnab240Service {
       : 0;
 
     return {
-      valorPagamento: valorPagamento,
+      valorPagamento,
       dataVencimento: segmentoA.dataVencimento,
       dataPagamento: segmentoA.dataPagamento,
       numeroDocumento: segmentoA.numeroDocumento,
@@ -723,7 +673,7 @@ class Cnab240Service {
    */
   static calcularSomatorias(dadosProcessados) {
     let totalRegistros = 0;
-    let totalLotes = dadosProcessados.lotes.length;
+    const totalLotes = dadosProcessados.lotes.length;
     let valorTotalGeral = 0;
     let totalSegmentosA = 0;
     let totalSegmentosB = 0;
@@ -1151,7 +1101,7 @@ class Cnab240Service {
       }
 
       return `${dia}/${mes}/${ano}`;
-    } catch (error) {
+    } catch {
       return '';
     }
   }
@@ -1176,7 +1126,7 @@ class Cnab240Service {
       const valorInteiro = parseInt(valorLimpo) || 0;
       // Converte centavos para reais (divide por 100)
       return valorInteiro / 100;
-    } catch (error) {
+    } catch {
       return 0;
     }
   }
@@ -1227,11 +1177,11 @@ class Cnab240Service {
         codigo_instrucao: segmento.pagamento?.codigoInstrucao,
 
         // Dados do favorecido se disponível
-        favorecido_banco: segmento.beneficiario?.banco || segmento.pagamento?.bancoFavorecido,
-        favorecido_agencia: segmento.beneficiario?.agencia || segmento.pagamento?.agenciaFavorecido,
-        favorecido_agencia_dv: segmento.beneficiario?.agenciaDv || segmento.pagamento?.dvAgenciaFavorecido,
-        favorecido_conta: segmento.beneficiario?.conta || segmento.pagamento?.contaFavorecido,
-        favorecido_conta_dv: segmento.beneficiario?.contaDv || segmento.pagamento?.dvContaFavorecido,
+        favorecido_banco: segmento.beneficiario?.banco?.codigo || segmento.pagamento?.bancoFavorecido,
+        favorecido_agencia: segmento.beneficiario?.banco?.agencia || segmento.pagamento?.agenciaFavorecido,
+        favorecido_agencia_dv: segmento.beneficiario?.banco?.agenciaDv || segmento.pagamento?.dvAgenciaFavorecido,
+        favorecido_conta: segmento.beneficiario?.banco?.conta || segmento.pagamento?.contaFavorecido,
+        favorecido_conta_dv: segmento.beneficiario?.banco?.digitoVerificador || segmento.pagamento?.dvContaFavorecido,
         favorecido_nome: segmento.beneficiario?.nome || segmento.pagamento?.nomeFavorecido || segmento.titulo?.nomeFavorecido || segmento.tributo?.nomeConcessionaria,
         favorecido_documento: segmento.beneficiario?.documento,
 
@@ -1249,29 +1199,29 @@ class Cnab240Service {
           return null;
         })(),
 
-        // Datas
+        // Datas - CORRIGIDO: usar parseDateCnab240 ao invés de formatarDataCNAB
         data_operacao: (() => {
           if (segmento.titulo?.dataPagamento) {
-            return this.formatarDataCNAB(segmento.titulo.dataPagamento);
+            return this.parseDateCnab240(segmento.titulo.dataPagamento);
           }
           if (segmento.tributo?.dataPagamento) {
-            return this.formatarDataCNAB(segmento.tributo.dataPagamento);
+            return this.parseDateCnab240(segmento.tributo.dataPagamento);
           }
           if (segmento.pagamento?.dataPagamento) {
-            return this.formatarDataCNAB(segmento.pagamento.dataPagamento);
+            return this.parseDateCnab240(segmento.pagamento.dataPagamento);
           }
           return null;
         })(),
 
         data_efetivacao: (() => {
           if (segmento.titulo?.dataVencimento) {
-            return this.formatarDataCNAB(segmento.titulo.dataVencimento);
+            return this.parseDateCnab240(segmento.titulo.dataVencimento);
           }
           if (segmento.tributo?.dataVencimento) {
-            return this.formatarDataCNAB(segmento.tributo.dataVencimento);
+            return this.parseDateCnab240(segmento.tributo.dataVencimento);
           }
           if (segmento.pagamento?.dataEfetivacao) {
-            return this.formatarDataCNAB(segmento.pagamento.dataEfetivacao);
+            return this.parseDateCnab240(segmento.pagamento.dataEfetivacao);
           }
           return null;
         })(),
@@ -1323,6 +1273,519 @@ class Cnab240Service {
       throw new Error(`Erro ao salvar segmento CNAB 240: ${error.message}`);
     }
   }
+
+  /**
+   * ✅ NOVO: Salva arquivo CNAB 240 no banco de dados
+   * @param {number} fileId - ID do arquivo na tabela files
+   * @param {string} operationId - ID da operação
+   * @param {Object} dadosArquivo - Dados extraídos do arquivo CNAB
+   * @returns {Promise<Object>} Arquivo CNAB salvo
+   */
+  static async salvarArquivoCnab240(fileId, operationId, dadosArquivo) {
+    try {
+      console.log(`[DEBUG] Salvando arquivo CNAB 240 - FileID: ${fileId}, OperationID: ${operationId}`);
+
+      const [results] = await sequelize.query(
+        `INSERT INTO cnab240_files (
+          file_id, operation_id, banco_codigo, banco_nome, arquivo_sequencia,
+          data_geracao, hora_geracao, versao_layout, densidade,
+          empresa_tipo_pessoa, empresa_documento, empresa_nome, empresa_codigo,
+          total_lotes, total_registros, valor_total,
+          header_dados, trailer_dados, created_at, updated_at
+        ) VALUES (
+          :file_id, :operation_id, :banco_codigo, :banco_nome, :arquivo_sequencia,
+          :data_geracao, :hora_geracao, :versao_layout, :densidade,
+          :empresa_tipo_pessoa, :empresa_documento, :empresa_nome, :empresa_codigo,
+          :total_lotes, :total_registros, :valor_total,
+          :header_dados, :trailer_dados, NOW(), NOW()
+        )`,
+        {
+          replacements: {
+            file_id: fileId,
+            operation_id: operationId,
+            banco_codigo: dadosArquivo.banco_codigo,
+            banco_nome: dadosArquivo.banco_nome,
+            arquivo_sequencia: dadosArquivo.arquivo_sequencia,
+            data_geracao: dadosArquivo.data_geracao,
+            hora_geracao: dadosArquivo.hora_geracao,
+            versao_layout: dadosArquivo.versao_layout,
+            densidade: dadosArquivo.densidade,
+            empresa_tipo_pessoa: dadosArquivo.empresa_tipo_pessoa,
+            empresa_documento: dadosArquivo.empresa_documento,
+            empresa_nome: dadosArquivo.empresa_nome,
+            empresa_codigo: dadosArquivo.empresa_codigo,
+            total_lotes: dadosArquivo.total_lotes,
+            total_registros: dadosArquivo.total_registros,
+            valor_total: dadosArquivo.valor_total,
+            header_dados: JSON.stringify(dadosArquivo.header_dados),
+            trailer_dados: JSON.stringify(dadosArquivo.trailer_dados)
+          },
+          type: sequelize.QueryTypes.INSERT
+        }
+      );
+
+      console.log(`[SUCCESS] Arquivo CNAB 240 salvo com ID: ${results}`);
+      return { id: results, ...dadosArquivo };
+
+    } catch (error) {
+      console.error('[ERROR] Erro ao salvar arquivo CNAB 240:', error.message);
+      throw new Error(`Erro ao salvar arquivo CNAB 240: ${error.message}`);
+    }
+  }
+
+  /**
+   * ✅ NOVO: Salva lote CNAB 240 no banco de dados
+   * @param {number} cnab240FileId - ID do arquivo CNAB 240
+   * @param {string} operationId - ID da operação
+   * @param {Object} lote - Dados do lote processado
+   * @param {number} loteNumero - Número sequencial do lote
+   * @returns {Promise<Object>} Lote salvo
+   */
+  static async salvarLoteCnab240(cnab240FileId, operationId, lote, loteNumero) {
+    try {
+      console.log(`[DEBUG] Salvando lote ${loteNumero} - CNAB240FileID: ${cnab240FileId}`);
+
+      const header = lote.header;
+      const trailer = lote.trailer;
+
+      const dadosLote = {
+        cnab240_file_id: cnab240FileId,
+        operation_id: operationId,
+        lote_numero: loteNumero,
+        lote_tipo: header?.tipoOperacao || header?.formaLancamento,
+        forma_lancamento: header?.formaLancamento,
+        empresa_tipo_pessoa: header?.tipoInscricaoEmpresa === '1' ? '1' : '2',
+        empresa_documento: header?.numeroInscricaoEmpresa,
+        empresa_nome: header?.nomeEmpresa,
+        agencia: header?.agencia,
+        agencia_dv: header?.dvAgencia,
+        conta: header?.numeroConta,
+        conta_dv: header?.dvConta,
+        quantidade_registros: trailer?.quantidadeRegistros || lote.detalhes.length,
+        valor_total: this.parseValorCNAB(trailer?.somatoriaCreditosReais) || 0,
+        quantidade_moedas: trailer?.quantidadeMoedas || 0,
+        data_operacao: this.parseDateCnab240(header?.dataOperacao),
+        data_credito: this.parseDateCnab240(header?.dataCredito),
+        header_lote_dados: JSON.stringify(header),
+        trailer_lote_dados: JSON.stringify(trailer)
+      };
+
+      const [results] = await sequelize.query(
+        `INSERT INTO cnab240_batches (
+          cnab240_file_id, operation_id, lote_numero, lote_tipo, forma_lancamento,
+          empresa_tipo_pessoa, empresa_documento, empresa_nome,
+          agencia, agencia_dv, conta, conta_dv,
+          quantidade_registros, valor_total, quantidade_moedas,
+          data_operacao, data_credito,
+          header_lote_dados, trailer_lote_dados, created_at, updated_at
+        ) VALUES (
+          :cnab240_file_id, :operation_id, :lote_numero, :lote_tipo, :forma_lancamento,
+          :empresa_tipo_pessoa, :empresa_documento, :empresa_nome,
+          :agencia, :agencia_dv, :conta, :conta_dv,
+          :quantidade_registros, :valor_total, :quantidade_moedas,
+          :data_operacao, :data_credito,
+          :header_lote_dados, :trailer_lote_dados, NOW(), NOW()
+        )`,
+        {
+          replacements: dadosLote,
+          type: sequelize.QueryTypes.INSERT
+        }
+      );
+
+      console.log(`[SUCCESS] Lote ${loteNumero} salvo com ID: ${results}`);
+      return { id: results, ...dadosLote };
+
+    } catch (error) {
+      console.error(`[ERROR] Erro ao salvar lote ${loteNumero}:`, error.message);
+      throw new Error(`Erro ao salvar lote CNAB 240: ${error.message}`);
+    }
+  }
+
+  /**
+   * ✅ NOVO: Salva código de barras na tabela otimizada para API Swap
+   * @param {number} segmentId - ID do segmento
+   * @param {string} operationId - ID da operação
+   * @param {Object} dados - Dados do código de barras
+   * @returns {Promise<Object>} Código de barras salvo
+   */
+  static async salvarCodigoBarras(segmentId, operationId, dados) {
+    try {
+      if (!dados.codigo_barras || dados.codigo_barras.trim() === '') {
+        console.log(`[DEBUG] Segmento ${segmentId} não possui código de barras válido`);
+        return null;
+      }
+
+      console.log(`[DEBUG] Salvando código de barras para segmento ${segmentId}: ${dados.codigo_barras}`);
+
+      const dadosCodigoBarras = {
+        segment_id: segmentId,
+        operation_id: operationId,
+        codigo_barras: dados.codigo_barras.trim(),
+        tipo_documento: dados.tipo_documento,
+        valor_documento: dados.valor_documento || 0,
+        data_vencimento: dados.data_vencimento,
+        favorecido_nome: dados.favorecido_nome,
+        favorecido_documento: dados.favorecido_documento,
+        numero_documento: dados.numero_documento,
+        arquivo_origem: dados.arquivo_origem,
+        lote_numero: dados.lote_numero,
+        status_pagamento: 'PENDENTE'
+      };
+
+      const [results] = await sequelize.query(
+        `INSERT INTO cnab240_codigo_barras (
+          segment_id, operation_id, codigo_barras, tipo_documento,
+          valor_documento, data_vencimento, favorecido_nome, favorecido_documento,
+          numero_documento, arquivo_origem, lote_numero, status_pagamento,
+          created_at, updated_at
+        ) VALUES (
+          :segment_id, :operation_id, :codigo_barras, :tipo_documento,
+          :valor_documento, :data_vencimento, :favorecido_nome, :favorecido_documento,
+          :numero_documento, :arquivo_origem, :lote_numero, :status_pagamento,
+          NOW(), NOW()
+        )`,
+        {
+          replacements: dadosCodigoBarras,
+          type: sequelize.QueryTypes.INSERT
+        }
+      );
+
+      console.log(`[SUCCESS] Código de barras salvo com ID: ${results} - Código: ${dados.codigo_barras}`);
+      return { id: results, ...dadosCodigoBarras };
+
+    } catch (error) {
+      if (error.message.includes('Duplicate entry')) {
+        console.log(`[WARNING] Código de barras ${dados.codigo_barras} já existe no banco`);
+        return null;
+      }
+      console.error('[ERROR] Erro ao salvar código de barras:', error.message);
+      throw new Error(`Erro ao salvar código de barras: ${error.message}`);
+    }
+  }
+
+  /**
+   * ✅ NOVO: Persiste todos os dados processados no banco de dados
+   * @param {number} fileId - ID do arquivo na tabela files
+   * @param {string} operationId - ID da operação
+   * @param {Object} dadosProcessados - Dados completos processados
+   * @param {Object} configuracaoBanco - Configuração do banco
+   * @param {string} nomeArquivo - Nome do arquivo original
+   * @returns {Promise<Object>} Resultado da persistência
+   */
+  static async persistirDadosCompletos(fileId, operationId, dadosProcessados, configuracaoBanco, nomeArquivo) {
+    try {
+      console.log(`[INFO] Iniciando persistência completa - FileID: ${fileId}, OperationID: ${operationId}`);
+
+      // 1. Calcular somatórias
+      const somatorias = this.calcularSomatorias(dadosProcessados);
+
+      // 2. Extrair dados para persistência do arquivo
+      const dadosArquivo = this.extrairDadosParaPersistencia(dadosProcessados, configuracaoBanco, somatorias);
+
+      // 3. Salvar arquivo CNAB 240
+      const arquivoSalvo = await this.salvarArquivoCnab240(fileId, operationId, dadosArquivo);
+      console.log(`[SUCCESS] Arquivo CNAB 240 persistido com ID: ${arquivoSalvo.id}`);
+
+      const resultados = {
+        arquivo: arquivoSalvo,
+        lotes: [],
+        segmentos: [],
+        codigosBarras: [],
+        estatisticas: {
+          totalLotes: 0,
+          totalSegmentos: 0,
+          totalCodigosBarras: 0,
+          erros: []
+        }
+      };
+
+      // 4. Processar cada lote
+      for (const [index, lote] of dadosProcessados.lotes.entries()) {
+        try {
+          const loteNumero = index + 1;
+
+          // Salvar lote
+          const loteSalvo = await this.salvarLoteCnab240(arquivoSalvo.id, operationId, lote, loteNumero);
+          resultados.lotes.push(loteSalvo);
+          resultados.estatisticas.totalLotes++;
+
+          console.log(`[INFO] Processando ${lote.detalhes.length} segmentos do lote ${loteNumero}`);
+
+          // 5. Processar cada segmento do lote
+          for (const [segIndex, detalhe] of lote.detalhes.entries()) {
+            try {
+              // Processar dados do segmento
+              const segmentoProcessado = {
+                sequencia: segIndex + 1,
+                segmento: detalhe.segmento,
+                dadosOriginais: detalhe
+              };
+
+              // Processar dados específicos por tipo de segmento
+              if (detalhe.segmento === 'J') {
+                segmentoProcessado.titulo = this.extrairDadosTitulo(detalhe);
+              } else if (detalhe.segmento === 'O') {
+                segmentoProcessado.tributo = this.extrairDadosTributo(detalhe);
+              } else if (detalhe.segmento === 'A') {
+                segmentoProcessado.pagamento = this.extrairDadosPagamento(detalhe);
+                segmentoProcessado.beneficiario = this.extrairDadosBeneficiario(detalhe);
+              } else if (detalhe.segmento === 'B') {
+                segmentoProcessado.informacoesComplementares = this.extrairInformacoesComplementares(detalhe);
+                segmentoProcessado.pix = this.extrairDadosPix(detalhe, configuracaoBanco);
+              }
+
+              // Incluir código de barras se disponível
+              if (detalhe.codigoBarras && detalhe.codigoBarras.trim() !== '') {
+                segmentoProcessado.codigo_barras = detalhe.codigoBarras.trim();
+              }
+
+              // Salvar segmento
+              const segmentoSalvo = await this.salvarSegmentoCnab240(loteSalvo.id, segmentoProcessado, operationId);
+              resultados.segmentos.push(segmentoSalvo);
+              resultados.estatisticas.totalSegmentos++;
+
+              // 6. Salvar código de barras se existir
+              if (segmentoProcessado.codigo_barras) {
+                const dadosCodigoBarras = {
+                  codigo_barras: segmentoProcessado.codigo_barras,
+                  tipo_documento: detalhe.segmento === 'J' ? 'TITULO' : detalhe.segmento === 'O' ? 'TRIBUTO' : 'CONVENIO',
+                  valor_documento: segmentoSalvo.valor_operacao || 0,
+                  data_vencimento: segmentoSalvo.data_efetivacao,
+                  favorecido_nome: segmentoSalvo.favorecido_nome,
+                  favorecido_documento: segmentoSalvo.favorecido_documento,
+                  numero_documento: segmentoSalvo.numero_documento,
+                  arquivo_origem: nomeArquivo,
+                  lote_numero: loteNumero
+                };
+
+                const codigoBarrasSalvo = await this.salvarCodigoBarras(segmentoSalvo.id, operationId, dadosCodigoBarras);
+                if (codigoBarrasSalvo) {
+                  resultados.codigosBarras.push(codigoBarrasSalvo);
+                  resultados.estatisticas.totalCodigosBarras++;
+                }
+              }
+
+            } catch (segmentoError) {
+              console.error(`[ERROR] Erro ao processar segmento ${segIndex + 1} do lote ${loteNumero}:`, segmentoError.message);
+              resultados.estatisticas.erros.push({
+                tipo: 'segmento',
+                lote: loteNumero,
+                segmento: segIndex + 1,
+                erro: segmentoError.message
+              });
+            }
+          }
+
+        } catch (loteError) {
+          console.error(`[ERROR] Erro ao processar lote ${index + 1}:`, loteError.message);
+          resultados.estatisticas.erros.push({
+            tipo: 'lote',
+            lote: index + 1,
+            erro: loteError.message
+          });
+        }
+      }
+
+      console.log('[SUCCESS] Persistência completa finalizada:');
+      console.log(`  - Arquivo: ${resultados.arquivo.id}`);
+      console.log(`  - Lotes: ${resultados.estatisticas.totalLotes}`);
+      console.log(`  - Segmentos: ${resultados.estatisticas.totalSegmentos}`);
+      console.log(`  - Códigos de Barras: ${resultados.estatisticas.totalCodigosBarras}`);
+      console.log(`  - Erros: ${resultados.estatisticas.erros.length}`);
+
+      return resultados;
+
+    } catch (error) {
+      console.error('[ERROR] Erro na persistência completa:', error.message);
+      throw new Error(`Erro na persistência dos dados CNAB 240: ${error.message}`);
+    }
+  }
+
+  /**
+   * ✅ NOVO: Busca códigos de barras pendentes para pagamento via API Swap
+   * @param {Object} filtros - Filtros de busca
+   * @returns {Promise<Array>} Lista de códigos de barras
+   */
+  static async buscarCodigosBarrasPendentes(filtros = {}) {
+    try {
+      const {
+        status = 'PENDENTE',
+        tipo_documento = null,
+        valor_minimo = null,
+        valor_maximo = null,
+        data_vencimento_ate = null,
+        limit = 100,
+        offset = 0
+      } = filtros;
+
+      let whereClause = 'WHERE cb.status_pagamento = :status';
+      const replacements = { status };
+
+      if (tipo_documento) {
+        whereClause += ' AND cb.tipo_documento = :tipo_documento';
+        replacements.tipo_documento = tipo_documento;
+      }
+
+      if (valor_minimo) {
+        whereClause += ' AND cb.valor_documento >= :valor_minimo';
+        replacements.valor_minimo = valor_minimo;
+      }
+
+      if (valor_maximo) {
+        whereClause += ' AND cb.valor_documento <= :valor_maximo';
+        replacements.valor_maximo = valor_maximo;
+      }
+
+      if (data_vencimento_ate) {
+        whereClause += ' AND cb.data_vencimento <= :data_vencimento_ate';
+        replacements.data_vencimento_ate = data_vencimento_ate;
+      }
+
+      const query = `
+        SELECT 
+          cb.id,
+          cb.codigo_barras,
+          cb.tipo_documento,
+          cb.valor_documento,
+          cb.data_vencimento,
+          cb.favorecido_nome,
+          cb.favorecido_documento,
+          cb.numero_documento,
+          cb.arquivo_origem,
+          cb.lote_numero,
+          cb.status_pagamento,
+          cb.created_at,
+          s.id as segment_id,
+          s.segmento_tipo,
+          s.dados_completos
+        FROM cnab240_codigo_barras cb
+        INNER JOIN cnab240_segments s ON cb.segment_id = s.id
+        ${whereClause}
+        ORDER BY cb.data_vencimento ASC, cb.valor_documento DESC
+        LIMIT :limit OFFSET :offset
+      `;
+
+      const [results] = await sequelize.query(query, {
+        replacements: { ...replacements, limit, offset },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      console.log(`[INFO] Encontrados ${results.length} códigos de barras com status ${status}`);
+      return results;
+
+    } catch (error) {
+      console.error('[ERROR] Erro ao buscar códigos de barras pendentes:', error.message);
+      throw new Error(`Erro ao buscar códigos de barras: ${error.message}`);
+    }
+  }
+
+  /**
+   * ✅ NOVO: Atualiza status de pagamento de um código de barras
+   * @param {string} codigoBarras - Código de barras
+   * @param {string} novoStatus - Novo status ('PROCESSANDO', 'PAGO', 'ERRO')
+   * @param {Object} dadosSwap - Dados da resposta da API Swap
+   * @returns {Promise<Object>} Resultado da atualização
+   */
+  static async atualizarStatusPagamento(codigoBarras, novoStatus, dadosSwap = {}) {
+    try {
+      console.log(`[INFO] Atualizando status do código de barras ${codigoBarras} para ${novoStatus}`);
+
+      const dadosAtualizacao = {
+        status_pagamento: novoStatus,
+        data_pagamento: novoStatus === 'PAGO' ? new Date() : null,
+        response_swap: dadosSwap.resposta ? JSON.stringify(dadosSwap.resposta) : null,
+        erro_swap: dadosSwap.erro || null
+      };
+
+      const [affectedRows] = await sequelize.query(
+        `UPDATE cnab240_codigo_barras 
+         SET status_pagamento = :status_pagamento,
+             data_pagamento = :data_pagamento,
+             response_swap = :response_swap,
+             erro_swap = :erro_swap,
+             updated_at = NOW()
+         WHERE codigo_barras = :codigo_barras`,
+        {
+          replacements: {
+            ...dadosAtualizacao,
+            codigo_barras: codigoBarras
+          },
+          type: sequelize.QueryTypes.UPDATE
+        }
+      );
+
+      if (affectedRows === 0) {
+        throw new Error(`Código de barras ${codigoBarras} não encontrado`);
+      }
+
+      console.log(`[SUCCESS] Status atualizado para ${novoStatus} - Código: ${codigoBarras}`);
+      return { sucesso: true, codigoBarras, novoStatus, dadosSwap };
+
+    } catch (error) {
+      console.error('[ERROR] Erro ao atualizar status de pagamento:', error.message);
+      throw new Error(`Erro ao atualizar status: ${error.message}`);
+    }
+  }
+
+  /**
+   * ✅ NOVO: Busca histórico de pagamentos por período
+   * @param {Date} dataInicio - Data inicial
+   * @param {Date} dataFim - Data final
+   * @param {Object} filtros - Filtros adicionais
+   * @returns {Promise<Array>} Histórico de pagamentos
+   */
+  static async buscarHistoricoPagamentos(dataInicio, dataFim, filtros = {}) {
+    try {
+      const {
+        status = null,
+        tipo_documento = null,
+        arquivo_origem = null
+      } = filtros;
+
+      let whereClause = 'WHERE cb.created_at BETWEEN :data_inicio AND :data_fim';
+      const replacements = {
+        data_inicio: dataInicio,
+        data_fim: dataFim
+      };
+
+      if (status) {
+        whereClause += ' AND cb.status_pagamento = :status';
+        replacements.status = status;
+      }
+
+      if (tipo_documento) {
+        whereClause += ' AND cb.tipo_documento = :tipo_documento';
+        replacements.tipo_documento = tipo_documento;
+      }
+
+      if (arquivo_origem) {
+        whereClause += ' AND cb.arquivo_origem = :arquivo_origem';
+        replacements.arquivo_origem = arquivo_origem;
+      }
+
+      const query = `
+        SELECT 
+          cb.*,
+          COUNT(*) OVER() as total_records,
+          SUM(cb.valor_documento) OVER() as valor_total
+        FROM cnab240_codigo_barras cb
+        ${whereClause}
+        ORDER BY cb.created_at DESC
+      `;
+
+      const [results] = await sequelize.query(query, {
+        replacements,
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      console.log(`[INFO] Histórico: ${results.length} registros encontrados no período`);
+      return results;
+
+    } catch (error) {
+      console.error('[ERROR] Erro ao buscar histórico de pagamentos:', error.message);
+      throw new Error(`Erro ao buscar histórico: ${error.message}`);
+    }
+  }
 }
 
-export default Cnab240Service; 
+export default Cnab240Service;

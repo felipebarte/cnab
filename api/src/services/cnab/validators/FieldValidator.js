@@ -64,7 +64,7 @@ export class FieldValidator {
       valid: true,
       errors: [],
       warnings: [],
-      value: value,
+      value,
       formattedValue: null
     };
 
@@ -321,7 +321,7 @@ export class FieldValidator {
     // Verificar se é numérico
     if (!/^\d+$/.test(fieldValue)) {
       result.valid = false;
-      result.errors.push(`data deve conter apenas dígitos`);
+      result.errors.push('data deve conter apenas dígitos');
       return result;
     }
 
@@ -352,32 +352,32 @@ export class FieldValidator {
       let day, month, year;
 
       switch (dateFormat) {
-        case '%d%m%Y':
-          day = parseInt(dateValue.substring(0, 2));
-          month = parseInt(dateValue.substring(2, 4));
-          year = parseInt(dateValue.substring(4, 8));
-          break;
+      case '%d%m%Y':
+        day = parseInt(dateValue.substring(0, 2));
+        month = parseInt(dateValue.substring(2, 4));
+        year = parseInt(dateValue.substring(4, 8));
+        break;
 
-        case '%d%m%y':
-          day = parseInt(dateValue.substring(0, 2));
-          month = parseInt(dateValue.substring(2, 4));
-          year = parseInt(dateValue.substring(4, 6));
-          // Assumir século 20xx para anos 00-50, 19xx para 51-99
-          year = year <= 50 ? 2000 + year : 1900 + year;
-          break;
+      case '%d%m%y':
+        day = parseInt(dateValue.substring(0, 2));
+        month = parseInt(dateValue.substring(2, 4));
+        year = parseInt(dateValue.substring(4, 6));
+        // Assumir século 20xx para anos 00-50, 19xx para 51-99
+        year = year <= 50 ? 2000 + year : 1900 + year;
+        break;
 
-        case '%Y%m%d':
-          year = parseInt(dateValue.substring(0, 4));
-          month = parseInt(dateValue.substring(4, 6));
-          day = parseInt(dateValue.substring(6, 8));
-          break;
+      case '%Y%m%d':
+        year = parseInt(dateValue.substring(0, 4));
+        month = parseInt(dateValue.substring(4, 6));
+        day = parseInt(dateValue.substring(6, 8));
+        break;
 
-        case '%y%m%d':
-          year = parseInt(dateValue.substring(0, 2));
-          year = year <= 50 ? 2000 + year : 1900 + year;
-          month = parseInt(dateValue.substring(2, 4));
-          day = parseInt(dateValue.substring(4, 6));
-          break;
+      case '%y%m%d':
+        year = parseInt(dateValue.substring(0, 2));
+        year = year <= 50 ? 2000 + year : 1900 + year;
+        month = parseInt(dateValue.substring(2, 4));
+        day = parseInt(dateValue.substring(4, 6));
+        break;
       }
 
       // Validar faixas básicas

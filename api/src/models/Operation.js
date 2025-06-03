@@ -148,15 +148,15 @@ Operation.findByType = function (operationType, limit = 100) {
   return this.findAll({
     where: { operation_type: operationType },
     order: [['created_at', 'DESC']],
-    limit: limit
+    limit
   });
 };
 
 Operation.findByStatus = function (status, limit = 100) {
   return this.findAll({
-    where: { status: status },
+    where: { status },
     order: [['created_at', 'DESC']],
-    limit: limit
+    limit
   });
 };
 

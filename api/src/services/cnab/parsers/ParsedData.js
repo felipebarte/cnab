@@ -200,7 +200,7 @@ export class ParsedRecord {
     this.linha = lineNumber;
     this.dados = {};
     this.metadata = {
-      rawLine: rawLine,
+      rawLine,
       extractedFields: 0,
       parseTime: new Date().toISOString()
     };

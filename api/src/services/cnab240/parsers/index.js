@@ -35,7 +35,7 @@ export class CNAB240Parser {
     const tipoRegistro = linha[7];
     const lote = linha.substring(3, 7);
 
-    let detalhes = {
+    const detalhes = {
       tipoRegistro,
       lote,
       descricao: '',
@@ -44,68 +44,68 @@ export class CNAB240Parser {
     };
 
     switch (tipoRegistro) {
-      case '0':
-        detalhes.descricao = 'Header de Arquivo';
-        detalhes.parser = 'HeaderArquivoParser';
-        detalhes.categoria = 'controle';
+    case '0':
+      detalhes.descricao = 'Header de Arquivo';
+      detalhes.parser = 'HeaderArquivoParser';
+      detalhes.categoria = 'controle';
+      break;
+
+    case '1':
+      detalhes.descricao = 'Header de Lote';
+      detalhes.parser = 'HeaderLoteParser';
+      detalhes.categoria = 'controle';
+      break;
+
+    case '3':
+      const segmento = linha[13];
+      detalhes.segmento = segmento;
+      detalhes.descricao = `Detalhe - Segmento ${segmento}`;
+      detalhes.categoria = 'detalhe';
+
+      switch (segmento) {
+      case 'A':
+        detalhes.parser = 'SegmentoParser';
+        detalhes.metodo = 'parseSegmentoA';
+        detalhes.descricao = 'Detalhe - Segmento A (Dados principais)';
         break;
-
-      case '1':
-        detalhes.descricao = 'Header de Lote';
-        detalhes.parser = 'HeaderLoteParser';
-        detalhes.categoria = 'controle';
+      case 'B':
+        detalhes.parser = 'SegmentoBParser';
+        detalhes.metodo = 'parse';
+        detalhes.descricao = 'Detalhe - Segmento B (Dados complementares PIX)';
         break;
-
-      case '3':
-        const segmento = linha[13];
-        detalhes.segmento = segmento;
-        detalhes.descricao = `Detalhe - Segmento ${segmento}`;
-        detalhes.categoria = 'detalhe';
-
-        switch (segmento) {
-          case 'A':
-            detalhes.parser = 'SegmentoParser';
-            detalhes.metodo = 'parseSegmentoA';
-            detalhes.descricao = 'Detalhe - Segmento A (Dados principais)';
-            break;
-          case 'B':
-            detalhes.parser = 'SegmentoBParser';
-            detalhes.metodo = 'parse';
-            detalhes.descricao = 'Detalhe - Segmento B (Dados complementares PIX)';
-            break;
-          case 'J':
-            detalhes.parser = 'SegmentoParser';
-            detalhes.metodo = 'parseSegmentoJ';
-            detalhes.descricao = 'Detalhe - Segmento J (Dados adicionais)';
-            break;
-          case 'O':
-            detalhes.parser = 'SegmentoParser';
-            detalhes.metodo = 'parseSegmentoO';
-            detalhes.descricao = 'Detalhe - Segmento O (Outras informações)';
-            break;
-          default:
-            detalhes.parser = 'SegmentoParser';
-            detalhes.metodo = 'parseGenerico';
-            detalhes.descricao = `Detalhe - Segmento ${segmento} (Genérico)`;
-        }
+      case 'J':
+        detalhes.parser = 'SegmentoParser';
+        detalhes.metodo = 'parseSegmentoJ';
+        detalhes.descricao = 'Detalhe - Segmento J (Dados adicionais)';
         break;
-
-      case '5':
-        detalhes.descricao = 'Trailer de Lote';
-        detalhes.parser = 'TrailerParser';
-        detalhes.metodo = 'parseTrailerLote';
-        detalhes.categoria = 'controle';
+      case 'O':
+        detalhes.parser = 'SegmentoParser';
+        detalhes.metodo = 'parseSegmentoO';
+        detalhes.descricao = 'Detalhe - Segmento O (Outras informações)';
         break;
-
-      case '9':
-        detalhes.descricao = 'Trailer de Arquivo';
-        detalhes.parser = 'TrailerParser';
-        detalhes.metodo = 'parseTrailerArquivo';
-        detalhes.categoria = 'controle';
-        break;
-
       default:
-        throw new Error(`Tipo de registro "${tipoRegistro}" não reconhecido`);
+        detalhes.parser = 'SegmentoParser';
+        detalhes.metodo = 'parseGenerico';
+        detalhes.descricao = `Detalhe - Segmento ${segmento} (Genérico)`;
+      }
+      break;
+
+    case '5':
+      detalhes.descricao = 'Trailer de Lote';
+      detalhes.parser = 'TrailerParser';
+      detalhes.metodo = 'parseTrailerLote';
+      detalhes.categoria = 'controle';
+      break;
+
+    case '9':
+      detalhes.descricao = 'Trailer de Arquivo';
+      detalhes.parser = 'TrailerParser';
+      detalhes.metodo = 'parseTrailerArquivo';
+      detalhes.categoria = 'controle';
+      break;
+
+    default:
+      throw new Error(`Tipo de registro "${tipoRegistro}" não reconhecido`);
     }
 
     return detalhes;
@@ -122,40 +122,40 @@ export class CNAB240Parser {
 
     try {
       switch (tipoInfo.parser) {
-        case 'HeaderArquivoParser':
-          dadosParsed = HeaderArquivoParser.parse(linha);
-          break;
+      case 'HeaderArquivoParser':
+        dadosParsed = HeaderArquivoParser.parse(linha);
+        break;
 
-        case 'HeaderLoteParser':
-          dadosParsed = HeaderLoteParser.parse(linha);
-          break;
+      case 'HeaderLoteParser':
+        dadosParsed = HeaderLoteParser.parse(linha);
+        break;
 
-        case 'SegmentoParser':
-          if (tipoInfo.metodo === 'parseSegmentoA') {
-            dadosParsed = SegmentoParser.parseSegmentoA(linha);
-          } else if (tipoInfo.metodo === 'parseSegmentoJ') {
-            dadosParsed = SegmentoParser.parseSegmentoJ(linha);
-          } else if (tipoInfo.metodo === 'parseSegmentoO') {
-            dadosParsed = SegmentoParser.parseSegmentoO(linha);
-          } else {
-            dadosParsed = SegmentoParser.parseGenerico(linha);
-          }
-          break;
+      case 'SegmentoParser':
+        if (tipoInfo.metodo === 'parseSegmentoA') {
+          dadosParsed = SegmentoParser.parseSegmentoA(linha);
+        } else if (tipoInfo.metodo === 'parseSegmentoJ') {
+          dadosParsed = SegmentoParser.parseSegmentoJ(linha);
+        } else if (tipoInfo.metodo === 'parseSegmentoO') {
+          dadosParsed = SegmentoParser.parseSegmentoO(linha);
+        } else {
+          dadosParsed = SegmentoParser.parseGenerico(linha);
+        }
+        break;
 
-        case 'SegmentoBParser':
-          dadosParsed = SegmentoBParser.parse(linha);
-          break;
+      case 'SegmentoBParser':
+        dadosParsed = SegmentoBParser.parse(linha);
+        break;
 
-        case 'TrailerParser':
-          if (tipoInfo.metodo === 'parseTrailerLote') {
-            dadosParsed = TrailerParser.parseTrailerLote(linha);
-          } else {
-            dadosParsed = TrailerParser.parseTrailerArquivo(linha);
-          }
-          break;
+      case 'TrailerParser':
+        if (tipoInfo.metodo === 'parseTrailerLote') {
+          dadosParsed = TrailerParser.parseTrailerLote(linha);
+        } else {
+          dadosParsed = TrailerParser.parseTrailerArquivo(linha);
+        }
+        break;
 
-        default:
-          throw new Error(`Parser "${tipoInfo.parser}" não encontrado`);
+      default:
+        throw new Error(`Parser "${tipoInfo.parser}" não encontrado`);
       }
     } catch (error) {
       throw new Error(`Erro no parsing ${tipoInfo.descricao}: ${error.message}`);
@@ -184,23 +184,23 @@ export class CNAB240Parser {
     const tipoInfo = this.detectType(linha);
 
     switch (tipoInfo.parser) {
-      case 'HeaderArquivoParser':
-        return HeaderArquivoParser.parseToModel(linha);
+    case 'HeaderArquivoParser':
+      return HeaderArquivoParser.parseToModel(linha);
 
-      case 'HeaderLoteParser':
-        return HeaderLoteParser.parseToModel(linha);
+    case 'HeaderLoteParser':
+      return HeaderLoteParser.parseToModel(linha);
 
-      case 'SegmentoParser':
-        return SegmentoParser.parseToModel(linha);
+    case 'SegmentoParser':
+      return SegmentoParser.parseToModel(linha);
 
-      case 'SegmentoBParser':
-        return SegmentoBParser.parseToModel(linha);
+    case 'SegmentoBParser':
+      return SegmentoBParser.parseToModel(linha);
 
-      case 'TrailerParser':
-        return TrailerParser.parseToModel(linha);
+    case 'TrailerParser':
+      return TrailerParser.parseToModel(linha);
 
-      default:
-        throw new Error(`Parser "${tipoInfo.parser}" não suporta criação de modelo`);
+    default:
+      throw new Error(`Parser "${tipoInfo.parser}" não suporta criação de modelo`);
     }
   }
 
@@ -214,26 +214,26 @@ export class CNAB240Parser {
       const tipoInfo = this.detectType(linha);
 
       switch (tipoInfo.parser) {
-        case 'HeaderArquivoParser':
-          return HeaderArquivoParser.validate(linha);
+      case 'HeaderArquivoParser':
+        return HeaderArquivoParser.validate(linha);
 
-        case 'HeaderLoteParser':
-          return HeaderLoteParser.validate(linha);
+      case 'HeaderLoteParser':
+        return HeaderLoteParser.validate(linha);
 
-        case 'SegmentoParser':
-          return SegmentoParser.validate(linha);
+      case 'SegmentoParser':
+        return SegmentoParser.validate(linha);
 
-        case 'SegmentoBParser':
-          return SegmentoBParser.validate(linha);
+      case 'SegmentoBParser':
+        return SegmentoBParser.validate(linha);
 
-        case 'TrailerParser':
-          return TrailerParser.validate(linha);
+      case 'TrailerParser':
+        return TrailerParser.validate(linha);
 
-        default:
-          return {
-            valido: false,
-            erros: [`Parser "${tipoInfo.parser}" não suporta validação`]
-          };
+      default:
+        return {
+          valido: false,
+          erros: [`Parser "${tipoInfo.parser}" não suporta validação`]
+        };
       }
     } catch (error) {
       return {
@@ -273,46 +273,46 @@ export class CNAB240Parser {
         resultado.linhasProcessadas++;
 
         switch (tipoInfo.tipoRegistro) {
-          case '0':
-            resultado.headerArquivo = dados;
-            break;
+        case '0':
+          resultado.headerArquivo = dados;
+          break;
 
-          case '1':
-            // Finalizar lote anterior se existir
-            if (loteAtual) {
-              resultado.lotes.push(loteAtual);
-            }
+        case '1':
+          // Finalizar lote anterior se existir
+          if (loteAtual) {
+            resultado.lotes.push(loteAtual);
+          }
 
-            // Iniciar novo lote
-            loteAtual = {
-              headerLote: dados,
-              detalhes: [],
-              trailerLote: null,
-              numero: dados.lote
-            };
-            break;
+          // Iniciar novo lote
+          loteAtual = {
+            headerLote: dados,
+            detalhes: [],
+            trailerLote: null,
+            numero: dados.lote
+          };
+          break;
 
-          case '3':
-            if (!loteAtual) {
-              resultado.warnings.push(`Linha ${indice + 1}: Detalhe encontrado sem header de lote`);
-            } else {
-              loteAtual.detalhes.push(dados);
-            }
-            break;
+        case '3':
+          if (!loteAtual) {
+            resultado.warnings.push(`Linha ${indice + 1}: Detalhe encontrado sem header de lote`);
+          } else {
+            loteAtual.detalhes.push(dados);
+          }
+          break;
 
-          case '5':
-            if (!loteAtual) {
-              resultado.warnings.push(`Linha ${indice + 1}: Trailer de lote encontrado sem header de lote`);
-            } else {
-              loteAtual.trailerLote = dados;
-              resultado.lotes.push(loteAtual);
-              loteAtual = null;
-            }
-            break;
+        case '5':
+          if (!loteAtual) {
+            resultado.warnings.push(`Linha ${indice + 1}: Trailer de lote encontrado sem header de lote`);
+          } else {
+            loteAtual.trailerLote = dados;
+            resultado.lotes.push(loteAtual);
+            loteAtual = null;
+          }
+          break;
 
-          case '9':
-            resultado.trailerArquivo = dados;
-            break;
+        case '9':
+          resultado.trailerArquivo = dados;
+          break;
         }
 
       } catch (error) {

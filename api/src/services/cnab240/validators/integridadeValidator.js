@@ -204,7 +204,7 @@ class IntegridadeValidator {
     if (dadosProcessados.trailerArquivo) {
       if (dadosProcessados.trailerArquivo.quantidadeRegistros !== totalRegistros) {
         resultado.erros.push(
-          `Quantidade total de registros inconsistente ` +
+          'Quantidade total de registros inconsistente ' +
           `(trailer: ${dadosProcessados.trailerArquivo.quantidadeRegistros}, real: ${totalRegistros})`
         );
         resultado.valido = false;
@@ -374,7 +374,7 @@ class IntegridadeValidator {
       if (header.dataGeracao && trailer.dataGeracao &&
         header.dataGeracao !== trailer.dataGeracao) {
         resultado.avisos.push(
-          `Data de geração inconsistente entre header e trailer do arquivo`
+          'Data de geração inconsistente entre header e trailer do arquivo'
         );
       }
     }

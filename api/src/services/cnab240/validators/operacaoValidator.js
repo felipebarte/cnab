@@ -157,43 +157,43 @@ class OperacaoValidator {
     const tipoOperacao = resultado.detalhes.tipoOperacao;
 
     switch (tipoOperacao) {
-      case 'PIX':
-      case 'PIX_TRANSFERENCIA':
-      case 'PIX_PAGAMENTO':
-        this.validarOperacaoPIX(lote, resultado);
-        break;
+    case 'PIX':
+    case 'PIX_TRANSFERENCIA':
+    case 'PIX_PAGAMENTO':
+      this.validarOperacaoPIX(lote, resultado);
+      break;
 
-      case 'PIX_SAQUE':
-        this.validarOperacaoPixSaque(lote, resultado);
-        break;
+    case 'PIX_SAQUE':
+      this.validarOperacaoPixSaque(lote, resultado);
+      break;
 
-      case 'COBRANCA':
-      case 'COBRANCA_SIMPLES':
-      case 'COBRANCA_VINCULADA':
-      case 'COBRANCA_CAUCIONADA':
-      case 'COBRANCA_DESCONTADA':
-        this.validarOperacaoCobranca(lote, resultado);
-        break;
+    case 'COBRANCA':
+    case 'COBRANCA_SIMPLES':
+    case 'COBRANCA_VINCULADA':
+    case 'COBRANCA_CAUCIONADA':
+    case 'COBRANCA_DESCONTADA':
+      this.validarOperacaoCobranca(lote, resultado);
+      break;
 
-      case 'TRANSFERENCIA':
-      case 'TRANSFERENCIA_CREDITO_CONTA':
-      case 'TRANSFERENCIA_DOC_TED':
-        this.validarOperacaoTransferencia(lote, resultado);
-        break;
+    case 'TRANSFERENCIA':
+    case 'TRANSFERENCIA_CREDITO_CONTA':
+    case 'TRANSFERENCIA_DOC_TED':
+      this.validarOperacaoTransferencia(lote, resultado);
+      break;
 
-      case 'PAGAMENTO':
-      case 'PAGAMENTO_FORNECEDOR':
-      case 'PAGAMENTO_TRIBUTO':
-        this.validarOperacaoPagamento(lote, resultado);
-        break;
+    case 'PAGAMENTO':
+    case 'PAGAMENTO_FORNECEDOR':
+    case 'PAGAMENTO_TRIBUTO':
+      this.validarOperacaoPagamento(lote, resultado);
+      break;
 
-      case 'DEBITO_AUTOMATICO':
-        this.validarOperacaoDebitoAutomatico(lote, resultado);
-        break;
+    case 'DEBITO_AUTOMATICO':
+      this.validarOperacaoDebitoAutomatico(lote, resultado);
+      break;
 
-      default:
-        resultado.avisos.push(`Validações específicas não implementadas para: ${tipoOperacao}`);
-        break;
+    default:
+      resultado.avisos.push(`Validações específicas não implementadas para: ${tipoOperacao}`);
+      break;
     }
   }
 
@@ -280,7 +280,7 @@ class OperacaoValidator {
         if (detalhe.valor > 50000) { // R$ 500,00 limite padrão PIX Saque
           resultado.avisos.push(
             `Detalhe ${index + 1}: Valor do saque (R$ ${(detalhe.valor / 100).toFixed(2)}) ` +
-            `excede limite padrão PIX Saque (R$ 500,00)`
+            'excede limite padrão PIX Saque (R$ 500,00)'
           );
         }
       }

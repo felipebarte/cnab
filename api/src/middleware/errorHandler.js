@@ -82,26 +82,26 @@ function classifyError(error) {
  */
 function getErrorSeverity(errorType, statusCode) {
   switch (errorType) {
-    case 'authentication':
-    case 'authorization':
-      return 'warning';
+  case 'authentication':
+  case 'authorization':
+    return 'warning';
 
-    case 'validation':
-    case 'not_found':
-    case 'business_logic':
-      return 'info';
+  case 'validation':
+  case 'not_found':
+  case 'business_logic':
+    return 'info';
 
-    case 'rate_limit':
-      return 'warning';
+  case 'rate_limit':
+    return 'warning';
 
-    case 'service_unavailable':
-      return statusCode >= 500 ? 'error' : 'warning';
+  case 'service_unavailable':
+    return statusCode >= 500 ? 'error' : 'warning';
 
-    case 'internal_server':
-      return 'error';
+  case 'internal_server':
+    return 'error';
 
-    default:
-      return statusCode >= 500 ? 'error' : 'warning';
+  default:
+    return statusCode >= 500 ? 'error' : 'warning';
   }
 }
 
@@ -113,38 +113,38 @@ function getErrorSeverity(errorType, statusCode) {
  */
 function generateUserFriendlyMessage(errorType, error) {
   switch (errorType) {
-    case 'authentication':
-      return 'Credenciais inválidas ou token expirado. Faça login novamente.';
+  case 'authentication':
+    return 'Credenciais inválidas ou token expirado. Faça login novamente.';
 
-    case 'authorization':
-      return 'Você não tem permissão para acessar este recurso.';
+  case 'authorization':
+    return 'Você não tem permissão para acessar este recurso.';
 
-    case 'validation':
-      return 'Dados fornecidos são inválidos. Verifique os campos obrigatórios.';
+  case 'validation':
+    return 'Dados fornecidos são inválidos. Verifique os campos obrigatórios.';
 
-    case 'business_logic':
-      if (error.message.includes('business hours')) {
-        return 'Operação disponível apenas durante horário comercial (07:00-23:00).';
-      }
-      if (error.message.includes('already paid')) {
-        return 'Este boleto já foi pago anteriormente.';
-      }
-      return 'Operação não permitida devido a regras de negócio.';
+  case 'business_logic':
+    if (error.message.includes('business hours')) {
+      return 'Operação disponível apenas durante horário comercial (07:00-23:00).';
+    }
+    if (error.message.includes('already paid')) {
+      return 'Este boleto já foi pago anteriormente.';
+    }
+    return 'Operação não permitida devido a regras de negócio.';
 
-    case 'service_unavailable':
-      return 'Serviço temporariamente indisponível. Tente novamente em alguns minutos.';
+  case 'service_unavailable':
+    return 'Serviço temporariamente indisponível. Tente novamente em alguns minutos.';
 
-    case 'not_found':
-      return 'Recurso não encontrado.';
+  case 'not_found':
+    return 'Recurso não encontrado.';
 
-    case 'rate_limit':
-      return 'Muitas requisições. Aguarde alguns segundos antes de tentar novamente.';
+  case 'rate_limit':
+    return 'Muitas requisições. Aguarde alguns segundos antes de tentar novamente.';
 
-    case 'internal_server':
-      return 'Erro interno do servidor. Nossa equipe foi notificada.';
+  case 'internal_server':
+    return 'Erro interno do servidor. Nossa equipe foi notificada.';
 
-    default:
-      return 'Ocorreu um erro inesperado. Tente novamente.';
+  default:
+    return 'Ocorreu um erro inesperado. Tente novamente.';
   }
 }
 

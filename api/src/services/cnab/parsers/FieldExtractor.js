@@ -141,17 +141,17 @@ export class FieldExtractor {
       const pictureInfo = this._parsePictureFormat(picture);
 
       switch (pictureInfo.type) {
-        case 'numeric':
-          return this._convertNumericValue(rawValue, pictureInfo, fieldSchema);
+      case 'numeric':
+        return this._convertNumericValue(rawValue, pictureInfo, fieldSchema);
 
-        case 'alphanumeric':
-          return this._convertAlphanumericValue(rawValue, pictureInfo, fieldSchema);
+      case 'alphanumeric':
+        return this._convertAlphanumericValue(rawValue, pictureInfo, fieldSchema);
 
-        case 'decimal':
-          return this._convertDecimalValue(rawValue, pictureInfo, fieldSchema);
+      case 'decimal':
+        return this._convertDecimalValue(rawValue, pictureInfo, fieldSchema);
 
-        default:
-          return rawValue;
+      default:
+        return rawValue;
       }
 
     } catch (error) {
@@ -283,43 +283,43 @@ export class FieldExtractor {
       let day, month, year;
 
       switch (format) {
-        case '%d%m%Y': // ddmmaaaa
-          if (rawValue.length === 8) {
-            day = parseInt(rawValue.substr(0, 2));
-            month = parseInt(rawValue.substr(2, 2));
-            year = parseInt(rawValue.substr(4, 4));
-          }
-          break;
+      case '%d%m%Y': // ddmmaaaa
+        if (rawValue.length === 8) {
+          day = parseInt(rawValue.substr(0, 2));
+          month = parseInt(rawValue.substr(2, 2));
+          year = parseInt(rawValue.substr(4, 4));
+        }
+        break;
 
-        case '%d%m%y': // ddmmaa
-          if (rawValue.length === 6) {
-            day = parseInt(rawValue.substr(0, 2));
-            month = parseInt(rawValue.substr(2, 2));
-            year = parseInt(rawValue.substr(4, 2));
-            // Assumir século 20xx se ano < 50, senão 19xx
-            year += year < 50 ? 2000 : 1900;
-          }
-          break;
+      case '%d%m%y': // ddmmaa
+        if (rawValue.length === 6) {
+          day = parseInt(rawValue.substr(0, 2));
+          month = parseInt(rawValue.substr(2, 2));
+          year = parseInt(rawValue.substr(4, 2));
+          // Assumir século 20xx se ano < 50, senão 19xx
+          year += year < 50 ? 2000 : 1900;
+        }
+        break;
 
-        case '%Y%m%d': // aaaammdd
-          if (rawValue.length === 8) {
-            year = parseInt(rawValue.substr(0, 4));
-            month = parseInt(rawValue.substr(4, 2));
-            day = parseInt(rawValue.substr(6, 2));
-          }
-          break;
+      case '%Y%m%d': // aaaammdd
+        if (rawValue.length === 8) {
+          year = parseInt(rawValue.substr(0, 4));
+          month = parseInt(rawValue.substr(4, 2));
+          day = parseInt(rawValue.substr(6, 2));
+        }
+        break;
 
-        case '%y%m%d': // aammdd
-          if (rawValue.length === 6) {
-            year = parseInt(rawValue.substr(0, 2));
-            month = parseInt(rawValue.substr(2, 2));
-            day = parseInt(rawValue.substr(4, 2));
-            year += year < 50 ? 2000 : 1900;
-          }
-          break;
+      case '%y%m%d': // aammdd
+        if (rawValue.length === 6) {
+          year = parseInt(rawValue.substr(0, 2));
+          month = parseInt(rawValue.substr(2, 2));
+          day = parseInt(rawValue.substr(4, 2));
+          year += year < 50 ? 2000 : 1900;
+        }
+        break;
 
-        default:
-          return rawValue; // Retornar string se formato não reconhecido
+      default:
+        return rawValue; // Retornar string se formato não reconhecido
       }
 
       // Validar data

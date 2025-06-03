@@ -167,7 +167,7 @@ File.findByType = function (fileType, limit = 100) {
   return this.findAll({
     where: { file_type: fileType },
     order: [['created_at', 'DESC']],
-    limit: limit,
+    limit,
     include: [{
       model: Operation,
       as: 'operation'
@@ -179,7 +179,7 @@ File.findByValidationStatus = function (status, limit = 100) {
   return this.findAll({
     where: { validation_status: status },
     order: [['created_at', 'DESC']],
-    limit: limit,
+    limit,
     include: [{
       model: Operation,
       as: 'operation'

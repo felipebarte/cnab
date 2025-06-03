@@ -123,56 +123,56 @@ export class BusinessRuleValidator {
 
           // Validar regras específicas por tipo de data
           switch (type) {
-            case 'vencimento':
-              // Vencimento não pode ser muito no passado (tolerância de 30 dias)
-              const thirtyDaysAgo = new Date(today);
-              thirtyDaysAgo.setDate(today.getDate() - 30);
+          case 'vencimento':
+            // Vencimento não pode ser muito no passado (tolerância de 30 dias)
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
 
-              if (parsedDate < thirtyDaysAgo) {
-                result.addWarning(
-                  `Linha ${lineNumber}, campo ${fieldName}: data de vencimento muito antiga (${this._formatDate(parsedDate)})`,
-                  lineNumber,
-                  fieldName
-                );
-              }
-              break;
+            if (parsedDate < thirtyDaysAgo) {
+              result.addWarning(
+                `Linha ${lineNumber}, campo ${fieldName}: data de vencimento muito antiga (${this._formatDate(parsedDate)})`,
+                lineNumber,
+                fieldName
+              );
+            }
+            break;
 
-            case 'emissao':
-              // Data de emissão não pode ser futura
-              if (parsedDate > today) {
-                result.addError(
-                  `Linha ${lineNumber}, campo ${fieldName}: data de emissão futura (${this._formatDate(parsedDate)})`,
-                  lineNumber,
-                  fieldName
-                );
-              }
+          case 'emissao':
+            // Data de emissão não pode ser futura
+            if (parsedDate > today) {
+              result.addError(
+                `Linha ${lineNumber}, campo ${fieldName}: data de emissão futura (${this._formatDate(parsedDate)})`,
+                lineNumber,
+                fieldName
+              );
+            }
 
-              // Data de emissão não pode ser muito antiga (5 anos)
-              const fiveYearsAgo = new Date(today);
-              fiveYearsAgo.setFullYear(today.getFullYear() - 5);
+            // Data de emissão não pode ser muito antiga (5 anos)
+            const fiveYearsAgo = new Date(today);
+            fiveYearsAgo.setFullYear(today.getFullYear() - 5);
 
-              if (parsedDate < fiveYearsAgo) {
-                result.addWarning(
-                  `Linha ${lineNumber}, campo ${fieldName}: data de emissão muito antiga (${this._formatDate(parsedDate)})`,
-                  lineNumber,
-                  fieldName
-                );
-              }
-              break;
+            if (parsedDate < fiveYearsAgo) {
+              result.addWarning(
+                `Linha ${lineNumber}, campo ${fieldName}: data de emissão muito antiga (${this._formatDate(parsedDate)})`,
+                lineNumber,
+                fieldName
+              );
+            }
+            break;
 
-            case 'processamento':
-              // Data de processamento deve ser hoje ou próxima
-              const tenDaysFromNow = new Date(today);
-              tenDaysFromNow.setDate(today.getDate() + 10);
+          case 'processamento':
+            // Data de processamento deve ser hoje ou próxima
+            const tenDaysFromNow = new Date(today);
+            tenDaysFromNow.setDate(today.getDate() + 10);
 
-              if (parsedDate > tenDaysFromNow) {
-                result.addWarning(
-                  `Linha ${lineNumber}, campo ${fieldName}: data de processamento muito futura (${this._formatDate(parsedDate)})`,
-                  lineNumber,
-                  fieldName
-                );
-              }
-              break;
+            if (parsedDate > tenDaysFromNow) {
+              result.addWarning(
+                `Linha ${lineNumber}, campo ${fieldName}: data de processamento muito futura (${this._formatDate(parsedDate)})`,
+                lineNumber,
+                fieldName
+              );
+            }
+            break;
           }
         }
 
@@ -605,24 +605,24 @@ export class BusinessRuleValidator {
     const bankCode = detection.bankCode;
 
     switch (bankCode) {
-      case '001': // Banco do Brasil
-        await this._validateBancoBrasilRules(lines, detection, result);
-        break;
-      case '033': // Santander
-        await this._validateSantanderRules(lines, detection, result);
-        break;
-      case '104': // Caixa
-        await this._validateCaixaRules(lines, detection, result);
-        break;
-      case '237': // Bradesco
-        await this._validateBradescoRules(lines, detection, result);
-        break;
-      case '341': // Itaú
-        await this._validateItauRules(lines, detection, result);
-        break;
-      default:
-        // Regras genéricas para bancos não específicos
-        break;
+    case '001': // Banco do Brasil
+      await this._validateBancoBrasilRules(lines, detection, result);
+      break;
+    case '033': // Santander
+      await this._validateSantanderRules(lines, detection, result);
+      break;
+    case '104': // Caixa
+      await this._validateCaixaRules(lines, detection, result);
+      break;
+    case '237': // Bradesco
+      await this._validateBradescoRules(lines, detection, result);
+      break;
+    case '341': // Itaú
+      await this._validateItauRules(lines, detection, result);
+      break;
+    default:
+      // Regras genéricas para bancos não específicos
+      break;
     }
   }
 

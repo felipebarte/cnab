@@ -280,7 +280,7 @@ class SwapFinancialService extends ExternalAPIService {
       // Endpoint: POST /ledger/payments/boletos
       // Payload: {"barcode": "codigo_de_barras"}
       const response = await this.authenticatedRequest('POST', '/ledger/payments/boletos', {
-        barcode: barcode
+        barcode
       });
 
       if (!response) {

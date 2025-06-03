@@ -399,7 +399,7 @@ CnabRecord.findByDateRange = function (startDate, endDate, dateField = 'data_pag
   return this.findAll({
     where: whereClause,
     order: [[dateField, 'DESC']],
-    limit: limit,
+    limit,
     include: [
       {
         model: File,
@@ -417,7 +417,7 @@ CnabRecord.findByCodigoOcorrencia = function (codigoOcorrencia, limit = 100) {
   return this.findAll({
     where: { codigo_ocorrencia: codigoOcorrencia },
     order: [['created_at', 'DESC']],
-    limit: limit,
+    limit,
     include: [
       {
         model: File,

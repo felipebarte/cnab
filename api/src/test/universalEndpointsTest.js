@@ -63,7 +63,7 @@ function validateUniversalResponse(response, operation) {
     console.log(`  ✓ Version: ${response.data.metadata.version}`);
 
     if (response.data.metadata.timing) {
-      console.log(`  ✓ Timing:`, response.data.metadata.timing);
+      console.log('  ✓ Timing:', response.data.metadata.timing);
     }
   }
 
@@ -100,7 +100,7 @@ async function testListarBancos() {
     console.log(`❌ Erro: ${error.message}`);
     if (error.response) {
       console.log(`   Status: ${error.response.status}`);
-      console.log(`   Data:`, error.response.data);
+      console.log('   Data:', error.response.data);
     }
     return false;
   }
@@ -185,7 +185,7 @@ async function testUpload() {
     console.log(`❌ Erro: ${error.message}`);
     if (error.response) {
       console.log(`   Status: ${error.response.status}`);
-      console.log(`   Error:`, error.response.data.error);
+      console.log('   Error:', error.response.data.error);
     }
     return false;
   }
@@ -206,7 +206,7 @@ async function testValidar() {
 
     // Testar via JSON (sem upload)
     const payload = {
-      content: content
+      content
     };
 
     const config = {
@@ -242,7 +242,7 @@ async function testValidar() {
     console.log(`❌ Erro: ${error.message}`);
     if (error.response) {
       console.log(`   Status: ${error.response.status}`);
-      console.log(`   Error:`, error.response.data.error);
+      console.log('   Error:', error.response.data.error);
     }
     return false;
   }
@@ -296,8 +296,8 @@ async function testProcessar() {
       // Verificar estrutura dos dados parseados
       if (parsing.data) {
         console.log('\n📋 Estrutura dos dados parseados:');
-        console.log(`   📁 Header arquivo: ${!!parsing.data.arquivo?.header ? '✅' : '❌'}`);
-        console.log(`   📁 Trailer arquivo: ${!!parsing.data.arquivo?.trailer ? '✅' : '❌'}`);
+        console.log(`   📁 Header arquivo: ${parsing.data.arquivo?.header ? '✅' : '❌'}`);
+        console.log(`   📁 Trailer arquivo: ${parsing.data.arquivo?.trailer ? '✅' : '❌'}`);
         console.log(`   📦 Lotes: ${parsing.data.lotes?.length || 0}`);
 
         if (parsing.data.lotes && parsing.data.lotes.length > 0) {
@@ -313,7 +313,7 @@ async function testProcessar() {
     console.log(`❌ Erro: ${error.message}`);
     if (error.response) {
       console.log(`   Status: ${error.response.status}`);
-      console.log(`   Error:`, error.response.data.error);
+      console.log('   Error:', error.response.data.error);
     }
     return false;
   }
@@ -326,7 +326,7 @@ async function testTratamentoErros() {
   console.log('\n⚠️ === TESTE 6: TRATAMENTO DE ERROS ===');
 
   let passedTests = 0;
-  let totalTests = 3;
+  const totalTests = 3;
 
   // Teste 6.1: Arquivo inválido
   try {
@@ -377,7 +377,7 @@ async function runAllTests() {
 
   const startTime = Date.now();
   let passedTests = 0;
-  let totalTests = 6;
+  const totalTests = 6;
 
   // Executar todos os testes
   const tests = [

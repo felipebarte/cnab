@@ -24,12 +24,12 @@ export class TrailerParser {
     const tipoRegistro = linha[7];
 
     switch (tipoRegistro) {
-      case '5':
-        return this.parseTrailerLote(linha);
-      case '9':
-        return this.parseTrailerArquivo(linha);
-      default:
-        throw new Error(`Tipo de registro esperado: 5 ou 9, encontrado: ${tipoRegistro}`);
+    case '5':
+      return this.parseTrailerLote(linha);
+    case '9':
+      return this.parseTrailerArquivo(linha);
+    default:
+      throw new Error(`Tipo de registro esperado: 5 ou 9, encontrado: ${tipoRegistro}`);
     }
   }
 
@@ -170,14 +170,14 @@ export class TrailerParser {
     const tipoRegistro = linha[7];
 
     switch (tipoRegistro) {
-      case '5':
-        const dadosLote = this.parseTrailerLote(linha);
-        return new TrailerLote240(dadosLote);
-      case '9':
-        const dadosArquivo = this.parseTrailerArquivo(linha);
-        return new TrailerArquivo240(dadosArquivo);
-      default:
-        throw new Error(`Tipo de registro "${tipoRegistro}" não suportado para criação de modelo`);
+    case '5':
+      const dadosLote = this.parseTrailerLote(linha);
+      return new TrailerLote240(dadosLote);
+    case '9':
+      const dadosArquivo = this.parseTrailerArquivo(linha);
+      return new TrailerArquivo240(dadosArquivo);
+    default:
+      throw new Error(`Tipo de registro "${tipoRegistro}" não suportado para criação de modelo`);
     }
   }
 
@@ -193,13 +193,13 @@ export class TrailerParser {
       const tipoRegistro = linha[7];
 
       switch (tipoRegistro) {
-        case '5':
-          return this.validateTrailerLote(linha);
-        case '9':
-          return this.validateTrailerArquivo(linha);
-        default:
-          erros.push(`Tipo de registro "${tipoRegistro}" não reconhecido`);
-          return { valido: false, erros };
+      case '5':
+        return this.validateTrailerLote(linha);
+      case '9':
+        return this.validateTrailerArquivo(linha);
+      default:
+        erros.push(`Tipo de registro "${tipoRegistro}" não reconhecido`);
+        return { valido: false, erros };
       }
     } catch (error) {
       erros.push(error.message);
@@ -321,12 +321,12 @@ export class TrailerParser {
     const tipoRegistro = linha[7];
 
     switch (tipoRegistro) {
-      case '5':
-        return this.extractTrailerLoteSummary(linha);
-      case '9':
-        return this.extractTrailerArquivoSummary(linha);
-      default:
-        throw new Error(`Tipo de registro "${tipoRegistro}" não suportado para extração de resumo`);
+    case '5':
+      return this.extractTrailerLoteSummary(linha);
+    case '9':
+      return this.extractTrailerArquivoSummary(linha);
+    default:
+      throw new Error(`Tipo de registro "${tipoRegistro}" não suportado para extração de resumo`);
     }
   }
 

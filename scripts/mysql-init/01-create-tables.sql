@@ -282,6 +282,54 @@ CREATE TABLE cnab240_segments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
+-- TABELA OTIMIZADA PARA CÓDIGOS DE BARRAS (API SWAP)
+-- ============================================================================
+
+-- Tabela otimizada para consulta rápida de códigos de barras
+CREATE TABLE cnab240_codigo_barras (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    segment_id BIGINT NOT NULL COMMENT 'Referência ao segmento',
+    operation_id VARCHAR(50) NOT NULL,
+    
+    -- Dados do código de barras
+    codigo_barras VARCHAR(60) NOT NULL COMMENT 'Código de barras para pagamento',
+    tipo_documento ENUM('TITULO', 'TRIBUTO', 'CONVENIO') NOT NULL,
+    
+    -- Dados para pagamento via API Swap
+    valor_documento DECIMAL(15,2) NOT NULL COMMENT 'Valor do documento',
+    data_vencimento DATE COMMENT 'Data de vencimento',
+    favorecido_nome VARCHAR(100) COMMENT 'Nome do favorecido',
+    favorecido_documento VARCHAR(20) COMMENT 'CPF/CNPJ do favorecido',
+    numero_documento VARCHAR(50) COMMENT 'Número do documento original',
+    
+    -- Status do pagamento
+    status_pagamento ENUM('PENDENTE', 'PROCESSANDO', 'PAGO', 'ERRO') DEFAULT 'PENDENTE',
+    data_pagamento TIMESTAMP NULL COMMENT 'Data/hora do pagamento via API Swap',
+    response_swap JSON COMMENT 'Resposta da API Swap',
+    erro_swap TEXT COMMENT 'Detalhes do erro se houver',
+    
+    -- Metadados para auditoria
+    arquivo_origem VARCHAR(255) COMMENT 'Nome do arquivo CNAB original',
+    lote_numero INT COMMENT 'Número do lote no arquivo',
+    
+    -- Índices para performance
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    UNIQUE KEY uk_codigo_barras (codigo_barras),
+    INDEX idx_segment_id (segment_id),
+    INDEX idx_operation_id (operation_id),
+    INDEX idx_status_pagamento (status_pagamento),
+    INDEX idx_data_vencimento (data_vencimento),
+    INDEX idx_valor_documento (valor_documento),
+    INDEX idx_tipo_documento (tipo_documento),
+    INDEX idx_favorecido_documento (favorecido_documento),
+    INDEX idx_arquivo_origem (arquivo_origem),
+    FOREIGN KEY (segment_id) REFERENCES cnab240_segments(id) ON DELETE CASCADE,
+    FOREIGN KEY (operation_id) REFERENCES operations(operation_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
 -- TABELAS DE AUDITORIA E LOGS
 -- ============================================================================
 

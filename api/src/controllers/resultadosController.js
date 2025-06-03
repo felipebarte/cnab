@@ -107,7 +107,7 @@ export class ResultadosController {
         ],
         order: [[validSortBy, validSortOrder]],
         limit: limitNum,
-        offset: offset,
+        offset,
         distinct: true
       });
 

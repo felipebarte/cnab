@@ -35,30 +35,30 @@ export function criarModelo(linha) {
   const segmento = linha[13]; // Posição 14 (índice 13) para detalhes
 
   switch (tipoRegistro) {
-    case '0': // Header de arquivo
-      return HeaderArquivo240.fromLinha(linha);
+  case '0': // Header de arquivo
+    return HeaderArquivo240.fromLinha(linha);
 
-    case '1': // Header de lote
-      return HeaderLote240.fromLinha(linha);
+  case '1': // Header de lote
+    return HeaderLote240.fromLinha(linha);
 
-    case '3': // Detalhe (segmentos A, B, etc.)
-      switch (segmento) {
-        case 'A':
-          return SegmentoA240.fromLinha(linha);
-        case 'B':
-          return SegmentoB240.fromLinha(linha);
-        default:
-          throw new Error(`Segmento "${segmento}" não suportado`);
-      }
-
-    case '5': // Trailer de lote
-      return TrailerLote240.fromLinha(linha);
-
-    case '9': // Trailer de arquivo
-      return TrailerArquivo240.fromLinha(linha);
-
+  case '3': // Detalhe (segmentos A, B, etc.)
+    switch (segmento) {
+    case 'A':
+      return SegmentoA240.fromLinha(linha);
+    case 'B':
+      return SegmentoB240.fromLinha(linha);
     default:
-      throw new Error(`Tipo de registro "${tipoRegistro}" não suportado`);
+      throw new Error(`Segmento "${segmento}" não suportado`);
+    }
+
+  case '5': // Trailer de lote
+    return TrailerLote240.fromLinha(linha);
+
+  case '9': // Trailer de arquivo
+    return TrailerArquivo240.fromLinha(linha);
+
+  default:
+    throw new Error(`Tipo de registro "${tipoRegistro}" não suportado`);
   }
 }
 

@@ -143,23 +143,23 @@ class Cnab240ValidatorSuite {
    */
   static validarPorTipo(tipo, dadosProcessados, opcoes = {}) {
     switch (tipo.toLowerCase()) {
-      case 'estrutura':
-        return EstruturaValidator.validar(dadosProcessados);
+    case 'estrutura':
+      return EstruturaValidator.validar(dadosProcessados);
 
-      case 'integridade':
-        return IntegridadeValidator.validar(dadosProcessados);
+    case 'integridade':
+      return IntegridadeValidator.validar(dadosProcessados);
 
-      case 'negocio':
-        return NegocioValidator.validar(dadosProcessados);
+    case 'negocio':
+      return NegocioValidator.validar(dadosProcessados);
 
-      case 'banco':
-        return BancoValidator.validar(dadosProcessados, opcoes.configuracaoBanco);
+    case 'banco':
+      return BancoValidator.validar(dadosProcessados, opcoes.configuracaoBanco);
 
-      case 'operacao':
-        return OperacaoValidator.validar(opcoes.lote, opcoes.configuracaoBanco);
+    case 'operacao':
+      return OperacaoValidator.validar(opcoes.lote, opcoes.configuracaoBanco);
 
-      default:
-        throw new Error(`Tipo de validação '${tipo}' não reconhecido`);
+    default:
+      throw new Error(`Tipo de validação '${tipo}' não reconhecido`);
     }
   }
 }

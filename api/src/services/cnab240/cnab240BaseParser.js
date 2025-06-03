@@ -137,19 +137,19 @@ class Cnab240BaseParser {
    */
   static extrairSequencial(linha, tipoRegistro) {
     switch (tipoRegistro) {
-      case '0': // Header Arquivo
-      case '9': // Trailer Arquivo
-        return '000001';
+    case '0': // Header Arquivo
+    case '9': // Trailer Arquivo
+      return '000001';
 
-      case '1': // Header Lote
-      case '5': // Trailer Lote
-        return linha.substring(8, 13).trim();
+    case '1': // Header Lote
+    case '5': // Trailer Lote
+      return linha.substring(8, 13).trim();
 
-      case '3': // Detalhe
-        return linha.substring(8, 13).trim();
+    case '3': // Detalhe
+      return linha.substring(8, 13).trim();
 
-      default:
-        return '';
+    default:
+      return '';
     }
   }
 
@@ -189,39 +189,39 @@ class Cnab240BaseParser {
         resultado.totalRegistros++;
 
         switch (registro.tipoRegistro) {
-          case '0': // Header Arquivo
-            resultado.headerArquivo = registro;
-            break;
+        case '0': // Header Arquivo
+          resultado.headerArquivo = registro;
+          break;
 
-          case '1': // Header Lote
-            loteAtual = {
-              headerLote: registro,
-              detalhes: [],
-              trailerLote: null,
-              numeroLote: registro.lote
-            };
-            resultado.lotes.push(loteAtual);
-            break;
+        case '1': // Header Lote
+          loteAtual = {
+            headerLote: registro,
+            detalhes: [],
+            trailerLote: null,
+            numeroLote: registro.lote
+          };
+          resultado.lotes.push(loteAtual);
+          break;
 
-          case '3': // Detalhe
-            if (loteAtual) {
-              loteAtual.detalhes.push(registro);
-            } else {
-              throw new Error(`Linha ${index + 1}: Registro de detalhe sem lote`);
-            }
-            break;
+        case '3': // Detalhe
+          if (loteAtual) {
+            loteAtual.detalhes.push(registro);
+          } else {
+            throw new Error(`Linha ${index + 1}: Registro de detalhe sem lote`);
+          }
+          break;
 
-          case '5': // Trailer Lote
-            if (loteAtual) {
-              loteAtual.trailerLote = registro;
-            } else {
-              throw new Error(`Linha ${index + 1}: Trailer de lote sem lote`);
-            }
-            break;
+        case '5': // Trailer Lote
+          if (loteAtual) {
+            loteAtual.trailerLote = registro;
+          } else {
+            throw new Error(`Linha ${index + 1}: Trailer de lote sem lote`);
+          }
+          break;
 
-          case '9': // Trailer Arquivo
-            resultado.trailerArquivo = registro;
-            break;
+        case '9': // Trailer Arquivo
+          resultado.trailerArquivo = registro;
+          break;
         }
 
       } catch (error) {

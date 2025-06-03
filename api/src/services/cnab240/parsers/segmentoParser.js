@@ -357,13 +357,13 @@ export class SegmentoParser {
     const subtipo = this.identifyJSubtype(linha);
 
     switch (subtipo) {
-      case 'J01':
-        return this.parseSegmentoJ01(linha);
-      case 'J02':
-        return this.parseSegmentoJ02(linha);
-      default:
-        // Fallback: usar parser J01 como padrão
-        return this.parseSegmentoJ01(linha);
+    case 'J01':
+      return this.parseSegmentoJ01(linha);
+    case 'J02':
+      return this.parseSegmentoJ02(linha);
+    default:
+      // Fallback: usar parser J01 como padrão
+      return this.parseSegmentoJ01(linha);
     }
   }
 
@@ -482,23 +482,23 @@ export class SegmentoParser {
     const segmento = linha[13];
 
     switch (segmento) {
-      case 'J': {
-        // Para segmentos J (cobranças), usar o parser específico
-        return this.parseSegmentoJ(linha);
-      }
+    case 'J': {
+      // Para segmentos J (cobranças), usar o parser específico
+      return this.parseSegmentoJ(linha);
+    }
 
-      case 'O': {
-        // Para segmentos O (tributos), usar o parser específico
-        return this.parseSegmentoO(linha);
-      }
+    case 'O': {
+      // Para segmentos O (tributos), usar o parser específico
+      return this.parseSegmentoO(linha);
+    }
 
-      case 'A': {
-        // Para segmentos A (PIX/TED), usar o parser específico
-        return this.parseSegmentoA(linha);
-      }
+    case 'A': {
+      // Para segmentos A (PIX/TED), usar o parser específico
+      return this.parseSegmentoA(linha);
+    }
 
-      default:
-        throw new Error(`Segmento "${segmento}" não suportado por este parser`);
+    default:
+      throw new Error(`Segmento "${segmento}" não suportado por este parser`);
     }
   }
 
@@ -511,19 +511,19 @@ export class SegmentoParser {
     const segmento = linha[13];
 
     switch (segmento) {
-      case 'A':
-        const dadosA = this.parseSegmentoA(linha);
-        return new SegmentoA240(dadosA);
-      case 'J':
-        // Para segmento J, usar estrutura genérica por ora
-        const dadosJ = this.parseSegmentoJ(linha);
-        return { tipo: 'SegmentoJ', ...dadosJ };
-      case 'O':
-        // Para segmento O, usar estrutura genérica por ora
-        const dadosO = this.parseSegmentoO(linha);
-        return { tipo: 'SegmentoO', ...dadosO };
-      default:
-        throw new Error(`Segmento "${segmento}" não suportado para criação de modelo`);
+    case 'A':
+      const dadosA = this.parseSegmentoA(linha);
+      return new SegmentoA240(dadosA);
+    case 'J':
+      // Para segmento J, usar estrutura genérica por ora
+      const dadosJ = this.parseSegmentoJ(linha);
+      return { tipo: 'SegmentoJ', ...dadosJ };
+    case 'O':
+      // Para segmento O, usar estrutura genérica por ora
+      const dadosO = this.parseSegmentoO(linha);
+      return { tipo: 'SegmentoO', ...dadosO };
+    default:
+      throw new Error(`Segmento "${segmento}" não suportado para criação de modelo`);
     }
   }
 
@@ -539,15 +539,15 @@ export class SegmentoParser {
       const segmento = linha[13];
 
       switch (segmento) {
-        case 'A':
-          return this.validateSegmentoA(linha);
-        case 'J':
-          return this.validateSegmentoJ(linha);
-        case 'O':
-          return this.validateSegmentoO(linha);
-        default:
-          erros.push(`Segmento "${segmento}" não reconhecido`);
-          return { valido: false, erros };
+      case 'A':
+        return this.validateSegmentoA(linha);
+      case 'J':
+        return this.validateSegmentoJ(linha);
+      case 'O':
+        return this.validateSegmentoO(linha);
+      default:
+        erros.push(`Segmento "${segmento}" não reconhecido`);
+        return { valido: false, erros };
       }
     } catch (error) {
       erros.push(error.message);
