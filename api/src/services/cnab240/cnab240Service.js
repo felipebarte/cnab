@@ -23,6 +23,174 @@ import {
  */
 class Cnab240Service {
   /**
+   * ✅ NOVO: Processa arquivo CNAB 240 com parser híbrido
+   * Combina parser tradicional com parser específico multi-state
+   * @param {string} cnabContent - Conteúdo do arquivo CNAB
+   * @param {Object} options - Opções de processamento
+   * @returns {Object} Dados processados com enriquecimento específico
+   */
+  static async processarHibrido(cnabContent, options = {}) {
+    try {
+      console.log('[INFO] Iniciando processamento CNAB 240 HÍBRIDO');
+
+      // Configurações do parser específico
+      const specificParserOptions = {
+        enableFeatureFlag: options.enableSpecificParser ?? true,
+        debug: options.debug ?? false,
+        ...options.specificParserOptions
+      };
+
+      // 1. Usar parser híbrido
+      const parserOptions = {
+        enableSpecificParser: specificParserOptions.enableFeatureFlag,
+        specificParserOptions
+      };
+
+      const parsingResult = await CNAB240Parser.parseFileWithSpecificParser(cnabContent, parserOptions);
+
+      if (!parsingResult.success) {
+        throw new Error(`Erro no parser híbrido: ${parsingResult.error}`);
+      }
+
+      // 2. Usar resultado do parser (já com merge inteligente se híbrido)
+      const resultadoParser = parsingResult.resultado;
+
+      // 3. Processo tradicional de validação e enriquecimento
+      const validacao = this.validarArquivo(cnabContent);
+      if (!validacao.valido) {
+        console.warn('[WARNING] Arquivo com problemas de validação:', validacao.erros);
+      }
+
+      // 4. Processar com método tradicional para manter compatibilidade
+      const linhas = cnabContent.split('\n').filter(linha => linha.trim().length > 0);
+      const dadosProcessadosTradicional = this.processarLinhas(linhas);
+
+      // 5. Obter configuração do banco
+      const configuracaoBanco = BANCOS_240[dadosProcessadosTradicional.headerArquivo?.codigoBanco] || {};
+
+      // 6. Gerar estrutura de resultado compatível
+      const resultado = {
+        sucesso: true,
+        valido: validacao.valido,
+
+        // ✅ NOVO: Dados híbridos
+        hibrido: parsingResult.hybrid,
+        parserEspecifico: parsingResult.hybrid,
+
+        // Dados processados (enriquecidos se híbrido)
+        dados: resultadoParser.pagamentos ? {
+          ...dadosProcessadosTradicional,
+          pagamentosEspecificos: resultadoParser.pagamentos || [],
+          dadosComplementares: resultadoParser.dadosComplementares || {}
+        } : dadosProcessadosTradicional,
+
+        // Validações
+        validacao: {
+          arquivo: validacao,
+          parserEspecifico: resultadoParser.processamento?.parserEspecifico || false
+        },
+
+        // ✅ NOVO: Estatísticas específicas
+        estatisticasEspecificas: resultadoParser.estatisticas || null,
+
+        // Metadados estendidos
+        processamento: {
+          timestamp: new Date().toISOString(),
+          linhasProcessadas: linhas.length,
+          configuracaoBanco: configuracaoBanco?.nome || 'Não identificada',
+          parserHibrido: true,
+          parserEspecificoAtivo: specificParserOptions.enableFeatureFlag,
+
+          // Informações do processamento híbrido
+          processamentoHibrido: {
+            tradicional: !!parsingResult.tradicional,
+            especifico: !!parsingResult.especifico,
+            merge: parsingResult.hybrid,
+            fallback: parsingResult.fallback || false,
+            erro: parsingResult.error || null
+          },
+
+          options: {
+            fileId: options.fileId,
+            operationId: options.operationId,
+            nomeArquivo: options.nomeArquivo,
+            enableSpecificParser: specificParserOptions.enableFeatureFlag
+          }
+        }
+      };
+
+      // 7. Persistência se solicitada
+      if (options.fileId && options.operationId) {
+        try {
+          console.log(`[INFO] Iniciando persistência híbrida - FileID: ${options.fileId}`);
+
+          // Usar dados enriquecidos para persistência
+          const dadosParaPersistencia = resultado.dados;
+          const somatorias = this.calcularSomatorias(dadosParaPersistencia);
+
+          const resultadoPersistencia = await this.persistirDadosCompletos(
+            options.fileId,
+            options.operationId,
+            dadosParaPersistencia,
+            configuracaoBanco,
+            options.nomeArquivo || 'arquivo_cnab_240_hibrido.txt'
+          );
+
+          resultado.persistencia = resultadoPersistencia;
+          console.log(`[SUCCESS] Persistência híbrida concluída - ${resultadoPersistencia.estatisticas.totalCodigosBarras} códigos de barras`);
+        } catch (persistenciaError) {
+          console.error('[ERROR] Erro na persistência híbrida:', persistenciaError.message);
+          resultado.persistencia = { erro: persistenciaError.message };
+        }
+      }
+
+      console.log('[SUCCESS] Processamento CNAB 240 HÍBRIDO concluído');
+      console.log(`  - Parser híbrido: ${resultado.hibrido}`);
+      console.log(`  - Parser específico ativo: ${resultado.processamento.parserEspecificoAtivo}`);
+      if (resultado.dados.pagamentosEspecificos) {
+        console.log(`  - Pagamentos específicos encontrados: ${resultado.dados.pagamentosEspecificos.length}`);
+      }
+
+      return resultado;
+
+    } catch (error) {
+      console.error('[ERROR] Erro durante processamento CNAB 240 HÍBRIDO:', error.message);
+
+      // Fallback para processamento tradicional
+      console.log('[INFO] Tentando fallback para processamento tradicional...');
+      try {
+        const resultadoFallback = await this.processar(cnabContent, options);
+        return {
+          ...resultadoFallback,
+          fallback: true,
+          erroOriginal: error.message,
+          processamento: {
+            ...resultadoFallback.processamento,
+            parserHibrido: false,
+            fallbackUtilizado: true
+          }
+        };
+      } catch (fallbackError) {
+        return {
+          sucesso: false,
+          valido: false,
+          erro: {
+            message: fallbackError.message,
+            stack: fallbackError.stack,
+            hibridoError: error.message
+          },
+          processamento: {
+            timestamp: new Date().toISOString(),
+            falhou: true,
+            parserHibrido: true,
+            fallbackFalhou: true
+          }
+        };
+      }
+    }
+  }
+
+  /**
    * Processa um arquivo CNAB 240
    * @param {string} cnabContent - Conteúdo do arquivo CNAB
    * @param {Object} options - Opções de processamento
