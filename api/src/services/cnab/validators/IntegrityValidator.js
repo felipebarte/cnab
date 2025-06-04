@@ -114,22 +114,22 @@ export class IntegrityValidator {
       const recordType = detection.format === 'cnab240' ? line.charAt(7) : line.charAt(0);
 
       switch (recordType) {
-        case '0':
-          counts.headerArquivo++;
-          break;
-        case '1':
-          if (detection.format === 'cnab240') counts.headerLote++;
-          else counts.detalhes++;
-          break;
-        case '3':
-          if (detection.format === 'cnab240') counts.detalhes++;
-          break;
-        case '5':
-          if (detection.format === 'cnab240') counts.trailerLote++;
-          break;
-        case '9':
-          counts.trailerArquivo++;
-          break;
+      case '0':
+        counts.headerArquivo++;
+        break;
+      case '1':
+        if (detection.format === 'cnab240') counts.headerLote++;
+        else counts.detalhes++;
+        break;
+      case '3':
+        if (detection.format === 'cnab240') counts.detalhes++;
+        break;
+      case '5':
+        if (detection.format === 'cnab240') counts.trailerLote++;
+        break;
+      case '9':
+        counts.trailerArquivo++;
+        break;
       }
     }
 
@@ -573,7 +573,7 @@ export class IntegrityValidator {
         };
       } else if (recordType === '3' && currentBatch) { // Detalhe
         currentBatch.detailLines.push({
-          line: line,
+          line,
           lineNumber: i + 1
         });
       } else if (recordType === '5' && currentBatch) { // Trailer lote

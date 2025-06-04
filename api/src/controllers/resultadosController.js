@@ -11,6 +11,7 @@ import Operation from '../models/Operation.js';
 import File from '../models/File.js';
 import CnabHeader from '../models/CnabHeader.js';
 import CnabRecord from '../models/CnabRecord.js';
+import Cnab240File from '../models/Cnab240File.js';
 import Logger from '../utils/logger.js';
 import ErrorHandler from '../utils/errorHandler.js';
 
@@ -82,7 +83,7 @@ export class ResultadosController {
       const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'created_at';
       const validSortOrder = ['ASC', 'DESC'].includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC';
 
-      // Buscar operações com informações relacionadas
+      // Buscar operações com informações relacionadas (incluindo CNAB 240 e 400)
       const { count, rows: operations } = await Operation.findAndCountAll({
         where: whereConditions,
         include: [
@@ -95,20 +96,26 @@ export class ResultadosController {
                 model: CnabHeader,
                 as: 'cnabHeader',
                 required: false
+              },
+              {
+                model: Cnab240File,
+                as: 'cnab240File',
+                required: false
               }
             ]
           }
         ],
         order: [[validSortBy, validSortOrder]],
         limit: limitNum,
-        offset: offset,
+        offset,
         distinct: true
       });
 
       // Formatar resposta
       const resultados = await Promise.all(operations.map(async (operation) => {
         const file = operation.files?.[0]; // Pegar primeiro arquivo relacionado
-        const header = file?.cnabHeader;
+        const header = file?.cnabHeader; // Dados CNAB 400
+        const cnab240File = file?.cnab240File; // Dados CNAB 240
 
         // Contar registros se arquivo existir
         let totalRecords = 0;
@@ -116,6 +123,45 @@ export class ResultadosController {
           totalRecords = await CnabRecord.count({
             where: { file_id: file.id }
           });
+        }
+
+        // Determinar os dados corretos baseado no tipo de operação
+        let banco = null;
+        let empresa = null;
+        let totals = {
+          registros: totalRecords,
+          valorTotal: 0
+        };
+
+        if (operation.operation_type === 'cnab240' && cnab240File) {
+          // Usar dados do CNAB 240
+          banco = {
+            codigo: cnab240File.banco_codigo,
+            nome: cnab240File.banco_nome
+          };
+          empresa = {
+            documento: cnab240File.empresa_documento,
+            nome: cnab240File.empresa_nome
+          };
+          totals = {
+            registros: cnab240File.total_registros || totalRecords,
+            valorTotal: cnab240File.valor_total || 0,
+            lotes: cnab240File.total_lotes || 0
+          };
+        } else if (operation.operation_type === 'cnab400' && header) {
+          // Usar dados do CNAB 400
+          banco = {
+            codigo: header.banco_codigo,
+            nome: header.banco_nome
+          };
+          empresa = {
+            documento: header.empresa_documento,
+            nome: header.empresa_nome
+          };
+          totals = {
+            registros: header.quantidade_registros || totalRecords,
+            valorTotal: header.valor_total || 0
+          };
         }
 
         return {
@@ -135,22 +181,12 @@ export class ResultadosController {
             validationStatus: file.validation_status
           } : null,
 
-          // Informações do banco/empresa (se houver)
-          banco: header ? {
-            codigo: header.banco_codigo,
-            nome: header.banco_nome
-          } : null,
+          // Informações do banco/empresa (dados corretos para cada tipo)
+          banco,
+          empresa,
 
-          empresa: header ? {
-            documento: header.empresa_documento,
-            nome: header.empresa_nome
-          } : null,
-
-          // Totalizadores
-          totals: {
-            registros: totalRecords,
-            valorTotal: header?.valor_total || 0
-          },
+          // Totalizadores (dados corretos para cada tipo)
+          totals,
 
           // Dados da requisição (metadata)
           metadata: {
@@ -260,13 +296,18 @@ export class ResultadosController {
         });
       }
 
-      // Buscar arquivo relacionado
+      // Buscar arquivo relacionado (incluindo dados CNAB 240 e 400)
       const file = await File.findOne({
         where: { operation_id: operationId },
         include: [
           {
             model: CnabHeader,
             as: 'cnabHeader',
+            required: false
+          },
+          {
+            model: Cnab240File,
+            as: 'cnab240File',
             required: false
           }
         ]
@@ -288,6 +329,54 @@ export class ResultadosController {
           // order: [['registro_sequencia', 'ASC']], // Comentado temporariamente para debug
           limit: 100
         });
+      }
+
+      // Determinar dados corretos baseado no tipo de operação
+      let header = null;
+      if (operation.operation_type === 'cnab240' && file?.cnab240File) {
+        // Usar dados do CNAB 240
+        header = {
+          banco: {
+            codigo: file.cnab240File.banco_codigo,
+            nome: file.cnab240File.banco_nome
+          },
+          empresa: {
+            documento: file.cnab240File.empresa_documento,
+            nome: file.cnab240File.empresa_nome,
+            codigo: file.cnab240File.empresa_codigo
+          },
+          arquivo: {
+            dataGeracao: file.cnab240File.data_geracao,
+            horaGeracao: file.cnab240File.hora_geracao,
+            sequencia: file.cnab240File.arquivo_sequencia,
+            versaoLayout: file.cnab240File.versao_layout
+          },
+          totals: {
+            valorTotal: file.cnab240File.valor_total,
+            quantidadeRegistros: file.cnab240File.total_registros,
+            totalLotes: file.cnab240File.total_lotes
+          }
+        };
+      } else if (operation.operation_type === 'cnab400' && file?.cnabHeader) {
+        // Usar dados do CNAB 400
+        header = {
+          banco: {
+            codigo: file.cnabHeader.banco_codigo,
+            nome: file.cnabHeader.banco_nome
+          },
+          empresa: {
+            documento: file.cnabHeader.empresa_documento,
+            nome: file.cnabHeader.empresa_nome
+          },
+          arquivo: {
+            dataGeracao: file.cnabHeader.arquivo_data_geracao,
+            numeroSequencial: file.cnabHeader.arquivo_numero_sequencial
+          },
+          totals: {
+            valorTotal: file.cnabHeader.valor_total,
+            quantidadeRegistros: file.cnabHeader.quantidade_registros
+          }
+        };
       }
 
       // Construir resposta detalhada
@@ -314,25 +403,8 @@ export class ResultadosController {
           createdAt: file.created_at
         } : null,
 
-        // Cabeçalho CNAB
-        header: file?.cnabHeader ? {
-          banco: {
-            codigo: file.cnabHeader.banco_codigo,
-            nome: file.cnabHeader.banco_nome
-          },
-          empresa: {
-            documento: file.cnabHeader.empresa_documento,
-            nome: file.cnabHeader.empresa_nome
-          },
-          arquivo: {
-            dataGeracao: file.cnabHeader.arquivo_data_geracao,
-            numeroSequencial: file.cnabHeader.arquivo_numero_sequencial
-          },
-          totals: {
-            valorTotal: file.cnabHeader.valor_total,
-            quantidadeRegistros: file.cnabHeader.quantidade_registros
-          }
-        } : null,
+        // Cabeçalho CNAB (dados corretos para cada tipo)
+        header,
 
         // Registros (limitados)
         registros: registros.map(record => ({

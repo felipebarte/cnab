@@ -26,7 +26,7 @@ import {
 // Configuração do multer para upload de arquivos CNAB 240
 const storage = multer.memoryStorage();
 const upload = multer({
-  storage: storage,
+  storage,
   limits: {
     fileSize: 20 * 1024 * 1024, // Limite de 20MB (maior que CNAB 400)
   },
@@ -349,7 +349,7 @@ export class Cnab240Controller {
         avisos: validacaoEstrutura.avisos,
         informacoesBasicas: {
           banco: configuracaoBanco?.nome || codigoBanco || 'Não identificado',
-          codigoBanco: codigoBanco,
+          codigoBanco,
           totalLinhas: linhas.length,
           totalLotes: dadosProcessados.lotes.length,
           formato: 'CNAB 240'
@@ -913,7 +913,7 @@ export class Cnab240Controller {
         ],
         order: [['created_at', 'DESC']],
         limit: limitNum,
-        offset: offset,
+        offset,
         distinct: true
       });
 

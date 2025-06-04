@@ -81,20 +81,20 @@ class NegocioValidator {
 
     // Aplicar validações por tipo de operação
     switch (tipoOperacao) {
-      case 'PIX':
-        this.validarRegrasNegocioPIX(lote, numeroLote, resultado);
-        break;
-      case 'COBRANCA':
-        this.validarRegrasNegocioCobranca(lote, numeroLote, resultado);
-        break;
-      case 'TRANSFERENCIA':
-        this.validarRegrasNegocioTransferencia(lote, numeroLote, resultado);
-        break;
-      case 'PAGAMENTO':
-        this.validarRegrasNegocioPagamento(lote, numeroLote, resultado);
-        break;
-      default:
-        resultado.avisos.push(`Lote ${numeroLote}: Tipo de operação não reconhecido: ${tipoOperacao}`);
+    case 'PIX':
+      this.validarRegrasNegocioPIX(lote, numeroLote, resultado);
+      break;
+    case 'COBRANCA':
+      this.validarRegrasNegocioCobranca(lote, numeroLote, resultado);
+      break;
+    case 'TRANSFERENCIA':
+      this.validarRegrasNegocioTransferencia(lote, numeroLote, resultado);
+      break;
+    case 'PAGAMENTO':
+      this.validarRegrasNegocioPagamento(lote, numeroLote, resultado);
+      break;
+    default:
+      resultado.avisos.push(`Lote ${numeroLote}: Tipo de operação não reconhecido: ${tipoOperacao}`);
     }
 
     // Validar regras comuns a todos os tipos
@@ -654,7 +654,7 @@ class NegocioValidator {
 
         resultado.avisos.push(
           `Lote ${numeroLote}, Detalhe ${numeroDetalhe}: ` +
-          `Possível transferência circular (mesma conta origem e destino)`
+          'Possível transferência circular (mesma conta origem e destino)'
         );
       }
     }

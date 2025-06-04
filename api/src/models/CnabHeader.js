@@ -220,7 +220,7 @@ CnabHeader.findByBanco = function (bancoCode, limit = 100) {
   return this.findAll({
     where: { banco_codigo: bancoCode },
     order: [['data_arquivo', 'DESC']],
-    limit: limit,
+    limit,
     include: [
       {
         model: File,
@@ -253,7 +253,7 @@ CnabHeader.findByDateRange = function (startDate, endDate, limit = 100) {
   return this.findAll({
     where: whereClause,
     order: [['data_arquivo', 'DESC']],
-    limit: limit,
+    limit,
     include: [
       {
         model: File,

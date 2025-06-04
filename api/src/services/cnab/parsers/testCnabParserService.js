@@ -60,7 +60,7 @@ const CNAB400_TEST_DATA = [
 /**
  * Dados inválidos para testes de erro
  */
-const INVALID_CNAB_DATA = `0010000`;  // Linha muito curta
+const INVALID_CNAB_DATA = '0010000';  // Linha muito curta
 
 /**
  * Classe de testes do CnabParserService
@@ -371,7 +371,7 @@ class CnabParserServiceTest {
       const totalTime = Date.now() - startTime;
 
       if (result.success || (result.data && result.data.metadata)) {
-        console.log(`✅ Performance medida:`);
+        console.log('✅ Performance medida:');
         console.log(`  🔍 Detecção: ${detectionTime}ms`);
         console.log(`  🔄 Parsing: ${parseTime}ms`);
         console.log(`  📊 Total: ${totalTime}ms`);

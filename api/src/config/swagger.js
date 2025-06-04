@@ -1,7 +1,6 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { join } from 'path';
 import fs from 'fs';
 import YAML from 'js-yaml';
 
@@ -23,7 +22,7 @@ try {
   swaggerSpec = {
     openapi: '3.0.3',
     info: {
-      title: 'API CNAB 400/240 Itaú Parser',
+      title: 'API CNAB 400/240 Itaú Parser Barte',
       version: '1.0.0',
       description: 'API para processamento de arquivos CNAB 400 e 240',
     },

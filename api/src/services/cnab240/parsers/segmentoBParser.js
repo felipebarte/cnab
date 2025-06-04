@@ -127,23 +127,23 @@ export class SegmentoBParser {
       segmento: linha[13],
 
       // Subtipo identificado
-      subtipo: subtipo
+      subtipo
     };
 
     // Parsing específico por subtipo
     switch (subtipo) {
-      case 'B01':
-        return this.parseB01(linha, dadosComuns);
-      case 'B02':
-        return this.parseB02(linha, dadosComuns);
-      case 'B03':
-        return this.parseB03(linha, dadosComuns);
-      case 'B04':
-        return this.parseB04(linha, dadosComuns);
-      case 'TRADICIONAL':
-        return this.parseTradicional(linha, dadosComuns);
-      default:
-        return this.parseGenerico(linha, dadosComuns);
+    case 'B01':
+      return this.parseB01(linha, dadosComuns);
+    case 'B02':
+      return this.parseB02(linha, dadosComuns);
+    case 'B03':
+      return this.parseB03(linha, dadosComuns);
+    case 'B04':
+      return this.parseB04(linha, dadosComuns);
+    case 'TRADICIONAL':
+      return this.parseTradicional(linha, dadosComuns);
+    default:
+      return this.parseGenerico(linha, dadosComuns);
     }
   }
 
@@ -376,21 +376,21 @@ export class SegmentoBParser {
 
       // Validações específicas por subtipo
       switch (dados.subtipo) {
-        case 'B01':
-          this.validateB01(dados, erros);
-          break;
-        case 'B02':
-          this.validateB02(dados, erros);
-          break;
-        case 'B03':
-          this.validateB03(dados, erros);
-          break;
-        case 'B04':
-          this.validateB04(dados, erros);
-          break;
-        case 'TRADICIONAL':
-          this.validateTradicional(dados, erros);
-          break;
+      case 'B01':
+        this.validateB01(dados, erros);
+        break;
+      case 'B02':
+        this.validateB02(dados, erros);
+        break;
+      case 'B03':
+        this.validateB03(dados, erros);
+        break;
+      case 'B04':
+        this.validateB04(dados, erros);
+        break;
+      case 'TRADICIONAL':
+        this.validateTradicional(dados, erros);
+        break;
       }
 
     } catch (error) {
@@ -544,23 +544,23 @@ export class SegmentoBParser {
 
     // Adicionar chave específica baseada no subtipo
     switch (dados.subtipo) {
-      case 'B01':
-        resumo.chave = dados.telefone ? dados.telefone.completo : '';
-        break;
-      case 'B02':
-        resumo.chave = dados.email || '';
-        break;
-      case 'B03':
-        resumo.chave = dados.numeroInscricao || '';
-        break;
-      case 'B04':
-        resumo.chave = dados.uuidChave || '';
-        break;
-      case 'TRADICIONAL':
-        resumo.chave = dados.endereco ? `${dados.endereco.logradouro}, ${dados.endereco.numero} - ${dados.endereco.cidade}, ${dados.endereco.estado} - ${dados.endereco.cep}` : '';
-        break;
-      default:
-        resumo.chave = dados.chavePix || '';
+    case 'B01':
+      resumo.chave = dados.telefone ? dados.telefone.completo : '';
+      break;
+    case 'B02':
+      resumo.chave = dados.email || '';
+      break;
+    case 'B03':
+      resumo.chave = dados.numeroInscricao || '';
+      break;
+    case 'B04':
+      resumo.chave = dados.uuidChave || '';
+      break;
+    case 'TRADICIONAL':
+      resumo.chave = dados.endereco ? `${dados.endereco.logradouro}, ${dados.endereco.numero} - ${dados.endereco.cidade}, ${dados.endereco.estado} - ${dados.endereco.cep}` : '';
+      break;
+    default:
+      resumo.chave = dados.chavePix || '';
     }
 
     return resumo;

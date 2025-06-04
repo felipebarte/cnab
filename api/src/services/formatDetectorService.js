@@ -183,7 +183,7 @@ class FormatDetectorService {
     // Formato não reconhecido
     throw new Error(
       `Formato CNAB não reconhecido. Tamanho de linha mais comum: ${tamanho} caracteres. ` +
-      `Formatos suportados: 240 ou 400 caracteres.`
+      'Formatos suportados: 240 ou 400 caracteres.'
     );
   }
 

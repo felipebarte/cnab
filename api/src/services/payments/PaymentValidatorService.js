@@ -85,23 +85,23 @@ export class PaymentValidatorService {
     let validationResult;
 
     switch (codeType) {
-      case 'BOLETO_BANCARIO_CODIGO_BARRAS':
-        validationResult = this.validateBankSlipBarcode(code);
-        break;
-      case 'BOLETO_BANCARIO_LINHA_DIGITAVEL':
-        validationResult = this.validateBankSlipDigitableLine(code);
-        break;
-      case 'ARRECADACAO_CODIGO_BARRAS':
-        validationResult = this.validateCollectionBarcode(code);
-        break;
-      case 'ARRECADACAO_LINHA_DIGITAVEL':
-        validationResult = this.validateCollectionDigitableLine(code);
-        break;
-      default:
-        result.errors.push('Tipo de código não suportado');
-        result.metadata.processingTime = `${Date.now() - startTime}ms`;
-        this._updateStats(result.valid);
-        return result;
+    case 'BOLETO_BANCARIO_CODIGO_BARRAS':
+      validationResult = this.validateBankSlipBarcode(code);
+      break;
+    case 'BOLETO_BANCARIO_LINHA_DIGITAVEL':
+      validationResult = this.validateBankSlipDigitableLine(code);
+      break;
+    case 'ARRECADACAO_CODIGO_BARRAS':
+      validationResult = this.validateCollectionBarcode(code);
+      break;
+    case 'ARRECADACAO_LINHA_DIGITAVEL':
+      validationResult = this.validateCollectionDigitableLine(code);
+      break;
+    default:
+      result.errors.push('Tipo de código não suportado');
+      result.metadata.processingTime = `${Date.now() - startTime}ms`;
+      this._updateStats(result.valid);
+      return result;
     }
 
     // Mescla os resultados

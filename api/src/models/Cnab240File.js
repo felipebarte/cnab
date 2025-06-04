@@ -303,7 +303,7 @@ Cnab240File.findByBanco = function (bancoCode, limit = 100) {
   return this.findAll({
     where: { banco_codigo: bancoCode },
     order: [['data_geracao', 'DESC']],
-    limit: limit,
+    limit,
     include: [
       {
         model: File,
@@ -321,7 +321,7 @@ Cnab240File.findByEmpresa = function (empresaDocumento, limit = 100) {
   return this.findAll({
     where: { empresa_documento: empresaDocumento },
     order: [['data_geracao', 'DESC']],
-    limit: limit,
+    limit,
     include: [
       {
         model: File,
@@ -354,7 +354,7 @@ Cnab240File.findByDateRange = function (startDate, endDate, limit = 100) {
   return this.findAll({
     where: whereClause,
     order: [['data_geracao', 'DESC']],
-    limit: limit,
+    limit,
     include: [
       {
         model: File,

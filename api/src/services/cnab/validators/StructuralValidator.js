@@ -336,55 +336,55 @@ export class StructuralValidator {
 
     for (const record of recordTypes) {
       switch (currentState) {
-        case 'START':
-          if (record.type === '0') {
-            currentState = 'HEADER_ARQUIVO';
-          } else {
-            result.addError(`Linha ${record.line}: esperado header arquivo`);
-          }
-          break;
+      case 'START':
+        if (record.type === '0') {
+          currentState = 'HEADER_ARQUIVO';
+        } else {
+          result.addError(`Linha ${record.line}: esperado header arquivo`);
+        }
+        break;
 
-        case 'HEADER_ARQUIVO':
-          if (record.type === '1') {
-            currentState = 'HEADER_LOTE';
-            loteCount++;
-          } else if (record.type === '9') {
-            currentState = 'TRAILER_ARQUIVO';
-          } else {
-            result.addError(`Linha ${record.line}: sequência inválida após header arquivo`);
-          }
-          break;
+      case 'HEADER_ARQUIVO':
+        if (record.type === '1') {
+          currentState = 'HEADER_LOTE';
+          loteCount++;
+        } else if (record.type === '9') {
+          currentState = 'TRAILER_ARQUIVO';
+        } else {
+          result.addError(`Linha ${record.line}: sequência inválida após header arquivo`);
+        }
+        break;
 
-        case 'HEADER_LOTE':
-          if (record.type === '3') {
-            currentState = 'DETALHE';
-          } else if (record.type === '5') {
-            currentState = 'TRAILER_LOTE';
-          } else {
-            result.addError(`Linha ${record.line}: esperado detalhe ou trailer de lote`);
-          }
-          break;
+      case 'HEADER_LOTE':
+        if (record.type === '3') {
+          currentState = 'DETALHE';
+        } else if (record.type === '5') {
+          currentState = 'TRAILER_LOTE';
+        } else {
+          result.addError(`Linha ${record.line}: esperado detalhe ou trailer de lote`);
+        }
+        break;
 
-        case 'DETALHE':
-          if (record.type === '3') {
-            // Continua em detalhes
-          } else if (record.type === '5') {
-            currentState = 'TRAILER_LOTE';
-          } else {
-            result.addError(`Linha ${record.line}: sequência inválida em detalhes`);
-          }
-          break;
+      case 'DETALHE':
+        if (record.type === '3') {
+          // Continua em detalhes
+        } else if (record.type === '5') {
+          currentState = 'TRAILER_LOTE';
+        } else {
+          result.addError(`Linha ${record.line}: sequência inválida em detalhes`);
+        }
+        break;
 
-        case 'TRAILER_LOTE':
-          if (record.type === '1') {
-            currentState = 'HEADER_LOTE';
-            loteCount++;
-          } else if (record.type === '9') {
-            currentState = 'TRAILER_ARQUIVO';
-          } else {
-            result.addError(`Linha ${record.line}: sequência inválida após trailer de lote`);
-          }
-          break;
+      case 'TRAILER_LOTE':
+        if (record.type === '1') {
+          currentState = 'HEADER_LOTE';
+          loteCount++;
+        } else if (record.type === '9') {
+          currentState = 'TRAILER_ARQUIVO';
+        } else {
+          result.addError(`Linha ${record.line}: sequência inválida após trailer de lote`);
+        }
+        break;
       }
     }
 

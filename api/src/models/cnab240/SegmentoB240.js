@@ -89,7 +89,7 @@ class SegmentoB240 {
       codigoBanco: linha.substring(0, 3),
       lote: linha.substring(3, 7).trim(),
       numeroSequencial: linha.substring(8, 13).trim(),
-      subtipo: subtipo,
+      subtipo,
       tipoInscricao: linha.substring(17, 18),
       numeroInscricao: linha.substring(18, 32).trim(),
       logradouro: linha.substring(32, 62).trim(),
@@ -129,40 +129,40 @@ class SegmentoB240 {
     const dadosLivres = linha.substring(18, 200).trim();
 
     switch (subtipo) {
-      case 'B01': // Telefone
-        return {
-          tipo: 'TELEFONE',
-          dadosPix: dadosLivres,
-          formato: 'Telefone celular (+55XXXXXXXXXXX)'
-        };
+    case 'B01': // Telefone
+      return {
+        tipo: 'TELEFONE',
+        dadosPix: dadosLivres,
+        formato: 'Telefone celular (+55XXXXXXXXXXX)'
+      };
 
-      case 'B02': // Email
-        return {
-          tipo: 'EMAIL',
-          dadosPix: dadosLivres,
-          formato: 'Endereço de email'
-        };
+    case 'B02': // Email
+      return {
+        tipo: 'EMAIL',
+        dadosPix: dadosLivres,
+        formato: 'Endereço de email'
+      };
 
-      case 'B03': // CPF/CNPJ
-        return {
-          tipo: 'DOCUMENTO',
-          dadosPix: dadosLivres,
-          formato: 'CPF (11 dígitos) ou CNPJ (14 dígitos)'
-        };
+    case 'B03': // CPF/CNPJ
+      return {
+        tipo: 'DOCUMENTO',
+        dadosPix: dadosLivres,
+        formato: 'CPF (11 dígitos) ou CNPJ (14 dígitos)'
+      };
 
-      case 'B04': // UUID
-        return {
-          tipo: 'UUID',
-          dadosPix: dadosLivres,
-          formato: 'Chave aleatória UUID'
-        };
+    case 'B04': // UUID
+      return {
+        tipo: 'UUID',
+        dadosPix: dadosLivres,
+        formato: 'Chave aleatória UUID'
+      };
 
-      default:
-        return {
-          tipo: 'DESCONHECIDO',
-          dadosPix: dadosLivres,
-          formato: 'Formato não identificado'
-        };
+    default:
+      return {
+        tipo: 'DESCONHECIDO',
+        dadosPix: dadosLivres,
+        formato: 'Formato não identificado'
+      };
     }
   }
 

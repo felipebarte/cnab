@@ -16,7 +16,7 @@ import ErrorHandler from '../utils/errorHandler.js';
 const storage = multer.memoryStorage();
 
 const upload = multer({
-  storage: storage,
+  storage,
   limits: {
     fileSize: 20 * 1024 * 1024, // 20MB - limite maior para suportar ambos os formatos
     fieldSize: 20 * 1024 * 1024, // Campos de texto também com limite maior
@@ -189,7 +189,7 @@ const unifiedUploadMiddleware = (req, res, next) => {
       if (uploadError.code === 'LIMIT_FILE_SIZE') {
         structuredError = ErrorHandler.createError(
           'ARQUIVO_MUITO_GRANDE',
-          `Arquivo muito grande. Tamanho máximo permitido: 20MB`,
+          'Arquivo muito grande. Tamanho máximo permitido: 20MB',
           {
             maxSize: '20MB',
             receivedSize: req.headers['content-length']

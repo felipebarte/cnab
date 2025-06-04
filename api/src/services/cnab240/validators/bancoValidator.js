@@ -122,45 +122,45 @@ class BancoValidator {
    */
   static aplicarValidacoesEspecificas(codigoBanco, dadosProcessados, configuracaoBanco, resultado) {
     switch (codigoBanco) {
-      case '001': // Banco do Brasil
-        this.validarBancoBrasil(dadosProcessados, configuracaoBanco, resultado);
-        break;
+    case '001': // Banco do Brasil
+      this.validarBancoBrasil(dadosProcessados, configuracaoBanco, resultado);
+      break;
 
-      case '104': // Caixa Econômica Federal
-        this.validarCaixaEconomica(dadosProcessados, configuracaoBanco, resultado);
-        break;
+    case '104': // Caixa Econômica Federal
+      this.validarCaixaEconomica(dadosProcessados, configuracaoBanco, resultado);
+      break;
 
-      case '237': // Bradesco
-        this.validarBradesco(dadosProcessados, configuracaoBanco, resultado);
-        break;
+    case '237': // Bradesco
+      this.validarBradesco(dadosProcessados, configuracaoBanco, resultado);
+      break;
 
-      case '341': // Itaú Unibanco
-        this.validarItau(dadosProcessados, configuracaoBanco, resultado);
-        break;
+    case '341': // Itaú Unibanco
+      this.validarItau(dadosProcessados, configuracaoBanco, resultado);
+      break;
 
-      case '033': // Santander
-        this.validarSantander(dadosProcessados, configuracaoBanco, resultado);
-        break;
+    case '033': // Santander
+      this.validarSantander(dadosProcessados, configuracaoBanco, resultado);
+      break;
 
-      case '756': // Bancoob
-        this.validarBancoob(dadosProcessados, configuracaoBanco, resultado);
-        break;
+    case '756': // Bancoob
+      this.validarBancoob(dadosProcessados, configuracaoBanco, resultado);
+      break;
 
-      case '748': // Sicredi
-        this.validarSicredi(dadosProcessados, configuracaoBanco, resultado);
-        break;
+    case '748': // Sicredi
+      this.validarSicredi(dadosProcessados, configuracaoBanco, resultado);
+      break;
 
-      case '260': // Nu Pagamentos
-        this.validarNubank(dadosProcessados, configuracaoBanco, resultado);
-        break;
+    case '260': // Nu Pagamentos
+      this.validarNubank(dadosProcessados, configuracaoBanco, resultado);
+      break;
 
-      case '077': // Banco Inter
-        this.validarBancoInter(dadosProcessados, configuracaoBanco, resultado);
-        break;
+    case '077': // Banco Inter
+      this.validarBancoInter(dadosProcessados, configuracaoBanco, resultado);
+      break;
 
-      default:
-        resultado.avisos.push(`Validações específicas não implementadas para o banco ${codigoBanco}`);
-        break;
+    default:
+      resultado.avisos.push(`Validações específicas não implementadas para o banco ${codigoBanco}`);
+      break;
     }
   }
 

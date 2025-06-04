@@ -111,7 +111,7 @@ class CNABSwapController {
       // Simular estrutura de boletos CNAB para verificação
       const mockBoletos = barcodes.map((barcode, index) => ({
         id: `cnab_${index + 1}`,
-        barcode: barcode,
+        barcode,
         type: 'boleto',
         status: 'pending'
       }));

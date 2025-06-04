@@ -119,21 +119,21 @@ export class Cnab400Parser {
     const schema = schemas.get(recordType);
 
     switch (this.state) {
-      case ParserState.WAITING_HEADER:
-        await this._processHeader(line, lineNumber, schema, builder, result, config);
-        break;
+    case ParserState.WAITING_HEADER:
+      await this._processHeader(line, lineNumber, schema, builder, result, config);
+      break;
 
-      case ParserState.PROCESSING_DETAILS:
-        await this._processDetail(line, lineNumber, recordType, schema, builder, result, config);
-        break;
+    case ParserState.PROCESSING_DETAILS:
+      await this._processDetail(line, lineNumber, recordType, schema, builder, result, config);
+      break;
 
-      case ParserState.WAITING_TRAILER:
-        await this._processTrailer(line, lineNumber, schema, builder, result, config);
-        break;
+    case ParserState.WAITING_TRAILER:
+      await this._processTrailer(line, lineNumber, schema, builder, result, config);
+      break;
 
-      default:
-        result.addError(`Estado inválido do parser: ${this.state}`, lineNumber);
-        this.state = ParserState.ERROR;
+    default:
+      result.addError(`Estado inválido do parser: ${this.state}`, lineNumber);
+      this.state = ParserState.ERROR;
     }
   }
 
@@ -239,10 +239,10 @@ export class Cnab400Parser {
     const recordTypeChar = line.charAt(0); // 1ª posição
 
     switch (recordTypeChar) {
-      case '0': return 'header_arquivo';
-      case '1': return 'detalhe';
-      case '9': return 'trailer_arquivo';
-      default: return 'unknown';
+    case '0': return 'header_arquivo';
+    case '1': return 'detalhe';
+    case '9': return 'trailer_arquivo';
+    default: return 'unknown';
     }
   }
 

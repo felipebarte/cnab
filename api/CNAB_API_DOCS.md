@@ -1,4 +1,4 @@
-# API CNAB 400/240 Itaú Parser
+# API CNAB 400/240 Itaú Parser Barte
 
 Esta API permite processar arquivos CNAB 400 e **CNAB 240** do Itaú e outros bancos para extrair informações como códigos de barras, linhas digitáveis, dados de transferências PIX, além de enviar dados processados para webhooks externos.
 

@@ -123,29 +123,29 @@ export class Cnab240Parser {
     const schema = schemas.get(recordType);
 
     switch (this.state) {
-      case ParserState.WAITING_FILE_HEADER:
-        await this._processFileHeader(line, lineNumber, schema, builder, result, config);
-        break;
+    case ParserState.WAITING_FILE_HEADER:
+      await this._processFileHeader(line, lineNumber, schema, builder, result, config);
+      break;
 
-      case ParserState.WAITING_BATCH_HEADER:
-        await this._processBatchHeader(line, lineNumber, schema, builder, result, config);
-        break;
+    case ParserState.WAITING_BATCH_HEADER:
+      await this._processBatchHeader(line, lineNumber, schema, builder, result, config);
+      break;
 
-      case ParserState.PROCESSING_BATCH_DETAILS:
-        await this._processBatchDetail(line, lineNumber, recordType, schema, builder, result, config);
-        break;
+    case ParserState.PROCESSING_BATCH_DETAILS:
+      await this._processBatchDetail(line, lineNumber, recordType, schema, builder, result, config);
+      break;
 
-      case ParserState.WAITING_BATCH_TRAILER:
-        await this._processBatchTrailer(line, lineNumber, schema, builder, result, config);
-        break;
+    case ParserState.WAITING_BATCH_TRAILER:
+      await this._processBatchTrailer(line, lineNumber, schema, builder, result, config);
+      break;
 
-      case ParserState.WAITING_FILE_TRAILER:
-        await this._processFileTrailer(line, lineNumber, schema, builder, result, config);
-        break;
+    case ParserState.WAITING_FILE_TRAILER:
+      await this._processFileTrailer(line, lineNumber, schema, builder, result, config);
+      break;
 
-      default:
-        result.addError(`Estado inválido do parser: ${this.state}`, lineNumber);
-        this.state = ParserState.ERROR;
+    default:
+      result.addError(`Estado inválido do parser: ${this.state}`, lineNumber);
+      this.state = ParserState.ERROR;
     }
   }
 
@@ -323,26 +323,26 @@ export class Cnab240Parser {
     const segmentChar = line.charAt(13); // 14ª posição para segmentos
 
     switch (recordTypeChar) {
-      case '0': return 'header_arquivo';
-      case '1': return 'header_lote';
-      case '3':
-        // Detalhes têm segmentos
-        switch (segmentChar) {
-          case 'P': return 'detalhe_segmento_p';
-          case 'Q': return 'detalhe_segmento_q';
-          case 'R': return 'detalhe_segmento_r';
-          case 'T': return 'detalhe_segmento_t';
-          case 'U': return 'detalhe_segmento_u';
-          case 'Y': return 'detalhe_segmento_y';
-          case 'J': return 'detalhe_segmento_j';
-          case 'N': return 'detalhe_segmento_n';
-          case 'O': return 'detalhe_segmento_o';
-          case 'W': return 'detalhe_segmento_w';
-          default: return 'detalhe';
-        }
-      case '5': return 'trailer_lote';
-      case '9': return 'trailer_arquivo';
-      default: return 'unknown';
+    case '0': return 'header_arquivo';
+    case '1': return 'header_lote';
+    case '3':
+      // Detalhes têm segmentos
+      switch (segmentChar) {
+      case 'P': return 'detalhe_segmento_p';
+      case 'Q': return 'detalhe_segmento_q';
+      case 'R': return 'detalhe_segmento_r';
+      case 'T': return 'detalhe_segmento_t';
+      case 'U': return 'detalhe_segmento_u';
+      case 'Y': return 'detalhe_segmento_y';
+      case 'J': return 'detalhe_segmento_j';
+      case 'N': return 'detalhe_segmento_n';
+      case 'O': return 'detalhe_segmento_o';
+      case 'W': return 'detalhe_segmento_w';
+      default: return 'detalhe';
+      }
+    case '5': return 'trailer_lote';
+    case '9': return 'trailer_arquivo';
+    default: return 'unknown';
     }
   }
 

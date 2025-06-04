@@ -85,8 +85,8 @@ async function quickTest() {
 
       // Estrutura dos dados
       console.log('\n📋 Estrutura dos dados:');
-      console.log(`   📁 Header arquivo: ${!!result.data.arquivo.header ? '✅' : '❌'}`);
-      console.log(`   📁 Trailer arquivo: ${!!result.data.arquivo.trailer ? '✅' : '❌'}`);
+      console.log(`   📁 Header arquivo: ${result.data.arquivo.header ? '✅' : '❌'}`);
+      console.log(`   📁 Trailer arquivo: ${result.data.arquivo.trailer ? '✅' : '❌'}`);
       console.log(`   📦 Lotes: ${result.data.lotes?.length || 0}`);
 
       if (result.data.lotes && result.data.lotes.length > 0) {
