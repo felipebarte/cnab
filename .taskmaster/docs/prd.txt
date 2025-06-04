@@ -1,141 +1,233 @@
-# PRD - Integração e Melhorias do Frontend CNAB
+# PRD: Implementação de Parser CNAB240 Avançado - Integração Script Python
 
-## 1. Visão Geral
+## 1. VISÃO GERAL DO PROJETO
 
-Este documento descreve as tarefas necessárias para completar a integração do frontend React/TypeScript com o backend da API CNAB e implementar funcionalidades faltantes para um sistema completo de gestão de pagamentos CNAB.
+### Objetivo Principal
+Implementar um parser CNAB240 avançado na API Node.js existente, integrando a lógica específica e robusta do script Python analisado, mantendo total compatibilidade com a arquitetura atual.
 
-## 2. Contexto Atual
+### Problema Identificado
+A API atual possui gaps funcionais críticos no processamento de arquivos CNAB240:
+- Não processa estados múltiplos do Segmento J (dados do pagador)
+- Parsing posicional genérico vs específico
+- Ausência de extração de dados completos do pagador
+- Formatação básica de endereços vs inteligente
+- Detecção limitada de emails em Segmento B
 
-### 2.1 Estado Atual do Frontend
-- React + TypeScript com Vite
-- Shadcn/UI para componentes
-- TanStack Query para gerenciamento de estado
-- Upload e processamento de CNAB funcionando
-- Interface de usuário completa mas parcialmente integrada
+### Solução Proposta
+Criar um sistema híbrido que mantém a arquitetura atual e adiciona um parser específico inspirado no script Python, oferecendo dados enriquecidos sem quebrar funcionalidades existentes.
 
-### 2.2 APIs Backend Disponíveis
-- POST /api/v1/cnab/processar-auto/upload - Funcionando
-- POST /api/v1/cnab/detectar-formato - Funcionando  
-- POST /api/v1/cnab/validar-auto - Funcionando
-- POST /api/v1/cnab/webhook-auto/upload - Funcionando
-- GET /api/v1/cnab/resultados - Disponível
-- GET /api/v1/cnab/resultados/:operationId - Disponível
+## 2. ESCOPO TÉCNICO
 
-## 3. Objetivos e Funcionalidades
+### Tecnologias
+- **Backend**: Node.js + Express (mantido)
+- **Parser Base**: Biblioteca @banco-br/nodejs-cnab (mantido)
+- **Parser Específico**: Novo módulo inspirado no script Python
+- **Endpoint Target**: `/api/v1/cnab/processar-auto/upload`
+- **Arquitetura**: Híbrida (atual + específica)
 
-### 3.1 Integração com APIs de Resultados
-- Implementar busca de resultados processados
-- Implementar listagem de histórico de operações
-- Sistema de polling para atualizações em tempo real
-- Persistência local de operationIds
+### Arquivos Principais Afetados
+- `api/src/services/cnab240/cnab240Service.js` (extensão)
+- `api/src/services/cnab240/parsers/` (novos parsers)
+- `api/src/controllers/cnabUnifiedController.js` (modificação)
+- Novos testes unitários e de integração
 
-### 3.2 Dashboard com Dados Reais
-- Conectar dashboard com dados do backend
-- Estatísticas baseadas em resultados reais
-- Gráficos e métricas de performance
-- Filtros por período e status
+## 3. FUNCIONALIDADES DETALHADAS
 
-### 3.3 Sistema de Aprovações Integrado
-- API para criação de lotes de aprovação
-- Fluxo completo de aprovação/rejeição
-- Notificações e logs de auditoria
-- Estados de aprovação persistidos
+### 3.1 Parser de Estado Múltiplo para Segmento J
+**Descrição**: Implementar lógica que processa corretamente duas linhas consecutivas do Segmento J
+- Primeira linha J: dados principais do pagamento
+- Segunda linha J: dados específicos do pagador
+- Controle de iteração para não processar linha duas vezes
 
-### 3.4 Gestão de Pagamentos
-- CRUD completo de pagamentos
-- Integração com dados de CNAB processados
-- Status tracking e atualizações
-- Validações e regras de negócio
+### 3.2 Extração Posicional Específica
+**Descrição**: Mapeamento preciso de campos baseado nas posições exatas do CNAB240
+- Código de barras: posições 17-61 (44 caracteres)
+- Nome favorecido: posições 61-91 (30 caracteres)
+- Valor: posições 26-36 (10 caracteres em centavos)
+- Data pagamento: posições 91-99 (8 caracteres)
+- 20+ campos adicionais com posicionamento exato
 
-### 3.5 Sistema de Autenticação
-- Login/logout de usuários
-- Controle de acesso por roles
-- Proteção de rotas sensíveis
-- Gestão de sessões
+### 3.3 Processamento Avançado de Segmento B
+**Descrição**: Extração inteligente de dados complementares
+- Endereço completo concatenado com formatação
+- Detecção automática de email via regex
+- Dados de CNPJ/CPF do favorecido
+- Informações de localização (CEP, UF, cidade)
 
-### 3.6 Melhorias de UX/UI
-- Loading states apropriados
-- Error boundaries e tratamento de erros
-- Notificações e feedback visual
-- Responsividade e acessibilidade
+### 3.4 Conversão Monetária Robusta
+**Descrição**: Sistema de conversão de valores com tratamento de erros
+- Filtro de dígitos com regex
+- Conversão centavos para reais (divisão por 100)
+- Fallback seguro para valores inválidos
+- Validação de formato CNAB
 
-### 3.7 Relatórios e Exportações
-- Geração de relatórios de pagamentos
-- Exportação em diferentes formatos
-- Filtros avançados
-- Agendamento de relatórios
+### 3.5 Sistema de Merge Inteligente
+**Descrição**: Combinar resultados do parser atual com o específico
+- Preservar dados existentes da API
+- Adicionar seção "pagamentosEspecificos"
+- Metadados de processamento comparativo
+- Flag de ativação para rollback
 
-## 4. Tecnologias e Ferramentas
+## 4. ESTRUTURA DE DADOS
 
-### 4.1 Stack Atual
-- React 18 + TypeScript
-- Vite para build
-- TanStack Query
-- Axios para HTTP
-- Shadcn/UI
-- React Router
-- Sonner para notificações
+### 4.1 Objeto Pagamento Específico
+```javascript
+{
+  "favorecido_nome": "string",
+  "pagador_nome": "string",           // NOVO
+  "cnpj_pagador": "string",           // NOVO
+  "banco_favorecido": "string",
+  "valor": "number",
+  "data_pagamento": "string",
+  "endereco_completo": "string",      // NOVO
+  "email": "string",                  // NOVO
+  "codigo_barras": "string",
+  "logradouro": "string",             // NOVO
+  "numero_endereco": "string",        // NOVO
+  "complemento": "string",            // NOVO
+  "bairro": "string",                 // NOVO
+  "cidade": "string",                 // NOVO
+  "cep": "string",                    // NOVO
+  "uf": "string",                     // NOVO
+  "cnpj_favorecido": "string"         // NOVO
+}
+```
 
-### 4.2 Padrões de Desenvolvimento
-- Componentização reutilizável
-- TypeScript strict mode
-- Error handling robusto
-- Performance otimizada
+### 4.2 Resposta API Enriquecida
+```javascript
+{
+  "sucesso": true,
+  "dados": {
+    "lotes": [...],                   // MANTIDO
+    "headerArquivo": {...},           // MANTIDO
+    "pagamentosEspecificos": [...]    // NOVO
+  },
+  "processamento": {
+    "parserAtual": true,
+    "parserEspecifico": true,         // NOVO
+    "totalPagamentosEspecificos": 150 // NOVO
+  }
+}
+```
+
+## 5. REQUISITOS TÉCNICOS
+
+### 5.1 Performance
+- Processamento deve manter performance atual
+- Parser específico executado em paralelo
+- Cache de resultados para arquivos grandes
+- Timeout configurável para processamento
+
+### 5.2 Compatibilidade
+- Zero breaking changes na API atual
+- Endpoints existentes preservados
+- Clientes atuais não impactados
+- Feature flag para ativação gradual
+
+### 5.3 Qualidade
+- Cobertura de testes >= 90%
+- Testes unitários para cada parser
+- Testes de integração com arquivos reais
+- Validação com arquivos de diferentes bancos
+
+### 5.4 Monitoramento
+- Logs detalhados de processamento
+- Métricas de performance comparativa
+- Alertas para divergências de dados
+- Dashboard de adoção da nova funcionalidade
+
+## 6. FASES DE IMPLEMENTAÇÃO
+
+### Fase 1: Preparação e Estrutura Base (2-3 dias)
+- Criar módulos de parser específico
+- Implementar extração posicional
+- Testes unitários básicos
+
+### Fase 2: Integração com API Atual (3-4 dias)
+- Modificar cnab240Service
+- Implementar sistema de merge
+- Feature flag de ativação
+
+### Fase 3: Validação e Testes (2-3 dias)
+- Testes com arquivos reais
+- Comparação de outputs
+- Ajustes de performance
+
+### Fase 4: Deploy e Monitoramento (1-2 dias)
+- Deploy com feature flag
+- Monitoramento de métricas
+- Ativação gradual
+
+## 7. CRITÉRIOS DE SUCESSO
+
+### Funcionais
+- ✅ Processamento correto de estados múltiplos Segmento J
+- ✅ Extração completa de dados do pagador
+- ✅ Formatação inteligente de endereços
+- ✅ Detecção automática de emails
+- ✅ Conversão monetária robusta
+
+### Técnicos
+- ✅ Zero breaking changes
+- ✅ Performance mantida ou melhorada
+- ✅ Cobertura de testes >= 90%
+- ✅ Logs e monitoramento implementados
+
+### Negócio
+- ✅ Dados 300% mais ricos que versão atual
+- ✅ Redução de 80% em reprocessamentos
+- ✅ Satisfação do cliente aumentada
+- ✅ Base para futuras integrações
+
+## 8. RISCOS E MITIGAÇÕES
+
+### Risco: Divergência de dados entre parsers
+**Mitigação**: Sistema de comparação automática e alertas
+
+### Risco: Impacto na performance
+**Mitigação**: Processamento paralelo e cache inteligente
+
+### Risco: Complexidade de manutenção
+**Mitigação**: Documentação detalhada e testes abrangentes
+
+### Risco: Adoção baixa da nova funcionalidade
+**Mitigação**: Feature flag e rollout gradual
+
+## 9. DEPENDÊNCIAS
+
+### Internas
+- Equipe de desenvolvimento backend (2 devs)
+- Equipe de QA para validação
+- DevOps para deploy e monitoramento
+
+### Externas
+- Arquivos CNAB240 reais para testes
+- Documentação oficial FEBRABAN
+- Validação com clientes piloto
+
+## 10. ENTREGÁVEIS
+
+### Código
+- Módulos de parser específico
 - Testes unitários e integração
+- Documentação técnica
+- Scripts de migração
 
-## 5. Critérios de Aceitação
+### Documentação
+- Guia de implementação
+- Comparativo de funcionalidades
+- Manual de troubleshooting
+- Métricas de performance
 
-### 5.1 Funcionalidades Core
-- Upload e processamento de CNAB funcionando 100%
-- Dashboard mostrando dados reais do backend
-- Sistema de aprovações completamente integrado
-- CRUD de pagamentos funcionando
-- Autenticação e autorização implementadas
+### Infraestrutura
+- Feature flags configuradas
+- Monitoramento implementado
+- Alertas configurados
+- Dashboard de métricas
 
-### 5.2 Qualidade e Performance
-- Tempo de carregamento < 3 segundos
-- Interface responsiva em todos os dispositivos
-- Tratamento de erros em todos os fluxos
-- Notificações claras para todas as ações
-- Validações client-side e server-side
+---
 
-### 5.3 Segurança
-- Rotas protegidas por autenticação
-- Validação de dados de entrada
-- Sanitização de inputs
-- Headers de segurança configurados
-
-## 6. Limitações e Restrições
-
-### 6.1 Técnicas
-- Manter compatibilidade com APIs existentes
-- Não quebrar funcionalidades já implementadas
-- Usar tecnologias já estabelecidas no projeto
-
-### 6.2 Temporais
-- Implementação incremental para não interromper desenvolvimento
-- Priorizar funcionalidades core primeiro
-- Manter versionamento e rollback possível
-
-## 7. Dependências
-
-### 7.1 Backend
-- APIs de resultados devem estar funcionando
-- Endpoints de autenticação disponíveis
-- Sistema de webhook configurado
-
-### 7.2 Infraestrutura
-- CORS configurado adequadamente
-- SSL/TLS em produção
-- Monitoramento e logs
-
-## 8. Entregáveis
-
-1. Integração completa com APIs de resultados
-2. Dashboard funcional com dados reais
-3. Sistema de aprovações operacional
-4. CRUD de pagamentos implementado
-5. Autenticação e autorização funcionando
-6. Relatórios e exportações disponíveis
-7. Testes unitários e de integração
-8. Documentação técnica atualizada 
+**Estimativa Total**: 8-12 dias de desenvolvimento
+**Complexidade**: Média-Alta
+**Impacto**: Alto (transformação de dados básicos para ricos)
+**ROI**: Muito Alto (base para futuras integrações e melhor experiência do cliente) 

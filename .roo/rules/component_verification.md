@@ -1,0 +1,133 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Regra de Verificação de Componentes Existentes
+
+## 🚫 REGRA CRÍTICA: NUNCA CRIAR COMPONENTES SEM VERIFICAÇÃO
+
+### Verificação Obrigatória Antes de Criar Qualquer Componente
+
+**SEMPRE** execute estas verificações antes de criar ou sugerir a criação de qualquer componente:
+
+1. **Buscar componentes por nome similar:**
+   ```bash
+   find . -name "*.tsx" -o -name "*.jsx" | xargs grep -l "function\|const.*=.*=>" | xargs grep -i "<NOME_COMPONENTE>"
+   ```
+
+2. **Buscar por nomes de arquivo similares:**
+   ```bash
+   find . -type f \( -name "*<nome>*.tsx" -o -name "*<nome>*.jsx" \) | head -20
+   ```
+
+3. **Buscar exports de componentes:**
+   ```bash
+   grep -r "export.*<NOME_COMPONENTE>" --include="*.tsx" --include="*.jsx" .
+   ```
+
+4. **Verificar imports existentes:**
+   ```bash
+   grep -r "import.*<NOME_COMPONENTE>" --include="*.tsx" --include="*.jsx" .
+   ```
+
+### Processo de Verificação Obrigatório
+
+#### 1. **Análise Semântica**
+- ✅ Verifique se existe componente com funcionalidade similar
+- ✅ Busque por variações do nome (singular/plural, com/sem prefixos)
+- ✅ Analise componentes genéricos que possam ser reutilizados
+
+#### 2. **Busca por Padrões Comuns**
+```bash
+# Buscar componentes de UI básicos
+grep -r "Button\|Input\|Modal\|Card\|Form" --include="*.tsx" src/
+
+# Buscar componentes de layout
+grep -r "Header\|Footer\|Sidebar\|Layout\|Container" --include="*.tsx" src/
+
+# Buscar componentes específicos do domínio
+grep -r -i "<termo_do_dominio>" --include="*.tsx" src/
+```
+
+#### 3. **Verificação de Estrutura de Pastas**
+```bash
+# Listar estrutura de componentes
+tree src/components/ -I "node_modules"
+tree src/app/ -I "node_modules" 
+find . -type d -name "*component*" -o -name "*ui*"
+```
+
+### Comportamento Obrigatório
+
+- ❌ **NUNCA** crie um componente sem verificar se já existe
+- ❌ **NUNCA** sugira criar componente sem mostrar resultados da busca
+- ✅ **SEMPRE** execute as verificações de busca primeiro
+- ✅ **SEMPRE** informe ao usuário sobre componentes similares encontrados
+- ✅ **SEMPRE** pergunte se deseja reutilizar/estender componente existente
+- ✅ **SEMPRE** justifique a necessidade de um novo componente se similares existirem
+
+### Comandos de Verificação Recomendados
+
+```bash
+# Busca abrangente por componente
+search_component() {
+  local name=$1
+  echo "🔍 Procurando componentes similares a '$name'..."
+  
+  # Buscar arquivos com nome similar
+  find . -type f \( -name "*${name,,}*" -o -name "*${name^}*" -o -name "*${name^^}*" \) \( -name "*.tsx" -o -name "*.jsx" \)
+  
+  # Buscar exports
+  grep -r "export.*${name}" --include="*.tsx" --include="*.jsx" . 2>/dev/null
+  
+  # Buscar definições de componente
+  grep -r "const ${name}\|function ${name}" --include="*.tsx" --include="*.jsx" . 2>/dev/null
+}
+```
+
+### Exceções Permitidas
+
+- Criar variação específica de componente existente (ex: `ButtonPrimary` quando já existe `Button`)
+- Criar componente específico de domínio quando genérico não atende
+- Refatorar componente complexo em subcomponentes menores
+- **SEMPRE** com justificativa clara da necessidade
+
+### Mensagem Padrão ao Encontrar Componentes Similares
+
+"⚠️ **COMPONENTES SIMILARES ENCONTRADOS!**
+Encontrei os seguintes componentes que podem ser relacionados:
+
+[Listar componentes encontrados]
+
+Antes de criar um novo componente:
+1. Analise se algum destes atende sua necessidade
+2. Considere estender/modificar um existente
+3. Se realmente precisar de um novo, explique a diferença
+
+Deseja analisar estes componentes existentes primeiro?"
+
+### Diretrizes para Reutilização
+
+#### **Prefira Sempre:**
+1. **Reutilizar** componente existente
+2. **Estender** via props/children quando possível
+3. **Compor** componentes existentes em novos layouts
+4. **Refatorar** componente existente para maior flexibilidade
+
+#### **Criar Novo Apenas Quando:**
+1. Funcionalidade completamente diferente
+2. Requisitos de design incompatíveis
+3. Performance crítica exige implementação específica
+4. Contexto de domínio completamente distinto
+
+### Integração com Ferramentas
+
+- Use semantic search_files quando disponível para busca mais inteligente
+- Integre com linter/IDE para avisos automáticos
+- Configure pre-commit hooks para verificação
+- Mantenha documentação de componentes atualizada
+
+---
+
+**Lembre-se:** Componentes duplicados aumentam bundle size, dificultam manutenção e geram inconsistências de UI. Sempre prefira reutilização!

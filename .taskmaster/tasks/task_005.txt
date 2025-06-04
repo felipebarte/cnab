@@ -1,43 +1,43 @@
 # Task ID: 5
-# Title: Implement Approval System API
+# Title: Advanced Segment B Processing
 # Status: pending
-# Dependencies: 1
+# Dependencies: 2
 # Priority: high
-# Description: Develop the API integration for creating and managing approval batches.
+# Description: Enhance data extraction for Segment B with intelligent formatting and detection.
 # Details:
-Create API endpoints for batch approval creation, approval/rejection flows, and logging. Ensure state persistence for approvals.
+Implement logic to concatenate and format addresses, detect emails using regex, and extract CNPJ/CPF and location information from Segment B.
 
 # Test Strategy:
-Test API endpoints with various approval scenarios and verify state persistence.
+Test with CNAB240 files containing Segment B data to ensure all fields are correctly extracted and formatted.
 
 # Subtasks:
-## 1. Design API Endpoints [pending]
+## 1. Concatenate and format full address [pending]
 ### Dependencies: None
-### Description: Design the structure and specifications for the API endpoints required for batch approval creation and management.
+### Description: Implement logic to concatenate and format the full address from given data fields.
 ### Details:
-Define the endpoints for creating approval batches, managing approval/rejection flows, and logging.
+This task involves taking individual address components such as street, number, neighborhood, city, state, and postal code, and concatenating them into a single formatted string.
 
-## 2. Develop Batch Approval Creation Endpoint [pending]
-### Dependencies: 5.1
-### Description: Implement the API endpoint for creating approval batches.
+## 2. Implement regex for email detection [pending]
+### Dependencies: None
+### Description: Create a regular expression to automatically detect email addresses within the data.
 ### Details:
-Develop the backend logic and database interactions for creating new approval batches.
+Develop a regex pattern that accurately identifies email addresses, considering common formats and variations.
 
-## 3. Implement Approval/Rejection Flows [pending]
-### Dependencies: 5.2
-### Description: Develop the API logic for handling approval and rejection actions within a batch.
+## 3. Extract CNPJ/CPF data [pending]
+### Dependencies: None
+### Description: Extract and validate CNPJ/CPF data from the provided information.
 ### Details:
-Create the necessary logic to update approval states and manage transitions between approved and rejected states.
+Implement logic to identify and extract CNPJ/CPF numbers, ensuring they are valid and correctly formatted.
 
-## 4. Develop Logging Mechanism [pending]
-### Dependencies: 5.3
-### Description: Implement logging for all actions performed through the approval system API.
+## 4. Extract location information [pending]
+### Dependencies: None
+### Description: Extract and organize location information such as CEP, UF, and city.
 ### Details:
-Ensure that all API interactions are logged for audit and debugging purposes.
+This task involves parsing the data to extract postal code (CEP), state (UF), and city, and ensuring they are correctly formatted and organized.
 
-## 5. Ensure State Persistence [pending]
-### Dependencies: 5.4
-### Description: Verify and ensure that the state of approvals is consistently persisted across the system.
+## 5. Integrate extracted data into Segment B processing [pending]
+### Dependencies: 5.1, 5.2, 5.3, 5.4
+### Description: Integrate all extracted and formatted data into the advanced processing of Segment B.
 ### Details:
-Implement mechanisms to maintain state consistency and recoverability in case of failures.
+Combine all the extracted and formatted data into the Segment B processing workflow, ensuring seamless integration and data consistency.
 

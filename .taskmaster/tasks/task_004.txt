@@ -1,43 +1,11 @@
 # Task ID: 4
-# Title: Create Dashboard with Real Data
+# Title: Develop Specific Positional Extraction Logic
 # Status: pending
 # Dependencies: 2
 # Priority: high
-# Description: Develop a dashboard that displays real-time data from the backend.
+# Description: Implement precise field extraction based on exact CNAB240 positions.
 # Details:
-Design and implement a dashboard using Shadcn/UI components. Fetch data from the backend and display statistics, graphs, and metrics. Implement filters for period and status.
+Map fields such as barcode, name, value, and payment date to their exact positions in the CNAB240 format. Implement extraction logic using these mappings.
 
 # Test Strategy:
-Verify that the dashboard displays accurate data and filters work as expected.
-
-# Subtasks:
-## 1. Design Dashboard Layout [pending]
-### Dependencies: None
-### Description: Create a wireframe and design the layout of the dashboard using Shadcn/UI components.
-### Details:
-Focus on user-friendly design and ensure all necessary components like graphs and filters are included.
-
-## 2. Implement Dashboard UI [pending]
-### Dependencies: 4.1
-### Description: Develop the front-end of the dashboard using the designed layout.
-### Details:
-Use Shadcn/UI components to build the dashboard interface.
-
-## 3. Integrate Real-Time Data Fetching [pending]
-### Dependencies: 4.2
-### Description: Set up data fetching from the backend to display real-time statistics, graphs, and metrics.
-### Details:
-Ensure data is fetched efficiently and displayed in the correct format on the dashboard.
-
-## 4. Implement Filters for Period and Status [pending]
-### Dependencies: 4.3
-### Description: Add filtering capabilities to the dashboard for period and status.
-### Details:
-Allow users to filter data based on time periods and status categories.
-
-## 5. Conduct User Acceptance Testing [pending]
-### Dependencies: 4.4
-### Description: Perform user acceptance testing to ensure the dashboard meets all requirements.
-### Details:
-Gather feedback from end-users and make necessary adjustments.
-
+Validate extraction logic with test CNAB240 files, ensuring all fields are correctly extracted.

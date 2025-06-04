@@ -1,11 +1,11 @@
 # Task ID: 6
-# Title: Develop Payment Management CRUD
+# Title: Robust Monetary Conversion System
 # Status: pending
-# Dependencies: 1
-# Priority: high
-# Description: Implement CRUD operations for payment management.
+# Dependencies: 2
+# Priority: medium
+# Description: Create a system for converting monetary values with error handling.
 # Details:
-Create React components for creating, reading, updating, and deleting payments. Integrate with CNAB processed data and implement business rules and validations.
+Implement a conversion system that uses regex to filter digits, converts centavos to reais, and handles invalid values gracefully.
 
 # Test Strategy:
-Perform CRUD operations and verify data integrity and business rule adherence.
+Test conversion logic with various monetary values, including edge cases, to ensure accuracy and error handling.

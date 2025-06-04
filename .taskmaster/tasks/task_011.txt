@@ -1,11 +1,11 @@
 # Task ID: 11
-# Title: Ensure Application Responsiveness
+# Title: Conduct Integration Testing with Real Files
 # Status: pending
-# Dependencies: 1
-# Priority: medium
-# Description: Make the application responsive across all devices.
+# Dependencies: 8, 10
+# Priority: high
+# Description: Perform integration tests using real CNAB240 files to validate parser accuracy.
 # Details:
-Use CSS media queries and responsive design principles to ensure the application works on different screen sizes and devices.
+Use real CNAB240 files to test the integration of the new parser with the existing system, checking for accuracy and performance.
 
 # Test Strategy:
-Test the application on various devices and screen sizes to ensure responsiveness.
+Compare parser outputs with expected results from real files to ensure correctness.

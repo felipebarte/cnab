@@ -3,110 +3,96 @@
     {
       "id": 1,
       "title": "Setup Project Repository",
-      "description": "Initialize the project repository with the necessary configurations and dependencies.",
-      "status": "done",
-      "dependencies": [],
+      "description": "Initialize the project repository and ensure all necessary configurations are in place for development.",
+      "details": "Create a new branch for the CNAB240 parser implementation. Ensure the repository is up-to-date with the latest main branch. Set up environment configurations and ensure all team members have access.",
+      "testStrategy": "Verify repository access and branch creation. Ensure all configurations are correct by running a basic Node.js server.",
       "priority": "medium",
-      "details": "The project setup is fully functional with a Docker environment. The frontend React project is configured and complete with React 18, TypeScript, Vite, TanStack Query, Axios, Shadcn/UI, React Router, Sonner, and TypeScript strict mode. ESLint and Prettier are configured for code quality. The project structure includes a complete frontend in `/frontend/` and a backend Node.js with functioning CNAB APIs in `/api/`. Docker containers are running: `cnab-frontend` on port 3000, `cnab-api` on port 8080, and `cnab-mysql` on port 3306. All health checks are passing.",
-      "testStrategy": "Verify that the project builds successfully and all dependencies are correctly installed. Ensure the Docker environment is active and all services are running. Confirm that the frontend and backend are accessible and responding correctly.",
-      "subtasks": [
-        {
-          "id": 101,
-          "title": "Verify Project Build",
-          "description": "Ensure that the project builds successfully with the current configurations and dependencies.",
-          "status": "done"
-        },
-        {
-          "id": 102,
-          "title": "Check API Integration",
-          "description": "Focus on integrating with the missing result endpoints: `/api/v1/cnab/resultados` and `/api/v1/cnab/resultados/:operationId`.",
-          "status": "done"
-        },
-        {
-          "id": 103,
-          "title": "Verify Docker Environment",
-          "description": "Ensure all Docker containers are running and healthy. Confirm that the frontend, backend, and database are accessible.",
-          "status": "done"
-        }
-      ]
+      "dependencies": [],
+      "status": "pending",
+      "subtasks": []
     },
     {
       "id": 2,
-      "title": "Implement API Integration for Resultados",
-      "description": "Integrate the frontend with the backend APIs to fetch processed results.",
-      "details": "Use Axios to implement API calls to GET /api/v1/cnab/resultados and GET /api/v1/cnab/resultados/:operationId. Store operationIds locally using localStorage or IndexedDB for persistence.",
-      "testStrategy": "Mock API responses and verify that data is correctly fetched and stored locally.",
-      "priority": "high",
+      "title": "Create Parser Module Structure",
+      "description": "Design and implement the basic structure for the new CNAB240 parser module.",
+      "details": "Create a new directory under `api/src/services/cnab240/parsers/` for the specific parser. Define the module interface and create placeholder files for each parser component.",
+      "testStrategy": "Check that the module structure is correctly set up and all files are accessible.",
+      "priority": "medium",
       "dependencies": [
         1
       ],
-      "status": "done",
+      "status": "pending",
+      "subtasks": []
+    },
+    {
+      "id": 3,
+      "title": "Implement Multi-State Segment J Parser",
+      "description": "Develop the logic to process multiple states of Segment J in CNAB240 files.",
+      "details": "Implement a function that iterates over CNAB240 lines, identifying and processing consecutive Segment J lines. Use the Python script as a reference for logic implementation.",
+      "testStrategy": "Create unit tests with CNAB240 samples containing multiple Segment J states to ensure correct processing.",
+      "priority": "high",
+      "dependencies": [
+        2
+      ],
+      "status": "pending",
       "subtasks": [
         {
           "id": 1,
-          "title": "Set Up Axios for API Calls",
-          "description": "Install and configure Axios in the frontend project to handle API requests.",
+          "title": "Analyze Existing Python Script",
+          "description": "Review the current Python script to understand its structure and logic.",
           "dependencies": [],
-          "details": "Ensure Axios is installed via npm or yarn and configure a base URL for the API endpoints.\n<info added on 2025-06-03T13:20:37.608Z>\nPROBLEMA RESOLVIDO!\n\nErro Corrigido:\n- Erro original: `TypeError: Cannot read properties of undefined (reading 'length')`\n- Causa: Frontend esperava `listaResponse.dados.resultados.length` mas API retorna `listaResponse.dados` (array direto)\n- Localização: `frontend/src/pages/Index.tsx` linha ~carregarResultadosHistoricos\n\nSolução Implementada:\n1. Verificação defensiva: Adicionado `Array.isArray(listaResponse.dados)` antes de acessar `.length`\n2. Estrutura correta: Corrigido para `listaResponse.dados.length` (não `resultados.length`)\n3. Fallback melhorado: Se falhar ao buscar detalhes, cria entrada básica ao invés de quebrar\n4. Debug melhorado: Adicionado logs detalhados para diagnosticar problemas futuros\n\nResultado:\n- Erro `TypeError` eliminado\n- Integração defensiva contra estruturas inesperadas  \n- Frontend não quebra mais ao carregar página\n- Sistema pronto para processar CNABs e exibir histórico\n\nO sistema agora carrega corretamente mesmo sem dados históricos, e funcionará perfeitamente quando houver arquivos CNAB processados.\n</info added on 2025-06-03T13:20:37.608Z>",
-          "status": "done",
-          "testStrategy": "Verify Axios is correctly installed and can make a simple GET request to a test endpoint."
+          "details": "Focus on identifying how the script processes data and where the new parser logic will fit.",
+          "status": "pending"
         },
         {
           "id": 2,
-          "title": "Implement GET /api/v1/cnab/resultados",
-          "description": "Create a function to fetch all results using the GET /api/v1/cnab/resultados endpoint.",
+          "title": "Design Parser Logic for Segment J",
+          "description": "Create a detailed plan for implementing the parser that processes two consecutive lines of Segment J.",
           "dependencies": [
             1
           ],
-          "details": "Use Axios to send a GET request to the endpoint and handle the response data appropriately.\n<info added on 2025-06-03T12:38:44.239Z>\nImplement the `GET /api/v1/cnab/resultados/:operationId` endpoint by creating a new controller `resultadosController.js` following the existing pattern. Ensure the endpoint integrates with the current infrastructure, reusing the `Operation` model and maintaining compatibility with the existing system.\n</info added on 2025-06-03T12:38:44.239Z>\n<info added on 2025-06-03T12:58:09.048Z>\nBuscar outras referências a 'sequencia' em consultas SQL ou métodos do modelo que ainda estão usando o campo antigo. Verificar se há algum uso residual de 'sequencia' que possa estar causando o erro \"Unknown column 'CnabRecord.sequencia' in 'order clause'\".\n</info added on 2025-06-03T12:58:09.048Z>\n<info added on 2025-06-03T13:02:51.252Z>\nIntegrate the unified endpoints for processing and uploading CNAB files into the frontend, ensuring seamless operation with the existing backend infrastructure. Implement auto-detection for CNAB 240/400 formats and ensure `OperationId` tracking is consistent across all operations. Additionally, address the \"Unknown column 'CnabRecord.sequencia' in 'order clause'\" error by resolving any residual usage of the 'sequencia' field in SQL queries or model methods.\n</info added on 2025-06-03T13:02:51.252Z>\n<info added on 2025-06-03T13:04:59.159Z>\nTestes realizados confirmaram que os endpoints unificados estão funcionando perfeitamente. Principais endpoints testados incluem `GET /api/v1/cnab/info-auto`, `POST /api/v1/cnab/detectar-formato`, `POST /api/v1/cnab/validar-auto`, e `POST /api/v1/cnab/processar-auto/upload`, todos operando com sucesso. Recursos como auto-detecção de CNAB 240/400, validação completa, tracking de OperationId, análise de consistência, e middleware de compatibilidade foram confirmados. Próximos passos incluem implementar a integração no frontend React, usar TanStack Query para cache e sincronização, implementar polling para atualizações em tempo real, e desenvolver uma UI com upload, progresso e resultados. Backend está pronto para integração com o frontend.\n</info added on 2025-06-03T13:04:59.159Z>",
-          "status": "done",
-          "testStrategy": "Mock the API response and ensure the function correctly processes and returns the data."
+          "details": "Ensure the design includes handling of main payment data on the first line and payer-specific data on the second line, with iteration control.",
+          "status": "pending"
         },
         {
           "id": 3,
-          "title": "Implement GET /api/v1/cnab/resultados/:operationId",
-          "description": "Create a function to fetch specific results using the GET /api/v1/cnab/resultados/:operationId endpoint.",
+          "title": "Implement Parser Logic",
+          "description": "Develop the parser logic based on the design to correctly process Segment J.",
           "dependencies": [
-            1
+            2
           ],
-          "details": "Use Axios to send a GET request with a dynamic operationId and handle the response data.",
-          "status": "done",
-          "testStrategy": "Test with various operationId values and mock responses to ensure correct data retrieval."
+          "details": "Write the code to integrate the new parser logic into the existing script, ensuring it processes two lines without duplication.",
+          "status": "pending"
         },
         {
           "id": 4,
-          "title": "Store operationIds Locally",
-          "description": "Implement local storage of operationIds using localStorage or IndexedDB for persistence.",
+          "title": "Integrate References and Dependencies",
+          "description": "Ensure all necessary references and dependencies are correctly integrated into the script.",
           "dependencies": [
-            2,
             3
           ],
-          "details": "Decide between localStorage and IndexedDB based on data size and complexity, and implement the storage solution.",
-          "status": "done",
-          "testStrategy": "Check that operationIds are correctly stored and retrieved from the chosen storage method."
+          "details": "Check for any external libraries or modules that need to be included for the parser to function correctly.",
+          "status": "pending"
         },
         {
           "id": 5,
-          "title": "Integrate API Calls with Frontend",
-          "description": "Connect the API functions to the frontend components to display the fetched results.",
+          "title": "Create Unit Tests for Parser Logic",
+          "description": "Develop unit tests to verify the functionality of the new parser logic.",
           "dependencies": [
-            2,
-            3,
-            4
+            3
           ],
-          "details": "Ensure the frontend components call the API functions and display the results to the user.",
-          "status": "done",
-          "testStrategy": "Perform end-to-end testing to ensure data flows from the API to the UI correctly."
+          "details": "Write tests that cover various scenarios, including edge cases, to ensure the parser processes data accurately.",
+          "status": "pending"
         }
       ]
     },
     {
-      "id": 3,
-      "title": "Develop Real-time Polling System",
-      "description": "Implement a polling system to update results in real-time.",
-      "details": "Use setInterval to periodically call the API endpoints and update the UI with new data. Ensure efficient polling to minimize server load.",
-      "testStrategy": "Simulate server updates and verify that the UI reflects changes in near real-time.",
-      "priority": "medium",
+      "id": 4,
+      "title": "Develop Specific Positional Extraction Logic",
+      "description": "Implement precise field extraction based on exact CNAB240 positions.",
+      "details": "Map fields such as barcode, name, value, and payment date to their exact positions in the CNAB240 format. Implement extraction logic using these mappings.",
+      "testStrategy": "Validate extraction logic with test CNAB240 files, ensuring all fields are correctly extracted.",
+      "priority": "high",
       "dependencies": [
         2
       ],
@@ -114,11 +100,11 @@
       "subtasks": []
     },
     {
-      "id": 4,
-      "title": "Create Dashboard with Real Data",
-      "description": "Develop a dashboard that displays real-time data from the backend.",
-      "details": "Design and implement a dashboard using Shadcn/UI components. Fetch data from the backend and display statistics, graphs, and metrics. Implement filters for period and status.",
-      "testStrategy": "Verify that the dashboard displays accurate data and filters work as expected.",
+      "id": 5,
+      "title": "Advanced Segment B Processing",
+      "description": "Enhance data extraction for Segment B with intelligent formatting and detection.",
+      "details": "Implement logic to concatenate and format addresses, detect emails using regex, and extract CNPJ/CPF and location information from Segment B.",
+      "testStrategy": "Test with CNAB240 files containing Segment B data to ensure all fields are correctly extracted and formatted.",
       "priority": "high",
       "dependencies": [
         2
@@ -127,513 +113,246 @@
       "subtasks": [
         {
           "id": 1,
-          "title": "Design Dashboard Layout",
-          "description": "Create a wireframe and design the layout of the dashboard using Shadcn/UI components.",
+          "title": "Concatenate and format full address",
+          "description": "Implement logic to concatenate and format the full address from given data fields.",
           "dependencies": [],
-          "details": "Focus on user-friendly design and ensure all necessary components like graphs and filters are included.",
-          "status": "pending",
-          "testStrategy": "Review design with stakeholders and gather feedback."
+          "details": "This task involves taking individual address components such as street, number, neighborhood, city, state, and postal code, and concatenating them into a single formatted string.",
+          "status": "pending"
         },
         {
           "id": 2,
-          "title": "Implement Dashboard UI",
-          "description": "Develop the front-end of the dashboard using the designed layout.",
-          "dependencies": [
-            1
-          ],
-          "details": "Use Shadcn/UI components to build the dashboard interface.",
-          "status": "pending",
-          "testStrategy": "Perform UI testing to ensure all components render correctly."
-        },
-        {
-          "id": 3,
-          "title": "Integrate Real-Time Data Fetching",
-          "description": "Set up data fetching from the backend to display real-time statistics, graphs, and metrics.",
-          "dependencies": [
-            2
-          ],
-          "details": "Ensure data is fetched efficiently and displayed in the correct format on the dashboard.",
-          "status": "pending",
-          "testStrategy": "Test data fetching with mock backend data to verify accuracy and performance."
-        },
-        {
-          "id": 4,
-          "title": "Implement Filters for Period and Status",
-          "description": "Add filtering capabilities to the dashboard for period and status.",
-          "dependencies": [
-            3
-          ],
-          "details": "Allow users to filter data based on time periods and status categories.",
-          "status": "pending",
-          "testStrategy": "Test filters with various data sets to ensure they work as expected."
-        },
-        {
-          "id": 5,
-          "title": "Conduct User Acceptance Testing",
-          "description": "Perform user acceptance testing to ensure the dashboard meets all requirements.",
-          "dependencies": [
-            4
-          ],
-          "details": "Gather feedback from end-users and make necessary adjustments.",
-          "status": "pending",
-          "testStrategy": "Use a checklist to verify all functionalities and gather user feedback."
-        }
-      ]
-    },
-    {
-      "id": 5,
-      "title": "Implement Approval System API",
-      "description": "Develop the API integration for creating and managing approval batches.",
-      "details": "Create API endpoints for batch approval creation, approval/rejection flows, and logging. Ensure state persistence for approvals.",
-      "testStrategy": "Test API endpoints with various approval scenarios and verify state persistence.",
-      "priority": "high",
-      "dependencies": [
-        1
-      ],
-      "status": "pending",
-      "subtasks": [
-        {
-          "id": 1,
-          "title": "Design API Endpoints",
-          "description": "Design the structure and specifications for the API endpoints required for batch approval creation and management.",
+          "title": "Implement regex for email detection",
+          "description": "Create a regular expression to automatically detect email addresses within the data.",
           "dependencies": [],
-          "details": "Define the endpoints for creating approval batches, managing approval/rejection flows, and logging.",
-          "status": "pending",
-          "testStrategy": "Review endpoint designs with stakeholders and validate against requirements."
-        },
-        {
-          "id": 2,
-          "title": "Develop Batch Approval Creation Endpoint",
-          "description": "Implement the API endpoint for creating approval batches.",
-          "dependencies": [
-            1
-          ],
-          "details": "Develop the backend logic and database interactions for creating new approval batches.",
-          "status": "pending",
-          "testStrategy": "Unit test the endpoint with various input scenarios to ensure correct batch creation."
+          "details": "Develop a regex pattern that accurately identifies email addresses, considering common formats and variations.",
+          "status": "pending"
         },
         {
           "id": 3,
-          "title": "Implement Approval/Rejection Flows",
-          "description": "Develop the API logic for handling approval and rejection actions within a batch.",
-          "dependencies": [
-            2
-          ],
-          "details": "Create the necessary logic to update approval states and manage transitions between approved and rejected states.",
-          "status": "pending",
-          "testStrategy": "Simulate approval and rejection actions to verify state transitions and persistence."
+          "title": "Extract CNPJ/CPF data",
+          "description": "Extract and validate CNPJ/CPF data from the provided information.",
+          "dependencies": [],
+          "details": "Implement logic to identify and extract CNPJ/CPF numbers, ensuring they are valid and correctly formatted.",
+          "status": "pending"
         },
         {
           "id": 4,
-          "title": "Develop Logging Mechanism",
-          "description": "Implement logging for all actions performed through the approval system API.",
-          "dependencies": [
-            3
-          ],
-          "details": "Ensure that all API interactions are logged for audit and debugging purposes.",
-          "status": "pending",
-          "testStrategy": "Verify that logs are correctly recorded for each API action and contain necessary details."
+          "title": "Extract location information",
+          "description": "Extract and organize location information such as CEP, UF, and city.",
+          "dependencies": [],
+          "details": "This task involves parsing the data to extract postal code (CEP), state (UF), and city, and ensuring they are correctly formatted and organized.",
+          "status": "pending"
         },
         {
           "id": 5,
-          "title": "Ensure State Persistence",
-          "description": "Verify and ensure that the state of approvals is consistently persisted across the system.",
+          "title": "Integrate extracted data into Segment B processing",
+          "description": "Integrate all extracted and formatted data into the advanced processing of Segment B.",
           "dependencies": [
+            1,
+            2,
+            3,
             4
           ],
-          "details": "Implement mechanisms to maintain state consistency and recoverability in case of failures.",
-          "status": "pending",
-          "testStrategy": "Conduct stress tests and simulate failures to ensure state persistence and recovery."
+          "details": "Combine all the extracted and formatted data into the Segment B processing workflow, ensuring seamless integration and data consistency.",
+          "status": "pending"
         }
       ]
     },
     {
       "id": 6,
-      "title": "Develop Payment Management CRUD",
-      "description": "Implement CRUD operations for payment management.",
-      "details": "Create React components for creating, reading, updating, and deleting payments. Integrate with CNAB processed data and implement business rules and validations.",
-      "testStrategy": "Perform CRUD operations and verify data integrity and business rule adherence.",
-      "priority": "high",
+      "title": "Robust Monetary Conversion System",
+      "description": "Create a system for converting monetary values with error handling.",
+      "details": "Implement a conversion system that uses regex to filter digits, converts centavos to reais, and handles invalid values gracefully.",
+      "testStrategy": "Test conversion logic with various monetary values, including edge cases, to ensure accuracy and error handling.",
+      "priority": "medium",
       "dependencies": [
-        1
+        2
       ],
       "status": "pending",
       "subtasks": []
     },
     {
       "id": 7,
-      "title": "Implement Authentication System",
-      "description": "Develop a user authentication and authorization system.",
-      "details": "Use React Router for route protection and implement login/logout functionality. Manage user roles and session management securely.",
-      "testStrategy": "Test login/logout flows, role-based access control, and session management.",
+      "title": "Implement Intelligent Merge System",
+      "description": "Develop a system to merge results from the current and specific parsers.",
+      "details": "Create logic to combine existing API data with new parser results, adding a 'pagamentosEspecificos' section and processing metadata.",
+      "testStrategy": "Test merging logic with outputs from both parsers to ensure data integrity and correctness.",
       "priority": "high",
       "dependencies": [
-        1
+        3,
+        4,
+        5
       ],
       "status": "pending",
-      "subtasks": []
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Analyze Current Parser and API Data Structure",
+          "description": "Review the existing parser and API data structures to understand the data formats and fields.",
+          "dependencies": [],
+          "details": "Examine the data output from the current parser and the API to identify key fields and data types that need to be preserved or merged.",
+          "status": "pending"
+        },
+        {
+          "id": 2,
+          "title": "Design Intelligent Merge Logic",
+          "description": "Create a plan for the intelligent merge logic that combines parser results with API data.",
+          "dependencies": [
+            1
+          ],
+          "details": "Develop a strategy for merging data that includes rules for preserving existing API data and integrating new sections such as 'pagamentosEspecificos'.",
+          "status": "pending"
+        },
+        {
+          "id": 3,
+          "title": "Implement Data Combination Logic",
+          "description": "Develop the code to implement the designed merge logic.",
+          "dependencies": [
+            2
+          ],
+          "details": "Write the necessary code to combine the parser results with the API data, ensuring data integrity and adherence to the designed logic.",
+          "status": "pending"
+        },
+        {
+          "id": 4,
+          "title": "Add Metadata Processing",
+          "description": "Incorporate metadata processing to track comparative processing details.",
+          "dependencies": [
+            3
+          ],
+          "details": "Implement functionality to generate and store metadata that records details of the data merging process for future reference and analysis.",
+          "status": "pending"
+        },
+        {
+          "id": 5,
+          "title": "Implement Activation Flag for Rollback",
+          "description": "Develop a flag system to enable or disable the merge logic for rollback purposes.",
+          "dependencies": [
+            3
+          ],
+          "details": "Create a mechanism to toggle the merge logic on or off, allowing for easy rollback if necessary.",
+          "status": "pending"
+        },
+        {
+          "id": 6,
+          "title": "Test and Validate Merge System",
+          "description": "Conduct thorough testing of the merge system to ensure it functions correctly and meets requirements.",
+          "dependencies": [
+            4,
+            5
+          ],
+          "details": "Perform tests to validate the merge logic, metadata processing, and rollback functionality, ensuring all components work together seamlessly.",
+          "status": "pending"
+        }
+      ]
     },
     {
       "id": 8,
-      "title": "Enhance UX/UI with Loading States",
-      "description": "Improve user experience by adding appropriate loading states.",
-      "details": "Implement loading indicators using Shadcn/UI components for asynchronous operations. Ensure smooth transitions and feedback.",
-      "testStrategy": "Simulate slow network conditions and verify loading states are displayed correctly.",
-      "priority": "medium",
+      "title": "Modify CNAB240 Service for Integration",
+      "description": "Update the cnab240Service to integrate the new parser logic.",
+      "details": "Extend `cnab240Service.js` to include calls to the new parser module. Ensure compatibility with existing service logic.",
+      "testStrategy": "Run integration tests to verify that the service correctly processes CNAB240 files using both parsers.",
+      "priority": "high",
       "dependencies": [
-        1
+        7
       ],
       "status": "pending",
       "subtasks": []
     },
     {
       "id": 9,
-      "title": "Implement Error Boundaries and Handling",
-      "description": "Add robust error handling and boundaries to the application.",
-      "details": "Use React error boundaries to catch and handle errors gracefully. Implement global error handling strategies for API calls.",
-      "testStrategy": "Introduce errors and verify that they are caught and handled without crashing the application.",
+      "title": "Implement Feature Flag for New Parser",
+      "description": "Add a feature flag to control the activation of the new parser logic.",
+      "details": "Implement a feature flag system to toggle the new parser logic on and off, allowing for gradual rollout and testing.",
+      "testStrategy": "Test the feature flag by toggling it and verifying the parser logic activation.",
       "priority": "medium",
       "dependencies": [
-        1
+        8
       ],
       "status": "pending",
       "subtasks": []
     },
     {
       "id": 10,
-      "title": "Develop Notification System",
-      "description": "Implement a notification system for user feedback.",
-      "details": "Use Sonner to create a notification system that provides clear feedback for user actions and system events.",
-      "testStrategy": "Trigger various user actions and verify that notifications are displayed appropriately.",
+      "title": "Develop Unit Tests for New Parser",
+      "description": "Create unit tests to ensure the new parser functions correctly.",
+      "details": "Develop comprehensive unit tests covering all new parser functionalities, ensuring at least 90% test coverage.",
+      "testStrategy": "Run unit tests and verify coverage metrics to ensure all functionalities are tested.",
       "priority": "medium",
       "dependencies": [
-        1
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 11,
-      "title": "Ensure Application Responsiveness",
-      "description": "Make the application responsive across all devices.",
-      "details": "Use CSS media queries and responsive design principles to ensure the application works on different screen sizes and devices.",
-      "testStrategy": "Test the application on various devices and screen sizes to ensure responsiveness.",
-      "priority": "medium",
-      "dependencies": [
-        1
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 12,
-      "title": "Implement Security Measures",
-      "description": "Add security features to protect the application and user data.",
-      "details": "Implement data validation, input sanitization, and configure security headers. Ensure routes are protected by authentication.",
-      "testStrategy": "Perform security testing to verify data protection and route security.",
-      "priority": "high",
-      "dependencies": [
-        7
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 13,
-      "title": "Develop Reporting and Export Features",
-      "description": "Implement features for generating and exporting reports.",
-      "details": "Create functionality to generate payment reports and export them in various formats. Implement advanced filtering options and scheduling capabilities.",
-      "testStrategy": "Generate reports with different filters and verify export functionality.",
-      "priority": "medium",
-      "dependencies": [
+        3,
+        4,
+        5,
         6
       ],
       "status": "pending",
       "subtasks": []
     },
     {
-      "id": 14,
-      "title": "Setup Unit and Integration Testing",
-      "description": "Establish a testing framework for unit and integration tests.",
-      "details": "Use Jest and React Testing Library to write unit and integration tests for critical components and features.",
-      "testStrategy": "Run tests to ensure all components and features work as expected.",
-      "priority": "medium",
-      "dependencies": [
-        1
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 15,
-      "title": "Document Technical Implementation",
-      "description": "Create and update technical documentation for the project.",
-      "details": "Document the architecture, API integrations, and key components of the application. Ensure documentation is clear and accessible.",
-      "testStrategy": "Review documentation for completeness and clarity.",
-      "priority": "low",
-      "dependencies": [
-        1
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 16,
-      "title": "Optimize Performance",
-      "description": "Improve the performance of the application.",
-      "details": "Analyze and optimize the application's performance, focusing on load times and resource usage. Use tools like Lighthouse for performance auditing.",
-      "testStrategy": "Conduct performance tests and verify improvements in load times and resource usage.",
-      "priority": "medium",
-      "dependencies": [
-        1
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 17,
-      "title": "Implement Local Storage for Operation IDs",
-      "description": "Persist operation IDs locally for offline access.",
-      "details": "Use localStorage or IndexedDB to store operation IDs, ensuring data is available offline and across sessions.",
-      "testStrategy": "Verify that operation IDs are correctly stored and retrieved from local storage.",
-      "priority": "medium",
-      "dependencies": [
-        2
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 18,
-      "title": "Create Audit Logs for Approvals",
-      "description": "Implement logging for approval actions for audit purposes.",
-      "details": "Develop a logging system to track all approval and rejection actions, ensuring logs are detailed and secure.",
-      "testStrategy": "Perform approval actions and verify that logs are accurately recorded.",
-      "priority": "medium",
-      "dependencies": [
-        5
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 19,
-      "title": "Implement Role-Based Access Control",
-      "description": "Add role-based access control to the application.",
-      "details": "Define user roles and permissions, and implement access control mechanisms to restrict access to sensitive routes and actions.",
-      "testStrategy": "Test access control by attempting to access restricted areas with different user roles.",
+      "id": 11,
+      "title": "Conduct Integration Testing with Real Files",
+      "description": "Perform integration tests using real CNAB240 files to validate parser accuracy.",
+      "details": "Use real CNAB240 files to test the integration of the new parser with the existing system, checking for accuracy and performance.",
+      "testStrategy": "Compare parser outputs with expected results from real files to ensure correctness.",
       "priority": "high",
       "dependencies": [
-        7
+        8,
+        10
       ],
       "status": "pending",
       "subtasks": []
     },
     {
-      "id": 20,
-      "title": "Develop Advanced Filtering for Reports",
-      "description": "Enhance report generation with advanced filtering options.",
-      "details": "Implement complex filtering logic for report generation, allowing users to filter by multiple criteria such as date range, status, and type.",
-      "testStrategy": "Generate reports using advanced filters and verify accuracy and performance.",
+      "id": 12,
+      "title": "Implement Monitoring and Logging",
+      "description": "Add detailed logging and monitoring for the new parser system.",
+      "details": "Implement logging for parser operations and set up monitoring to track performance and detect anomalies.",
+      "testStrategy": "Verify logs are correctly generated and monitoring alerts are triggered for specific events.",
       "priority": "medium",
       "dependencies": [
+        11
+      ],
+      "status": "pending",
+      "subtasks": []
+    },
+    {
+      "id": 13,
+      "title": "Optimize Performance and Caching",
+      "description": "Enhance performance and implement caching for large file processing.",
+      "details": "Optimize parser performance by implementing parallel processing and caching strategies for large files.",
+      "testStrategy": "Test with large CNAB240 files to ensure performance improvements and caching effectiveness.",
+      "priority": "medium",
+      "dependencies": [
+        11
+      ],
+      "status": "pending",
+      "subtasks": []
+    },
+    {
+      "id": 14,
+      "title": "Deploy with Feature Flag",
+      "description": "Deploy the new parser system with the feature flag enabled for gradual rollout.",
+      "details": "Deploy the updated system to production with the feature flag set for controlled activation. Monitor initial rollout closely.",
+      "testStrategy": "Monitor deployment logs and system performance to ensure smooth rollout.",
+      "priority": "high",
+      "dependencies": [
+        12,
         13
       ],
       "status": "pending",
       "subtasks": []
     },
     {
-      "id": 21,
-      "title": "Integrate Webhooks for Real-time Updates",
-      "description": "Use webhooks to receive real-time updates from the backend.",
-      "details": "Configure the application to listen for webhook events from the backend and update the UI accordingly.",
-      "testStrategy": "Simulate webhook events and verify that the UI updates in real-time.",
+      "id": 15,
+      "title": "Documentation and Training",
+      "description": "Prepare documentation and training materials for the new parser system.",
+      "details": "Create detailed documentation covering the new parser functionalities, implementation details, and troubleshooting guides. Conduct training sessions for the development and QA teams.",
+      "testStrategy": "Review documentation for completeness and accuracy. Gather feedback from training sessions to ensure understanding.",
       "priority": "medium",
       "dependencies": [
-        3
+        14
       ],
       "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 22,
-      "title": "Implement Session Management",
-      "description": "Manage user sessions securely and efficiently.",
-      "details": "Ensure sessions are managed securely, with automatic expiration and renewal mechanisms. Use secure cookies for session storage.",
-      "testStrategy": "Test session expiration and renewal processes to ensure security and usability.",
-      "priority": "medium",
-      "dependencies": [
-        7
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 23,
-      "title": "Enhance Accessibility Features",
-      "description": "Improve the accessibility of the application.",
-      "details": "Ensure the application meets WCAG 2.1 standards, focusing on keyboard navigation, screen reader support, and color contrast.",
-      "testStrategy": "Conduct accessibility testing using tools like Axe and manual testing with screen readers.",
-      "priority": "medium",
-      "dependencies": [
-        1
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 24,
-      "title": "Configure CORS and Security Headers",
-      "description": "Set up CORS and configure security headers for the application.",
-      "details": "Ensure CORS is configured correctly to allow safe cross-origin requests. Set security headers to protect against common vulnerabilities.",
-      "testStrategy": "Test API requests from different origins and verify security headers are correctly applied.",
-      "priority": "high",
-      "dependencies": [
-        12
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 25,
-      "title": "Setup Monitoring and Logging",
-      "description": "Implement monitoring and logging for the application.",
-      "details": "Use tools like Sentry or LogRocket to monitor application performance and log errors. Ensure logs are detailed and accessible for debugging.",
-      "testStrategy": "Introduce errors and monitor logs to ensure they are captured and reported correctly.",
-      "priority": "medium",
-      "dependencies": [
-        1
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 26,
-      "title": "Develop CNAB Data Display System with Payment Verification Modal",
-      "description": "Implement a frontend system to display CNAB data with a detailed modal for payment verification.",
-      "details": "Create a React component to display CNAB data in a card format, including details such as Lotes, Registros, Total, Operation ID, and more. Implement a modal that appears when a user clicks a 'Ver Detalhes' button on each payment entry, showing detailed information for payment verification. Ensure the frontend uses the CNAB file name and integrates with the backend API to send data for approval and payment processing via the Swap API. Include additional features such as total values of processed files, identified company names, financial analysis, metrics by period, operation details, transaction listing, and movement categorization. Use React, TypeScript, and Axios for API calls, and ensure the UI is responsive and user-friendly.",
-      "testStrategy": "1. Verify that the CNAB data is correctly displayed in the frontend with all required fields.\n2. Test the 'Ver Detalhes' modal to ensure it opens correctly and displays all necessary payment verification details.\n3. Check the integration with the backend API to confirm data is sent correctly for approval and payment processing.\n4. Validate additional features such as financial analysis, metrics by period, and transaction listing are functioning as expected.\n5. Perform UI/UX testing to ensure the interface is intuitive and responsive across different devices.",
-      "status": "in-progress",
-      "dependencies": [
-        2
-      ],
-      "priority": "high",
-      "subtasks": [
-        {
-          "id": 1,
-          "title": "Design CNAB Data Card Component",
-          "description": "Create a React component to display CNAB data in a card format, including fields like Lotes, Registros, Total, and Operation ID.",
-          "dependencies": [],
-          "details": "Use React and TypeScript to ensure type safety and maintainability.\n<info added on 2025-06-03T13:37:01.482Z>\nThe CNAB Data Card Component has been successfully implemented, providing a responsive and accessible design that integrates seamlessly with existing types and follows project coding standards. The component displays CNAB data in a card format using React and TypeScript, ensuring type safety and maintainability.\n</info added on 2025-06-03T13:37:01.482Z>",
-          "status": "done",
-          "testStrategy": "Verify the component renders correctly with mock CNAB data."
-        },
-        {
-          "id": 2,
-          "title": "Implement Payment Verification Modal",
-          "description": "Develop a modal that appears on clicking 'Ver Detalhes' button, showing detailed payment verification information.",
-          "dependencies": [
-            1
-          ],
-          "details": "Ensure the modal displays all necessary payment details and is responsive.\n<info added on 2025-06-03T13:41:31.966Z>\n✅ **Subtarefa 26.2 - Implement Payment Verification Modal IMPLEMENTADA COM SUCESSO**\n\n**O que foi realizado:**\n\n1. **Criado o componente PaymentVerificationModal.tsx** (`frontend/src/components/CNAB/PaymentVerificationModal.tsx`):\n   - Modal completo para verificação detalhada de pagamentos CNAB\n   - Interface responsiva e acessível usando componentes Shadcn/UI\n   - Integração com tipos TypeScript existentes (CNABApiProcessingResponse)\n\n2. **Funcionalidades implementadas:**\n   - **Exibição detalhada de informações do arquivo:** nome, tamanho, formato, linhas, encoding, confiança\n   - **Informações bancárias completas:** código, nome do banco, agência, conta\n   - **Resumo financeiro visual:** lotes, registros e valor total com ícones e cores\n   - **Detalhes dos lotes:** exibição dos primeiros 5 lotes com informações de operação e serviço\n   - **Tratamento de erros e avisos:** seções específicas para erros de processamento e avisos de validação\n   - **Ações de verificação:** botões para Aprovar, Rejeitar e Enviar ao Banco\n   - **Campo de rejeição:** textarea para inserir motivo da rejeição quando necessário\n   - **Copy to clipboard:** funcionalidade para copiar Operation ID\n\n3. **Design e UX:**\n   - Layout responsivo com ScrollArea para conteúdo extenso\n   - Seções organizadas com cores temáticas (azul=bancário, verde=financeiro, etc.)\n   - Estados de loading nos botões durante processamento\n   - Validação de campos obrigatórios (motivo da rejeição)\n   - Feedback visual claro para status de sucesso/erro\n\n4. **Integração e callbacks:**\n   - Props para callbacks: onApprove, onReject, onSendToBank\n   - Gerenciamento de estado interno para UI (loading, rejeição)\n   - Compatível com dados da API existente\n\n**Verificação:**\n- ✅ Build do projeto executado com sucesso\n- ✅ Componente compila sem erros TypeScript\n- ✅ Segue padrões de design do projeto\n- ✅ Pronto para integração com CNABDataCard\n\n**Próximos passos:**\n- Integrar os dois componentes (CNABDataCard + PaymentVerificationModal)\n- Criar exemplo de uso/demonstração\n- Prosseguir para próxima subtarefa da tarefa 26\n</info added on 2025-06-03T13:41:31.966Z>",
-          "status": "done",
-          "testStrategy": "Test modal appearance and data accuracy with various payment entries."
-        },
-        {
-          "id": 3,
-          "title": "Integrate CNAB Data with Backend API",
-          "description": "Connect the frontend to the backend API to fetch and display CNAB data.",
-          "dependencies": [
-            1
-          ],
-          "details": "Use Axios for API calls and handle data fetching and error states.\n<info added on 2025-06-03T13:58:05.725Z>\n✅ **SUBTAREFA 26.3 CONCLUÍDA COM SUCESSO!**\n\n## 🎯 Integração Completa da API Backend Implementada\n\n### 📋 Resumo da Implementação:\n- **Integração direta na estrutura existente** do dashboard (Index.tsx) em vez de criar componentes duplicados\n- **Aprimoramento do componente ProcessingStatus** para usar os hooks React Query existentes\n- **Compatibilidade total** com a estrutura legada mantendo funcionalidade existing\n- **Nova funcionalidade de modal de verificação** integrada ao fluxo existente\n\n### 🔧 Funcionalidades Implementadas:\n\n#### 1. **Integração de Hooks React Query**\n- Uso completo do `useCNABDataList` para buscar dados paginados da API\n- `useCNABDataForCard` para detalhes específicos de operações CNAB\n- `useCNABStatistics` para estatísticas em tempo real\n- `useCNABActions` para aprovação/rejeição/envio ao banco\n\n#### 2. **UI/UX Melhorado**\n- **Estatísticas em tempo real** na parte superior do ProcessingStatus\n- **Cards modernos** usando o CNABDataCard já existente quando dados da API estão disponíveis\n- **Fallback elegante** para layout legado quando API não está disponível\n- **Paginação** funcional para navegação entre resultados\n\n#### 3. **Funcionalidades de Ação**\n- **Modal de verificação de pagamento** integrado (PaymentVerificationModal)\n- **Botões de ação** para aprovar, rejeitar e enviar ao banco\n- **Loading states** apropriados com overlays\n- **Tratamento de erros** robusto com mensagens adequadas\n\n#### 4. **Compatibilidade e Manutenção**\n- **Detecção automática** de quando usar dados da API vs dados legados\n- **Preservação total** da funcionalidade existente\n- **Integração sem quebras** no fluxo atual do sistema\n\n### 🚀 **Resultado Final:**\nA aba CNAB no dashboard principal agora possui **integração completa com o backend**, mantendo compatibilidade total com a estrutura existente e adicionando funcionalidades modernas de verificação e aprovação de pagamentos CNAB.\n\n### 🔄 **Próximos Passos Sugeridos:**\n- Testar a funcionalidade com dados reais da API\n- Verificar se há necessidade de melhorias na UI baseado no feedback dos usuários\n- Implementar funcionalidades adicionais de filtragem se necessário\n</info added on 2025-06-03T13:58:05.725Z>\n<info added on 2025-06-03T14:10:20.709Z>\n🔧 **CORREÇÃO DE ERROS IMPLEMENTADA**\n\n## 🐛 **Problemas Identificados e Corrigidos:**\n\n### **Erro 1: TypeError - Cannot read properties of undefined (reading 'map')**\n**Problema:** Acesso inseguro às propriedades `statisticsData.dados.porTipo` sem verificação de nulos.\n\n**Solução Implementada:**\n```typescript\n// Verificações de segurança adicionadas\nconst hasValidStatistics = statisticsData?.dados?.porTipo && Array.isArray(statisticsData.dados.porTipo);\nconst statisticsArray = hasValidStatistics ? statisticsData.dados.porTipo : [];\n\n// Funções auxiliares com fallbacks seguros\nconst getTotalCount = () => {\n  return statisticsArray.reduce((acc, t) => acc + (t.total || 0), 0);\n};\n```\n\n### **Erro 2: Hook useCNABDataList com acesso inseguro**\n**Problema:** `query.data?.dados.resultados.map()` falhava quando a estrutura não existia.\n\n**Solução Implementada:**\n```typescript\n// Verificação de estrutura antes do map\nconst hasValidData = query.data?.dados?.resultados && Array.isArray(query.data.dados.resultados);\n\n// Map seguro com verificações adicionais\nconst transformedData = hasValidData ? query.data.dados.resultados.map(resultado => {\n  if (!resultado || !resultado.operationId) {\n    return null;\n  }\n  // ... transformação segura\n}).filter(Boolean) : [];\n```\n\n### **Erro 3: Paginação com propriedades undefined**\n**Problema:** Acesso direto a `apiPagination.pagina` sem verificação.\n\n**Solução Implementada:**\n```typescript\n// Todas as operações de paginação agora têm fallbacks\nonClick={() => handlePageChange((apiPagination.pagina || 1) - 1)}\nPágina {apiPagination.pagina || 1} de {Math.ceil((apiPagination.total || 0) / (apiPagination.limite || 1))}\n```\n\n## ✅ **Status Atual:**\n- **Frontend rodando sem erros** ✅\n- **Todos os TypeErrors corrigidos** ✅  \n- **Verificações de segurança implementadas** ✅\n- **Fallbacks apropriados adicionados** ✅\n- **Compatibilidade mantida** com estrutura existente ✅\n\n## 🔄 **Resultado:**\nA integração da API está funcionando corretamente com tratamento robusto de erros e verificações de segurança em todos os pontos críticos.\n</info added on 2025-06-03T14:10:20.709Z>\n<info added on 2025-06-03T14:29:21.753Z>\n🔧 **PROBLEMA DA LISTAGEM CNAB CORRIGIDO!**\n\n## 🐛 **Problema Identificado:**\n- **CNABs processados não apareciam na listagem** mesmo após processamento bem-sucedido\n- **API funcionando corretamente** mas problema na transformação dos dados no frontend\n- **Estrutura de resposta da API diferente** da esperada pelos hooks React Query\n\n## 🎯 **Causa Raiz:**\n1. **Interface `CNABListaResultadosResponse` incorreta** - esperava `dados.resultados[]` mas API retorna `dados[]` diretamente\n2. **Hook `useCNABDataList` acessando propriedades erradas** - tentava acessar `query.data?.dados?.resultados` em vez de `query.data?.dados`\n3. **Paginação com nomes de campos diferentes** - esperava `pagina/limite` mas API usa `page/limit`\n\n## ✅ **Correções Implementadas:**\n\n### 1. **Interface API Corrigida:**\n```typescript\nexport interface CNABListaResultadosResponse {\n  sucesso: boolean;\n  dados: Array<{...}>, // CORRETO: dados direto como array\n  paginacao: { page, limit, hasNext, hasPrev }, // CORRETO: nomes de campos\n  // ...\n}\n```\n\n### 2. **Hook useCNABDataList Atualizado:**\n```typescript\n// ANTES (INCORRETO):\nconst hasValidData = query.data?.dados?.resultados && Array.isArray(query.data.dados.resultados);\n\n// DEPOIS (CORRETO):\nconst hasValidData = query.data?.dados && Array.isArray(query.data.dados);\n```\n\n### 3. **Transformação de Dados Melhorada:**\n- ✅ Uso correto da estrutura real da API (`resultado.file.id`, `resultado.totals.registros`)\n- ✅ Mapeamento de banco e empresa quando disponíveis\n- ✅ Tratamento adequado de metadata e status da API\n\n### 4. **Paginação Corrigida:**\n```typescript\n// ANTES (INCORRETO):\napiPagination.pagina, apiPagination.limite, apiPagination.temAnterior\n\n// DEPOIS (CORRETO): \napiPagination.page, apiPagination.limit, apiPagination.hasPrev\n```\n\n## 🧪 **Teste de Validação:**\n- ✅ API retornando dados corretamente: `curl localhost:8080/api/v1/cnab/resultados`\n- ✅ Frontend sem erros nos logs Docker\n- ✅ Estrutura de dados alinhada entre API e frontend\n- ✅ Hook useCNABDataList agora acessa dados da forma correta\n\n## 📊 **Resultado:**\n**LISTAGEM DE CNABs PROCESSADOS FUNCIONANDO!** 🎉\n- CNABs processados agora aparecem corretamente na interface\n- Modal de verificação integrado e funcional\n- Paginação funcionando com a estrutura correta da API\n- Transformação de dados robusta e compatível\n</info added on 2025-06-03T14:29:21.753Z>\n<info added on 2025-06-03T14:59:58.242Z>\n🎯 **PROBLEMA DE DUPLICAÇÃO DE CARDS RESOLVIDO!**\n\n## 🐛 **Problema Crítico Identificado:**\n- **Cards de CNAB duplicados** após upload de arquivo\n- **Estado conflitante** entre dados legados (processedCNABFiles) e dados da API via React Query\n- **ProcessingStatus sendo renderizado duas vezes**: uma no Index.tsx e outra dentro do FileUpload.tsx\n\n## 🔧 **Correções Implementadas:**\n\n### 1. **Remoção de Estado Duplicado (Index.tsx):**\n```typescript\n// REMOVIDO: Estado processedCNABFiles que causava conflito\n// const [processedCNABFiles, setProcessedCNABFiles] = useState<CNABApiProcessingResponse[]>([]);\n\n// SIMPLIFICADO: handleCNABFileProcessed apenas para notificação\nconst handleCNABFileProcessed = (response: CNABApiProcessingResponse) => {\n  // Apenas mudar para a aba de CNAB e exibir notificação\n  // O React Query vai automaticamente atualizar os dados via invalidação de cache\n  setActiveTab('cnab');\n  \n  if (response.sucesso) {\n    toast.success('✅ Arquivo CNAB processado com sucesso!');\n  }\n};\n```\n\n### 2. **Simplificação do ProcessingStatus:**\n```typescript\n// REMOVIDO: Props processedFiles e loading desnecessárias\ninterface ProcessingStatusProps {\n  onFileAction?: (file: any, action: string) => void; // Mantido apenas callback opcional\n}\n\n// AGORA: Usa apenas dados da API via React Query hooks\n// - useCNABDataList para listagem\n// - useCNABStatistics para estatísticas\n// - Cache invalidation automática após uploads\n```\n\n### 3. **Correção Crítica no FileUpload:**\n```typescript\n// REMOVIDO: ProcessingStatus duplicado dentro de FileUpload\n// Causa da duplicação: FileUpload renderizava outro ProcessingStatus\n\n// ADICIONADO: Invalidação de cache após upload bem-sucedido\nqueryClient.invalidateQueries({ queryKey: CNAB_QUERY_KEYS.lists() });\nqueryClient.invalidateQueries({ queryKey: CNAB_QUERY_KEYS.statistics() });\n```\n\n## ✅ **Resultado Final:**\n- **✅ Sem mais duplicação de cards** após upload de CNAB\n- **✅ Fonte única de verdade** via React Query API calls\n- **✅ Atualização automática** da lista após upload\n- **✅ Interface limpa** sem estados conflitantes\n- **✅ Performance melhorada** com invalidação seletiva de cache\n\n## 🎉 **Status Atualizado:**\n**INTEGRAÇÃO CNAB BACKEND COMPLETAMENTE FUNCIONAL!**\n- Upload de arquivos ✅\n- Listagem sem duplicação ✅ \n- Modal de verificação ✅\n- Aprovação/Rejeição ✅\n- Invalidação de cache ✅\n</info added on 2025-06-03T14:59:58.242Z>",
-          "status": "done",
-          "testStrategy": "Mock API responses to test data integration and error handling."
-        },
-        {
-          "id": 4,
-          "title": "Develop Swap API Integration for Payment Processing",
-          "description": "Implement functionality to send data to the Swap API for approval and payment processing.",
-          "dependencies": [
-            3
-          ],
-          "details": "Ensure secure and reliable API communication using Axios.",
-          "status": "pending",
-          "testStrategy": "Simulate API calls and verify successful data transmission and response handling."
-        },
-        {
-          "id": 5,
-          "title": "Calculate and Display Total Values of Processed Files",
-          "description": "Add functionality to calculate and display total values of processed CNAB files.",
-          "dependencies": [
-            3
-          ],
-          "details": "Include total amounts and other relevant financial metrics.",
-          "status": "pending",
-          "testStrategy": "Validate calculations with sample data sets."
-        },
-        {
-          "id": 6,
-          "title": "Implement Financial Analysis Features",
-          "description": "Develop features for financial analysis, including metrics by period and operation details.",
-          "dependencies": [
-            5
-          ],
-          "details": "Provide insights and analytics based on CNAB data.",
-          "status": "pending",
-          "testStrategy": "Test accuracy of financial metrics and period-based analysis."
-        },
-        {
-          "id": 7,
-          "title": "Add Transaction Listing and Movement Categorization",
-          "description": "Create a listing of transactions with categorization of movements.",
-          "dependencies": [
-            6
-          ],
-          "details": "Ensure clear categorization and listing of all transactions.",
-          "status": "pending",
-          "testStrategy": "Check categorization logic and transaction display for correctness."
-        },
-        {
-          "id": 8,
-          "title": "Ensure Responsive and User-Friendly UI",
-          "description": "Optimize the UI for responsiveness and user-friendliness across devices.",
-          "dependencies": [
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7
-          ],
-          "details": "Use CSS and responsive design principles to enhance user experience.",
-          "status": "pending",
-          "testStrategy": "Conduct usability testing on various devices and screen sizes."
-        },
-        {
-          "id": 9,
-          "title": "Corrigir Badge de Status no Histórico de Processamento CNAB",
-          "description": "Resolver problema onde todas as badges mostravam status 'Erro' independente do status real do processamento",
-          "details": "Correção da lógica de determinação de status no frontend que estava verificando status 'completed' incorreto em vez de 'success' que é o status real retornado pela API\n<info added on 2025-06-03T15:15:36.266Z>\n## ✅ CORREÇÕES REALIZADAS - Badge do Histórico de Processamento CNAB\n\n### 🔍 Problema Identificado:\nA badge estava sempre mostrando \"Erro\" porque o código estava verificando o status 'completed', mas a API retorna os seguintes status válidos:\n- 'started' - Operação iniciada\n- 'processing' - Em processamento  \n- 'success' - Processado com sucesso ✅\n- 'error' - Erro no processamento ❌\n\n### 🛠️ Correções Aplicadas:\n\n#### 1. **frontend/src/hooks/useCNABData.ts**\n- **Linha 120**: Alterada verificação de `status === 'completed'` para `status === 'success'`\n- **Linha 303**: Corrigida verificação de `isComplete` para usar `status === 'success'`\n\n#### 2. **frontend/src/pages/Index.tsx**  \n- **Linha 118**: Corrigida lógica de sucesso de hardcode para `detalhes.sucesso && detalhes.dados.status === 'success'`\n- **Linha 154**: Corrigida criação de basicFile para usar `resultado.status === 'success'`\n\n#### 3. **frontend/src/components/CNAB/ProcessingStatus.tsx**\n- **Função getCompletedCount()**: Alterada busca de `status === 'completed'` para `status === 'success'`\n\n#### 4. **frontend/src/components/CNAB/CNABDataList.tsx**\n- **Filtro de status**: Corrigido botão \"Concluídos\" para filtrar por `status === 'success'`\n\n### 🎯 Resultado:\n- ✅ Badge agora mostra corretamente \"Sucesso\" para arquivos processados com sucesso\n- ✅ Badge mostra \"Erro\" apenas para arquivos que realmente falharam  \n- ✅ Sistema Docker continua funcionando sem erros\n- ✅ Compatibilidade mantida com modelo Operation da API (status: 'started', 'processing', 'success', 'error')\n\n### 🔧 Status dos Testes:\n- ✅ Logs Docker: Nenhum erro detectado\n- ✅ Frontend funcional em Docker\n- ✅ API funcional em Docker\n- ✅ Integração frontend-backend funcionando corretamente\n</info added on 2025-06-03T15:15:36.266Z>",
-          "status": "done",
-          "dependencies": [],
-          "parentTaskId": 26
-        }
-      ]
-    },
-    {
-      "id": 27,
-      "title": "Implement CNAB Boleto Data Extraction and Validation System",
-      "description": "Develop a system to extract and validate boleto data within the CNAB processing endpoint.",
-      "details": "This task involves implementing a comprehensive system for extracting and validating boleto data in the /api/v1/cnab/processar-auto/upload endpoint of the Unificados API. The system should extract key boleto data such as barcode, digitable line, 'nosso número', due date, and amount. Implement utility functions for calculating check digits using modulo 10 and modulo 11 algorithms. Ensure data integrity by validating the consistency between the barcode and the digitable line. Integrate this functionality with the existing CNAB parser (segmentoParser.js), focusing on segments J and O. The response from the API should include structured boleto data with validation metadata. Follow the logic and positioning used in the existing Python script cnab_boleto_certo.py.",
-      "testStrategy": "1. Write unit tests for utility functions that calculate modulo 10 and modulo 11 check digits.\n2. Create integration tests to verify the extraction of boleto data from CNAB files, ensuring correct parsing of segments J and O.\n3. Validate the consistency between the extracted barcode and digitable line, ensuring discrepancies are caught and handled.\n4. Test the API endpoint to ensure it returns structured boleto data with validation metadata.\n5. Perform end-to-end testing to confirm integration with the existing CNAB parser and that the API response is correctly expanded with boleto data.",
-      "status": "pending",
-      "dependencies": [
-        2,
-        26
-      ],
-      "priority": "high",
       "subtasks": []
     }
   ]

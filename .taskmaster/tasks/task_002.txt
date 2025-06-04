@@ -1,77 +1,11 @@
 # Task ID: 2
-# Title: Implement API Integration for Resultados
-# Status: done
+# Title: Create Parser Module Structure
+# Status: pending
 # Dependencies: 1
-# Priority: high
-# Description: Integrate the frontend with the backend APIs to fetch processed results.
+# Priority: medium
+# Description: Design and implement the basic structure for the new CNAB240 parser module.
 # Details:
-Use Axios to implement API calls to GET /api/v1/cnab/resultados and GET /api/v1/cnab/resultados/:operationId. Store operationIds locally using localStorage or IndexedDB for persistence.
+Create a new directory under `api/src/services/cnab240/parsers/` for the specific parser. Define the module interface and create placeholder files for each parser component.
 
 # Test Strategy:
-Mock API responses and verify that data is correctly fetched and stored locally.
-
-# Subtasks:
-## 1. Set Up Axios for API Calls [done]
-### Dependencies: None
-### Description: Install and configure Axios in the frontend project to handle API requests.
-### Details:
-Ensure Axios is installed via npm or yarn and configure a base URL for the API endpoints.
-<info added on 2025-06-03T13:20:37.608Z>
-PROBLEMA RESOLVIDO!
-
-Erro Corrigido:
-- Erro original: `TypeError: Cannot read properties of undefined (reading 'length')`
-- Causa: Frontend esperava `listaResponse.dados.resultados.length` mas API retorna `listaResponse.dados` (array direto)
-- Localização: `frontend/src/pages/Index.tsx` linha ~carregarResultadosHistoricos
-
-Solução Implementada:
-1. Verificação defensiva: Adicionado `Array.isArray(listaResponse.dados)` antes de acessar `.length`
-2. Estrutura correta: Corrigido para `listaResponse.dados.length` (não `resultados.length`)
-3. Fallback melhorado: Se falhar ao buscar detalhes, cria entrada básica ao invés de quebrar
-4. Debug melhorado: Adicionado logs detalhados para diagnosticar problemas futuros
-
-Resultado:
-- Erro `TypeError` eliminado
-- Integração defensiva contra estruturas inesperadas  
-- Frontend não quebra mais ao carregar página
-- Sistema pronto para processar CNABs e exibir histórico
-
-O sistema agora carrega corretamente mesmo sem dados históricos, e funcionará perfeitamente quando houver arquivos CNAB processados.
-</info added on 2025-06-03T13:20:37.608Z>
-
-## 2. Implement GET /api/v1/cnab/resultados [done]
-### Dependencies: 2.1
-### Description: Create a function to fetch all results using the GET /api/v1/cnab/resultados endpoint.
-### Details:
-Use Axios to send a GET request to the endpoint and handle the response data appropriately.
-<info added on 2025-06-03T12:38:44.239Z>
-Implement the `GET /api/v1/cnab/resultados/:operationId` endpoint by creating a new controller `resultadosController.js` following the existing pattern. Ensure the endpoint integrates with the current infrastructure, reusing the `Operation` model and maintaining compatibility with the existing system.
-</info added on 2025-06-03T12:38:44.239Z>
-<info added on 2025-06-03T12:58:09.048Z>
-Buscar outras referências a 'sequencia' em consultas SQL ou métodos do modelo que ainda estão usando o campo antigo. Verificar se há algum uso residual de 'sequencia' que possa estar causando o erro "Unknown column 'CnabRecord.sequencia' in 'order clause'".
-</info added on 2025-06-03T12:58:09.048Z>
-<info added on 2025-06-03T13:02:51.252Z>
-Integrate the unified endpoints for processing and uploading CNAB files into the frontend, ensuring seamless operation with the existing backend infrastructure. Implement auto-detection for CNAB 240/400 formats and ensure `OperationId` tracking is consistent across all operations. Additionally, address the "Unknown column 'CnabRecord.sequencia' in 'order clause'" error by resolving any residual usage of the 'sequencia' field in SQL queries or model methods.
-</info added on 2025-06-03T13:02:51.252Z>
-<info added on 2025-06-03T13:04:59.159Z>
-Testes realizados confirmaram que os endpoints unificados estão funcionando perfeitamente. Principais endpoints testados incluem `GET /api/v1/cnab/info-auto`, `POST /api/v1/cnab/detectar-formato`, `POST /api/v1/cnab/validar-auto`, e `POST /api/v1/cnab/processar-auto/upload`, todos operando com sucesso. Recursos como auto-detecção de CNAB 240/400, validação completa, tracking de OperationId, análise de consistência, e middleware de compatibilidade foram confirmados. Próximos passos incluem implementar a integração no frontend React, usar TanStack Query para cache e sincronização, implementar polling para atualizações em tempo real, e desenvolver uma UI com upload, progresso e resultados. Backend está pronto para integração com o frontend.
-</info added on 2025-06-03T13:04:59.159Z>
-
-## 3. Implement GET /api/v1/cnab/resultados/:operationId [done]
-### Dependencies: 2.1
-### Description: Create a function to fetch specific results using the GET /api/v1/cnab/resultados/:operationId endpoint.
-### Details:
-Use Axios to send a GET request with a dynamic operationId and handle the response data.
-
-## 4. Store operationIds Locally [done]
-### Dependencies: 2.2, 2.3
-### Description: Implement local storage of operationIds using localStorage or IndexedDB for persistence.
-### Details:
-Decide between localStorage and IndexedDB based on data size and complexity, and implement the storage solution.
-
-## 5. Integrate API Calls with Frontend [done]
-### Dependencies: 2.2, 2.3, 2.4
-### Description: Connect the API functions to the frontend components to display the fetched results.
-### Details:
-Ensure the frontend components call the API functions and display the results to the user.
-
+Check that the module structure is correctly set up and all files are accessible.

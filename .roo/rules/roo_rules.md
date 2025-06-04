@@ -56,4 +56,5 @@ alwaysApply: true
   - [docker_server_check.md](mdc:.roo/rules/docker_server_check.md) - Verificação de containers Docker ativos
   - [dev_workflow.mcd](mdc:.roo/rules/dev_workflow.md) - Fluxo de desenvolvimento com Task Master
   - [taskmaster.md](mdc:.roo/rules/taskmaster.md) - Referência de comandos Task Master
-  - [self_improve.md](mdc:.roo/rules/self_improve.md) - Melhorias contínuas de regras 
+  - [self_improve.md](mdc:.roo/rules/self_improve.md) - Melhorias contínuas de regras
+  - [component_verification.md](mdc:.roo/rules/component_verification.md) - Verificação obrigatória de componentes existentes 
