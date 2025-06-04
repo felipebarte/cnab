@@ -1,0 +1,88 @@
+============================================================
+RESUMO DA ANÁLISE CNAB240
+============================================================
+Data/Hora da análise: 04/06/2025 00:26:55
+Total de pagamentos encontrados: 8
+Arquivos gerados:
+  - JSON: pagamentos_cnab240_20250604_002655.json
+  - CSV: pagamentos_cnab240_20250604_002655.csv
+  - Resumo: resumo_analise_20250604_002655.txt
+============================================================
+
+ESTATÍSTICAS:
+Valor total dos pagamentos: R$ 47779.020000
+Valor médio por pagamento: R$ 5972.377500
+Bancos envolvidos: 5 (03, 29, 37, 61, 77)
+
+LISTA DE PAGAMENTOS:
+------------------------------------------------------------
+Pagamento 1:
+  Favorecido: 49.855.267 LUCAS SEVERO AGLIAR
+  CPF/CNPJ: 00000000003148
+  Banco: 61 | Agência: 10300 | Conta: 005400001110
+  Valor: R$ 5400.000000
+  Data: 2062025
+  Boleto: 6191110300005400001110000000000031487955001
+  Remetente: 204985526 (BRASIL LTDA.)
+
+Pagamento 2:
+  Favorecido: LEANDRO CORREA SOCIEDADE INDIV
+  CPF/CNPJ: 11202277899030
+  Banco: 77 | Agência: 10300 | Conta: 007962000001
+  Valor: R$ 7962.000000
+  Data: 2062025
+  Boleto: 7791110300007962000001112022778990303279239
+  Remetente: 202720643 (BRASIL LTDA.)
+
+Pagamento 3:
+  Favorecido: PLUGIFY TECNOLOGIA S/A
+  CPF/CNPJ: 09000090051370
+  Banco: 29 | Agência: 10000 | Conta: 013322660001
+  Valor: R$ 13322.660000
+  Data: 2062025
+  Boleto: 2997110000013322660001090000900513700796020
+  Remetente: 202359988 (BRASIL LTDA.)
+
+Pagamento 4:
+  Favorecido: PLUGIFY TECNOLOGIA S/A
+  CPF/CNPJ: 09000090052900
+  Banco: 29 | Agência: 10300 | Conta: 000121460001
+  Valor: R$ 121.460000
+  Data: 2062025
+  Boleto: 2991110300000121460001090000900529000796020
+  Remetente: 202359988 (BRASIL LTDA.)
+
+Pagamento 5:
+  Favorecido: POPU DIGITAL LTDA
+  CPF/CNPJ: 05573844601357
+  Banco: 03 | Agência: 10400 | Conta: 002500000000
+  Valor: R$ 2500.000000
+  Data: 2062025
+  Boleto: 0391110400002500000000055738446013575957201
+  Remetente: 205573844 (BRASIL LTDA.)
+
+Pagamento 6:
+  Favorecido: WARUN GESTAO DE NEGOCIOS LTDA
+  CPF/CNPJ: 11208706529030
+  Banco: 77 | Agência: 10300 | Conta: 007500000001
+  Valor: R$ 7500.000000
+  Data: 2062025
+  Boleto: 7792110300007500000001112087065290301872571
+  Remetente: 205167402 (BRASIL LTDA.)
+
+Pagamento 7:
+  Favorecido: AIG SEGUROS BRASIL S.A.
+  CPF/CNPJ: 05023660901351
+  Banco: 03 | Agência: 09700 | Conta: 010154260000
+  Valor: R$ 10154.260000
+  Data: 1062025
+  Boleto: 0399109700010154260000050236609013511441301
+
+Pagamento 8:
+  Favorecido: TRMS DATA LTDA
+  CPF/CNPJ: 09000000059170
+  Banco: 37 | Agência: 09700 | Conta: 000818643369
+  Valor: R$ 818.640000
+  Data: 1062025
+  Boleto: 3792109700000818643369090000000591700061430
+

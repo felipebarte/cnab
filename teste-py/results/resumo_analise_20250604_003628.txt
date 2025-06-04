@@ -1,0 +1,11 @@
+============================================================
+RESUMO DA ANÁLISE CNAB240
+============================================================
+Data/Hora da análise: 04/06/2025 00:36:28
+Total de pagamentos encontrados: 0
+Arquivos gerados:
+  - JSON: pagamentos_cnab240_20250604_003628.json
+  - CSV: pagamentos_cnab240_20250604_003628.csv
+  - Resumo: resumo_analise_20250604_003628.txt
+============================================================
+
