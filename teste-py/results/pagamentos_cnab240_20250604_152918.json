@@ -1,0 +1,32 @@
+[
+  {
+    "favorecido_nome": "OMIEXPERIENCE LTDA.",
+    "pagador_nome": "BARTE BRASIL LTDA.",
+    "cnpj_pagador": "44522660000108",
+    "banco_favorecido": "991",
+    "valor": 1169.0,
+    "data_pagamento": "04062025",
+    "documento": "89027350910026160000",
+    "codigo_banco": "341",
+    "codigo_lote": "0001",
+    "tipo_registro": "3",
+    "numero_registro": "00001",
+    "segmento": "J",
+    "codigo_movimento": "000341",
+    "codigo_camara": "103",
+    "informacoes": "",
+    "descontos": "000000000000000",
+    "acrescimos": "00000000000000",
+    "codigo_barras": "34199110300001169001090189027350910026160000",
+    "endereco_completo": "AV JURUBATUBA, 00460 - VILA CORDEIRO - SAO PAULO/SP - CEP: 04583100",
+    "logradouro": "AV JURUBATUBA",
+    "numero_endereco": "00460",
+    "complemento": "",
+    "bairro": "VILA CORDEIRO",
+    "cidade": "SAO PAULO",
+    "cep": "04583100",
+    "uf": "SP",
+    "email": "financeiro@omie.com.br",
+    "cnpj_favorecido": "18511742000147"
+  }
+]

@@ -1,5 +1,8 @@
 # CNAB Project
 
+
+
+
 Este projeto utiliza Task Master AI para gerenciamento de tarefas.
 
 ## Configuração
