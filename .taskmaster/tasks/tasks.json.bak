@@ -8,7 +8,7 @@
       "testStrategy": "Verify repository access and branch creation. Ensure all configurations are correct by running a basic Node.js server.",
       "priority": "medium",
       "dependencies": [],
-      "status": "pending",
+      "status": "in-progress",
       "subtasks": []
     },
     {
@@ -257,7 +257,47 @@
         7
       ],
       "status": "pending",
-      "subtasks": []
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Update Service for New Parser Logic",
+          "description": "Modify the cnab240Service to integrate the new parser logic.",
+          "dependencies": [],
+          "details": "Identify the sections of the cnab240Service that require updates to accommodate the new parser logic. Implement the necessary changes to ensure the new logic is incorporated.",
+          "status": "pending"
+        },
+        {
+          "id": 2,
+          "title": "Ensure Compatibility with Current Architecture",
+          "description": "Maintain compatibility with the current architecture while integrating the new parser logic.",
+          "dependencies": [
+            1
+          ],
+          "details": "Review the existing architecture and ensure that the changes made for the new parser logic do not disrupt the current system. Implement any necessary adjustments to maintain compatibility.",
+          "status": "pending"
+        },
+        {
+          "id": 3,
+          "title": "Implement Calls to Specific Parser",
+          "description": "Implement the necessary calls to the specific parser within the service.",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "Determine the points in the service where the specific parser needs to be called. Implement these calls and ensure they are correctly integrated into the service workflow.",
+          "status": "pending"
+        },
+        {
+          "id": 4,
+          "title": "Integrate System of Merge",
+          "description": "Integrate the system of merge to ensure seamless operation with the new parser logic.",
+          "dependencies": [
+            3
+          ],
+          "details": "Develop and integrate a system of merge that works with the new parser logic. Ensure that the merge system is compatible with the existing service and functions correctly.",
+          "status": "pending"
+        }
+      ]
     },
     {
       "id": 9,
