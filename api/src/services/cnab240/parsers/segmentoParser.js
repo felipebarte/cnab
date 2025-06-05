@@ -179,6 +179,7 @@ export class SegmentoParser {
 
   /**
    * Processa uma linha de segmento J01 CNAB 240 (dados principais de títulos de cobrança)
+   * Incorpora lógica do script Python para maior precisão na extração
    * @param {string} linha - Linha de 240 caracteres
    * @returns {Object} Dados do segmento J01 parseados
    */
@@ -193,70 +194,98 @@ export class SegmentoParser {
     // Garantir exatamente 240 caracteres
     linha = linha.substring(0, 240);
 
+    // ✅ INTEGRAÇÃO PYTHON: Usar posições específicas do script Python que funcionam
+    // Baseado na lógica do teste.py linha 20-38
+    const codigoBanco = linha.substring(0, 3).trim();
+    const codigoLote = linha.substring(3, 7).trim();
+    const tipoRegistro = linha[7];
+    const numeroRegistro = linha.substring(8, 13).trim();
+    const segmento = linha[13];
+
+    // ✅ PYTHON LOGIC: Posições específicas do script Python (linha 25, 28-38)
+    const codigoBarras = linha.substring(17, 61).trim(); // Python: linha[17:61]
+    const codigoMovimento = linha.substring(14, 20).trim(); // Python: linha[14:20]
+    const codigoBancoFavorecido = linha.substring(20, 23).trim(); // Python: linha[20:23]
+    const codigoCamara = linha.substring(23, 26).trim(); // Python: linha[23:26]
+    const valorStr = linha.substring(26, 36).trim(); // Python: linha[26:36]
+    const documento = linha.substring(41, 61).trim(); // Python: linha[41:61]
+    const nomeFavorecido = linha.substring(61, 91).trim(); // Python: linha[61:91]
+    const dataPagamento = linha.substring(91, 99).trim(); // Python: linha[91:99]
+    const valorPagamentoStr = linha.substring(110, 125).trim(); // Python: linha[110:125]
+    const descontos = linha.substring(114, 129).trim(); // Python: linha[114:129]
+    const acrescimos = linha.substring(129, 143).trim(); // Python: linha[129:143]
+    const informacoes = linha.substring(200, 220).trim(); // Python: linha[200:220]
+
+    // ✅ PYTHON LOGIC: Conversão segura de valores (linha 40-48 do Python)
+    let valorReais = 0.0;
+    try {
+      const valorPagamentoLimpo = valorStr.replace(/\D/g, ''); // Remove não-dígitos
+      if (valorPagamentoLimpo) {
+        valorReais = parseInt(valorPagamentoLimpo) / 100; // Centavos para reais
+      }
+    } catch (error) {
+      console.warn('Erro na conversão de valor:', error.message);
+      valorReais = 0.0;
+    }
+
     const dados = {
-      // Posições 001-003: Código do banco
-      codigoBanco: linha.substring(0, 3).trim(),
+      // Campos básicos do CNAB
+      codigoBanco,
+      lote: codigoLote,
+      tipoRegistro,
+      numeroSequencial: numeroRegistro,
+      segmento,
 
-      // Posições 004-007: Lote de serviço
-      lote: linha.substring(3, 7).trim(),
+      // ✅ PYTHON EXTRACTED FIELDS: Campos extraídos com lógica do Python
+      codigoBarras,
+      codigoMovimento,
+      codigoBancoFavorecido,
+      codigoCamara,
+      documento,
+      nomeFavorecido,
+      dataPagamento,
+      descontos,
+      acrescimos,
+      informacoes,
 
-      // Posição 008: Tipo de registro (3)
-      tipoRegistro: linha[7],
+      // ✅ PYTHON VALUE CONVERSION: Valor convertido usando lógica Python
+      valorTitulo: valorStr,
+      valorPago: valorStr,
+      valor: valorReais, // Valor em reais (conversão Python)
+      valorReais, // Campo explícito para compatibilidade
 
-      // Posições 009-013: Número sequencial do registro
-      numeroSequencial: linha.substring(8, 13).trim(),
+      // Campos adicionais para compatibilidade com estrutura existente
+      tipoMovimento: codigoMovimento,
+      bancoFavorecido: codigoBancoFavorecido,
+      camaraCompensacao: codigoCamara,
+      outrasInformacoes: informacoes,
 
-      // Posição 014: Código do segmento (J)
-      segmento: linha[13],
+      // ✅ PYTHON COMPATIBILITY: Estrutura similar ao objeto Python
+      favorecido_nome: nomeFavorecido.trim(),
+      banco_favorecido: codigoBancoFavorecido,
+      data_pagamento: dataPagamento,
+      codigo_banco: codigoBanco,
+      codigo_lote: codigoLote,
+      tipo_registro: tipoRegistro,
+      numero_registro: numeroRegistro,
+      codigo_movimento: codigoMovimento,
+      codigo_camara: codigoCamara,
+      codigo_barras: codigoBarras,
 
-      // Posições 015-017: Tipo de movimento
-      tipoMovimento: linha.substring(14, 17).trim(),
-
-      // Posições 018-019: Código da instrução para movimento
-      codigoInstrucaoMovimento: linha.substring(17, 19).trim(),
-
-      // ✅ CORREÇÃO CRÍTICA: Baseado na análise real do arquivo rem92563.txt
-      // O código de barras está localizado nas posições após o identificador J000
-      // Análise mostrou que códigos de barras com 47-48 dígitos iniciam na posição 27 (posição 28 em base 1)
-      codigoBarras: linha.substring(27, 75).trim(), // Posições 28-75 (48 caracteres)
-
-      // Nome do favorecido vem após o código de barras
-      nomeFavorecido: linha.substring(75, 135).trim(), // Posições 76-135 (60 caracteres)
-
-      // ✅ CORREÇÃO CRÍTICA: Data de vencimento está após o nome
-      dataVencimento: linha.substring(135, 143).trim(), // Posições 136-143 (8 caracteres)
-
-      // ✅ CORREÇÃO CRÍTICA: Valor do título/pagamento 
-      // Análise confirmou que valores como "002234040" estão na posição 143-151
-      valorTitulo: linha.substring(143, 151).trim(), // Posições 144-151 (8 caracteres)
-      valorPago: linha.substring(143, 151).trim(), // Mesmo valor como fallback
-
-      // ✅ NOVOS CAMPOS: Campos adicionais para informações completas
-      dataPagamento: linha.substring(151, 159).trim(), // Posições 152-159 (8 caracteres)
-
-      // Valor efetivamente pago pode estar em outra posição
-      valorEfetivo: linha.substring(159, 174).trim(), // Posições 160-174 (15 caracteres)
-
-      // Desconto + abatimento
-      descontoAbatimento: linha.substring(174, 189).trim(), // Posições 175-189 (15 caracteres)
-
-      // Acréscimo + mora
-      acrescimoMora: linha.substring(189, 204).trim(), // Posições 190-204 (15 caracteres)
-
-      // Outras informações
-      outrasInformacoes: linha.substring(204, 219).trim(), // Posições 205-219 (15 caracteres)
-
-      // Informações complementares até o final
-      informacoesComplementares: linha.substring(219, 240).trim(), // Posições 220-240 (21 caracteres)
+      // Campos complementares para estrutura completa
+      dataVencimento: '', // Será preenchido se disponível
+      valorEfetivo: valorPagamentoStr,
+      endereco_completo: '', // Será preenchido pelo segmento B
 
       // Metadados
       _metadata: {
         tipo: '3',
-        descricao: 'Segmento J01 - Dados principais de títulos/cobrança',
+        descricao: 'Segmento J01 - Dados principais de títulos/cobrança (Python Enhanced)',
         categoria: 'pagamento',
         segmento: 'J',
         subtipo: 'J01',
         parser: 'SegmentoParser.parseSegmentoJ01',
+        pythonCompatible: true,
         linhaOriginal: linha
       }
     };
@@ -266,6 +295,7 @@ export class SegmentoParser {
 
   /**
    * Processa uma linha de segmento J02 CNAB 240 (dados complementares da empresa)
+   * Incorpora lógica do script Python para extração de dados do pagador
    * @param {string} linha - Linha de 240 caracteres
    * @returns {Object} Dados do segmento J02 parseados
    */
@@ -280,52 +310,54 @@ export class SegmentoParser {
     // Garantir exatamente 240 caracteres
     linha = linha.substring(0, 240);
 
+    // ✅ PYTHON LOGIC: Extração baseada no script Python (linha 55-58)
+    // Python: cnpj_pagador = segunda_linha_j[21:35].strip()
+    // Python: pagador_nome = segunda_linha_j[35:58].strip()
+    const cnpjPagador = linha.substring(21, 35).trim(); // Python: linha[21:35]
+    const pagadorNome = linha.substring(35, 58).trim(); // Python: linha[35:58]
+
     const dados = {
-      // Posições 001-003: Código do banco
+      // Campos básicos do CNAB
       codigoBanco: linha.substring(0, 3).trim(),
-
-      // Posições 004-007: Lote de serviço
       lote: linha.substring(3, 7).trim(),
-
-      // Posição 008: Tipo de registro (3)
       tipoRegistro: linha[7],
-
-      // Posições 009-013: Número sequencial do registro
       numeroSequencial: linha.substring(8, 13).trim(),
-
-      // Posição 014: Código do segmento (J)
       segmento: linha[13],
 
-      // Posições 015-018: Indicador de subtipo (ex: "0005")
+      // ✅ PYTHON EXTRACTED FIELDS: Campos extraídos com lógica do Python
+      cnpjPagador, // Posição exata do Python
+      pagadorNome, // Posição exata do Python
+
+      // Campos tradicionais para compatibilidade
       indicadorSubtipo: linha.substring(14, 18),
-
-      // Posições 019-032: CNPJ/CPF da empresa pagadora (14 dígitos para CNPJ)
       cnpjEmpresa: linha.substring(18, 32).trim(),
-
-      // Posições 033-035: Campo intermediário/código adicional
       codigoIntermediario: linha.substring(32, 35).trim(),
-
-      // Posições 036-075: Nome da empresa pagadora (40 posições, excluindo "20" do próximo campo)
       nomeEmpresa: linha.substring(35, 75).trim(),
-
-      // Posições 076-077: Campo adicional (parece ser tipo de inscrição "20" = CNPJ)
       tipoInscricaoFavorecido: linha.substring(75, 77).trim(),
-
-      // Posições 078-091: CNPJ/CPF do favorecido (14 dígitos)
       cnpjFavorecido: linha.substring(77, 91).trim(),
-
-      // Posições 092-147: Nome do favorecido/beneficiário (aproximadamente 55 posições)
       nomeFavorecido: linha.substring(91, 147).trim(),
-
-      // Posições 148-167: Informações adicionais/complementares (20 posições)
       informacoesAdicionais: linha.substring(147, 167).trim(),
-
-      // Posições 168-240: Dados livres/uso específico (restante da linha)
       dadosLivres: linha.substring(167, 240).trim(),
+
+      // ✅ PYTHON COMPATIBILITY: Estrutura similar ao objeto Python
+      cnpj_pagador: cnpjPagador,
+      pagador_nome: pagadorNome.trim(),
 
       // Metadados do subtipo
       subtipoJ: 'J02',
-      descricaoSubtipo: 'Dados complementares da empresa pagadora'
+      descricaoSubtipo: 'Dados complementares da empresa pagadora (Python Enhanced)',
+
+      // Metadados
+      _metadata: {
+        tipo: '3',
+        descricao: 'Segmento J02 - Dados da empresa pagadora (Python Enhanced)',
+        categoria: 'pagamento',
+        segmento: 'J',
+        subtipo: 'J02',
+        parser: 'SegmentoParser.parseSegmentoJ02',
+        pythonCompatible: true,
+        linhaOriginal: linha
+      }
     };
 
     return dados;
@@ -357,13 +389,13 @@ export class SegmentoParser {
     const subtipo = this.identifyJSubtype(linha);
 
     switch (subtipo) {
-    case 'J01':
-      return this.parseSegmentoJ01(linha);
-    case 'J02':
-      return this.parseSegmentoJ02(linha);
-    default:
-      // Fallback: usar parser J01 como padrão
-      return this.parseSegmentoJ01(linha);
+      case 'J01':
+        return this.parseSegmentoJ01(linha);
+      case 'J02':
+        return this.parseSegmentoJ02(linha);
+      default:
+        // Fallback: usar parser J01 como padrão
+        return this.parseSegmentoJ01(linha);
     }
   }
 
@@ -482,23 +514,23 @@ export class SegmentoParser {
     const segmento = linha[13];
 
     switch (segmento) {
-    case 'J': {
-      // Para segmentos J (cobranças), usar o parser específico
-      return this.parseSegmentoJ(linha);
-    }
+      case 'J': {
+        // Para segmentos J (cobranças), usar o parser específico
+        return this.parseSegmentoJ(linha);
+      }
 
-    case 'O': {
-      // Para segmentos O (tributos), usar o parser específico
-      return this.parseSegmentoO(linha);
-    }
+      case 'O': {
+        // Para segmentos O (tributos), usar o parser específico
+        return this.parseSegmentoO(linha);
+      }
 
-    case 'A': {
-      // Para segmentos A (PIX/TED), usar o parser específico
-      return this.parseSegmentoA(linha);
-    }
+      case 'A': {
+        // Para segmentos A (PIX/TED), usar o parser específico
+        return this.parseSegmentoA(linha);
+      }
 
-    default:
-      throw new Error(`Segmento "${segmento}" não suportado por este parser`);
+      default:
+        throw new Error(`Segmento "${segmento}" não suportado por este parser`);
     }
   }
 
@@ -511,19 +543,25 @@ export class SegmentoParser {
     const segmento = linha[13];
 
     switch (segmento) {
-    case 'A':
-      const dadosA = this.parseSegmentoA(linha);
-      return new SegmentoA240(dadosA);
-    case 'J':
-      // Para segmento J, usar estrutura genérica por ora
-      const dadosJ = this.parseSegmentoJ(linha);
-      return { tipo: 'SegmentoJ', ...dadosJ };
-    case 'O':
-      // Para segmento O, usar estrutura genérica por ora
-      const dadosO = this.parseSegmentoO(linha);
-      return { tipo: 'SegmentoO', ...dadosO };
-    default:
-      throw new Error(`Segmento "${segmento}" não suportado para criação de modelo`);
+      case 'A':
+        {
+          const dadosA = this.parseSegmentoA(linha);
+          return new SegmentoA240(dadosA); // ✅ CORREÇÃO: Usando o modelo correto
+        }
+      case 'J':
+        // Para segmento J, usar estrutura genérica por ora
+        {
+          const dadosJ = this.parseSegmentoJ(linha);
+          return { tipo: 'SegmentoJ', ...dadosJ }; // ✅ CORREÇÃO: Usando o modelo correto
+        }
+      case 'O':
+        // Para segmento O, usar estrutura genérica por ora
+        {
+          const dadosO = this.parseSegmentoO(linha);
+          return { tipo: 'SegmentoO', ...dadosO }; // ✅ CORREÇÃO: Usando o modelo correto
+        }
+      default:
+        throw new Error(`Segmento "${segmento}" não suportado para criação de modelo`);
     }
   }
 
@@ -539,15 +577,15 @@ export class SegmentoParser {
       const segmento = linha[13];
 
       switch (segmento) {
-      case 'A':
-        return this.validateSegmentoA(linha);
-      case 'J':
-        return this.validateSegmentoJ(linha);
-      case 'O':
-        return this.validateSegmentoO(linha);
-      default:
-        erros.push(`Segmento "${segmento}" não reconhecido`);
-        return { valido: false, erros };
+        case 'A':
+          return this.validateSegmentoA(linha);
+        case 'J':
+          return this.validateSegmentoJ(linha);
+        case 'O':
+          return this.validateSegmentoO(linha);
+        default:
+          erros.push(`Segmento "${segmento}" não reconhecido`);
+          return { valido: false, erros };
       }
     } catch (error) {
       erros.push(error.message);

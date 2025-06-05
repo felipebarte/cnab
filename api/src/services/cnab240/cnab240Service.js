@@ -23,6 +23,156 @@ import {
  */
 class Cnab240Service {
   /**
+   * ✅ NOVO: Processa arquivo CNAB 240 com lógica do script Python
+   * Implementa extração sequencial de pagamentos J+J e J+B
+   * @param {string} cnabContent - Conteúdo do arquivo CNAB
+   * @param {Object} options - Opções de processamento
+   * @returns {Object} Dados processados com lógica Python
+   */
+  static async processarComLogicaPython(cnabContent, options = {}) {
+    try {
+      console.log('[INFO] Iniciando processamento CNAB 240 com LÓGICA PYTHON');
+      
+      const linhas = cnabContent.split(/\r?\n/).filter(linha => linha.trim().length > 0);
+      const pagamentos = [];
+      
+      let i = 0;
+      while (i < linhas.length) {
+        const linha = linhas[i];
+        
+        // ✅ PYTHON LOGIC: Verifica se é um Segmento J (linha 16 do Python)
+        // Python: if linha[7:8] == "3" and linha[13:14] == "J":
+        if (linha.length >= 240 && linha[7] === "3" && linha[13] === "J") {
+          try {
+            // ✅ PYTHON LOGIC: Usar parser J01 melhorado com posições Python
+            const { SegmentoParser } = await import('./parsers/segmentoParser.js');
+            const dadosJ01 = SegmentoParser.parseSegmentoJ01(linha);
+            
+            // ✅ PYTHON LOGIC: Verificar se existe segunda linha J (linha 50-60 Python)
+            // Python: if i + 1 < len(linhas): segunda_linha_j = linhas[i + 1]
+            let pagadorNome = "";
+            let cnpjPagador = "";
+            if (i + 1 < linhas.length) {
+              const segundaLinhaJ = linhas[i + 1];
+              if (segundaLinhaJ.length >= 240 && 
+                  segundaLinhaJ[7] === "3" && 
+                  segundaLinhaJ[13] === "J") {
+                // ✅ PYTHON LOGIC: Segunda linha J - dados do pagador
+                const dadosJ02 = SegmentoParser.parseSegmentoJ02(segundaLinhaJ);
+                cnpjPagador = dadosJ02.cnpjPagador;
+                pagadorNome = dadosJ02.pagadorNome;
+                i += 1; // Pular a segunda linha J
+              }
+            }
+            
+            // ✅ PYTHON LOGIC: Criar objeto base do pagamento (linha 62-93 Python)
+            const pagamento = {
+              favorecido_nome: dadosJ01.favorecido_nome || dadosJ01.nomeFavorecido || "",
+              pagador_nome: pagadorNome,
+              cnpj_pagador: cnpjPagador,
+              banco_favorecido: dadosJ01.banco_favorecido || dadosJ01.codigoBancoFavorecido || "",
+              valor: dadosJ01.valor || dadosJ01.valorReais || 0,
+              data_pagamento: dadosJ01.data_pagamento || dadosJ01.dataPagamento || "",
+              documento: dadosJ01.documento || "",
+              codigo_banco: dadosJ01.codigo_banco || dadosJ01.codigoBanco || "",
+              codigo_lote: dadosJ01.codigo_lote || dadosJ01.lote || "",
+              tipo_registro: dadosJ01.tipo_registro || dadosJ01.tipoRegistro || "",
+              numero_registro: dadosJ01.numero_registro || dadosJ01.numeroSequencial || "",
+              segmento: dadosJ01.segmento || "J",
+              codigo_movimento: dadosJ01.codigo_movimento || dadosJ01.codigoMovimento || "",
+              codigo_camara: dadosJ01.codigo_camara || dadosJ01.codigoCamara || "",
+              informacoes: dadosJ01.informacoes || dadosJ01.outrasInformacoes || "",
+              descontos: dadosJ01.descontos || "",
+              acrescimos: dadosJ01.acrescimos || "",
+              codigo_barras: dadosJ01.codigo_barras || dadosJ01.codigoBarras || "",
+              
+              // ✅ PYTHON LOGIC: Campos do Segmento B (serão preenchidos se existir)
+              endereco_completo: "",
+              logradouro: "",
+              numero_endereco: "",
+              complemento: "",
+              bairro: "",
+              cidade: "",
+              cep: "",
+              uf: "",
+              email: "",
+              cnpj_favorecido: ""
+            };
+            
+            // ✅ PYTHON LOGIC: Verificar se a próxima linha é um Segmento B (linha 95-135 Python)
+            // Python: if i + 1 < len(linhas): proxima_linha = linhas[i + 1]
+            if (i + 1 < linhas.length) {
+              const proximaLinha = linhas[i + 1];
+              if (proximaLinha.length >= 240 && 
+                  proximaLinha[7] === "3" && 
+                  proximaLinha[13] === "B") {
+                
+                try {
+                  // ✅ PYTHON LOGIC: Segmento B - Extrair dados complementares
+                  const { SegmentoBParser } = await import('./parsers/segmentoBParser.js');
+                  const dadosB = SegmentoBParser.parseTradicional(proximaLinha, {});
+                  
+                  // ✅ PYTHON LOGIC: Adicionar dados do Segmento B ao pagamento (linha 121-132 Python)
+                  pagamento.cnpj_favorecido = dadosB.cnpj_favorecido || dadosB.cnpjFavorecido || "";
+                  pagamento.endereco_completo = dadosB.endereco_completo || dadosB.enderecoCompleto || "";
+                  pagamento.logradouro = dadosB.logradouro || "";
+                  pagamento.numero_endereco = dadosB.numero_endereco || dadosB.numeroEndereco || "";
+                  pagamento.complemento = dadosB.complemento || "";
+                  pagamento.bairro = dadosB.bairro || "";
+                  pagamento.cidade = dadosB.cidade || "";
+                  pagamento.cep = dadosB.cep || "";
+                  pagamento.uf = dadosB.uf || "";
+                  pagamento.email = dadosB.email || "";
+                  
+                  // Pular a linha do Segmento B na próxima iteração
+                  i += 1;
+                } catch (error) {
+                  console.warn(`Erro ao processar Segmento B: ${error.message}`);
+                }
+              }
+            }
+            
+            pagamentos.push(pagamento);
+            
+          } catch (error) {
+            console.warn(`Erro ao processar linha ${i + 1}: ${error.message}`);
+          }
+        }
+        
+        i += 1;
+      }
+      
+      // ✅ PYTHON LOGIC: Calcular total dos pagamentos (linha 160-165 Python)
+      const totalPagamentos = pagamentos.reduce((sum, pag) => sum + (pag.valor || 0), 0);
+      
+      console.log(`[INFO] PYTHON LOGIC: Processados ${pagamentos.length} pagamentos, total: R$ ${totalPagamentos.toFixed(2)}`);
+      
+      return {
+        sucesso: true,
+        valido: true,
+        pythonLogicEnabled: true,
+        dados: {
+          pagamentos,
+          resumo: {
+            totalPagamentos: pagamentos.length,
+            valorTotal: totalPagamentos,
+            valorMedio: pagamentos.length > 0 ? totalPagamentos / pagamentos.length : 0
+          }
+        },
+        processamento: {
+          linhasProcessadas: linhas.length,
+          segmentosJ: pagamentos.length,
+          metodologia: 'Python Sequential Logic'
+        }
+      };
+      
+    } catch (error) {
+      console.error('[ERROR] Erro no processamento Python:', error);
+      throw error;
+    }
+  }
+
+  /**
    * ✅ NOVO: Processa arquivo CNAB 240 com parser híbrido
    * Combina parser tradicional com parser específico multi-state
    * @param {string} cnabContent - Conteúdo do arquivo CNAB
@@ -199,6 +349,56 @@ class Cnab240Service {
   static async processar(cnabContent, options = {}) {
     try {
       console.log('[INFO] Iniciando processamento CNAB 240');
+
+      // ✅ NOVO: Usar lógica Python como padrão se habilitada
+      if (options.usePythonLogic !== false) { // Por padrão, usar Python logic
+        console.log('[INFO] Usando lógica Python para processamento...');
+        try {
+          const resultadoPython = await this.processarComLogicaPython(cnabContent, options);
+          
+          // Se bem-sucedido, retornar resultado Python formatado
+          if (resultadoPython.sucesso && resultadoPython.dados.pagamentos.length > 0) {
+            console.log(`[SUCCESS] Processamento Python concluído: ${resultadoPython.dados.pagamentos.length} pagamentos`);
+            
+            // Formatar para compatibilidade com estrutura existente
+            return {
+              ...resultadoPython,
+              dados: {
+                ...resultadoPython.dados,
+                headerArquivo: { codigoBanco: '341' }, // Mock para compatibilidade
+                trailerArquivo: {},
+                lotes: [{
+                  detalhes: resultadoPython.dados.pagamentos.map(pag => ({
+                    segmento: 'J',
+                    dados: pag,
+                    codigo_barras: pag.codigo_barras
+                  }))
+                }]
+              },
+              codigosBarras: {
+                total: resultadoPython.dados.pagamentos.filter(p => p.codigo_barras).length,
+                lista: resultadoPython.dados.pagamentos
+                  .filter(p => p.codigo_barras)
+                  .map(p => ({
+                    tipo: 'titulo',
+                    segmento: 'J',
+                    codigo: p.codigo_barras,
+                    favorecido: p.favorecido_nome,
+                    valor: p.valor,
+                    dataVencimento: p.data_pagamento,
+                    dataPagamento: p.data_pagamento
+                  }))
+              }
+            };
+          }
+        } catch (pythonError) {
+          console.warn(`[WARNING] Falha na lógica Python: ${pythonError.message}`);
+          console.log('[INFO] Fallback para processamento tradicional...');
+        }
+      }
+
+      // Processamento tradicional (fallback ou se Python logic desabilitada)
+      console.log('[INFO] Usando processamento tradicional CNAB 240');
 
       // 1. Validar arquivo básico
       const validacao = this.validarArquivo(cnabContent);

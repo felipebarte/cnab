@@ -132,18 +132,18 @@ export class SegmentoBParser {
 
     // Parsing específico por subtipo
     switch (subtipo) {
-    case 'B01':
-      return this.parseB01(linha, dadosComuns);
-    case 'B02':
-      return this.parseB02(linha, dadosComuns);
-    case 'B03':
-      return this.parseB03(linha, dadosComuns);
-    case 'B04':
-      return this.parseB04(linha, dadosComuns);
-    case 'TRADICIONAL':
-      return this.parseTradicional(linha, dadosComuns);
-    default:
-      return this.parseGenerico(linha, dadosComuns);
+      case 'B01':
+        return this.parseB01(linha, dadosComuns);
+      case 'B02':
+        return this.parseB02(linha, dadosComuns);
+      case 'B03':
+        return this.parseB03(linha, dadosComuns);
+      case 'B04':
+        return this.parseB04(linha, dadosComuns);
+      case 'TRADICIONAL':
+        return this.parseTradicional(linha, dadosComuns);
+      default:
+        return this.parseGenerico(linha, dadosComuns);
     }
   }
 
@@ -267,48 +267,85 @@ export class SegmentoBParser {
 
   /**
    * Parser específico para Segmento B Tradicional - Endereço/Dados Complementares
+   * Incorpora lógica do script Python para extração de endereços
    * @param {string} linha - Linha de 240 caracteres
    * @param {Object} dadosComuns - Dados básicos já extraídos
    * @returns {Object} Dados específicos do segmento B tradicional
    */
   static parseTradicional(linha, dadosComuns) {
+    // ✅ PYTHON LOGIC: Extração baseada no script Python (linha 99-131)
+    // Python: cnpj_favorecido = proxima_linha[18:32].strip()
+    // Python: logradouro = proxima_linha[32:62].strip()
+    // Python: numero_endereco = proxima_linha[62:67].strip()
+    // Python: complemento = proxima_linha[67:82].strip()
+    // Python: bairro = proxima_linha[82:97].strip()
+    // Python: cidade = proxima_linha[97:117].strip()
+    // Python: cep = proxima_linha[117:125].strip()
+    // Python: uf = proxima_linha[125:127].strip()
+
+    const cnpjFavorecido = linha.substring(18, 32).trim(); // Python: linha[18:32]
+    const logradouro = linha.substring(32, 62).trim(); // Python: linha[32:62]
+    const numeroEndereco = linha.substring(62, 67).trim(); // Python: linha[62:67]
+    const complemento = linha.substring(67, 82).trim(); // Python: linha[67:82]
+    const bairro = linha.substring(82, 97).trim(); // Python: linha[82:97]
+    const cidade = linha.substring(97, 117).trim(); // Python: linha[97:117]
+    const cep = linha.substring(117, 125).trim(); // Python: linha[117:125]
+    const uf = linha.substring(125, 127).trim(); // Python: linha[125:127]
+
+    // ✅ PYTHON LOGIC: Extração de email (linha 109-118)
+    // Python: resto_linha = proxima_linha[127:].strip()
+    const restoLinha = linha.substring(127).trim(); // Python: linha[127:]
+    let email = '';
+    if (restoLinha.includes('@')) {
+      // Procurar por padrão de email
+      const partes = restoLinha.split(/\s+/);
+      for (const parte of partes) {
+        if (parte.includes('@') && parte.includes('.') && parte.length > 5) {
+          email = parte.trim();
+          break;
+        }
+      }
+    }
+
+    // ✅ PYTHON LOGIC: Endereço completo formatado (linha 123)
+    // Python: endereco_completo = f"{logradouro.strip()}, {numero_endereco.strip()} {complemento.strip()} - {bairro.strip()} - {cidade.strip()}/{uf} - CEP: {cep.strip()}"
+    const enderecoCompleto = `${logradouro}, ${numeroEndereco} ${complemento} - ${bairro} - ${cidade}/${uf} - CEP: ${cep}`.replace(/\s+/g, ' ').trim();
+
     return {
       ...dadosComuns,
-      // Posições 015-017: Espaços ou indicador vazio
+      // Posições tradicionais
       indicadorSubtipo: linha.substring(14, 17).trim(),
-
-      // Posições 018: Tipo de inscrição (1=CPF, 2=CNPJ)
       tipoInscricao: linha[17],
-
-      // Posições 019-032: Número da inscrição (CPF ou CNPJ)
       numeroInscricao: linha.substring(18, 32).trim(),
 
-      // Endereço completo (posições 033-127)
+      // ✅ PYTHON EXTRACTED FIELDS: Campos extraídos com lógica do Python
+      cnpjFavorecido,
+      logradouro,
+      numeroEndereco,
+      complemento,
+      bairro,
+      cidade,
+      cep,
+      uf,
+      email,
+      enderecoCompleto,
+
+      // Endereço estruturado (compatibilidade)
       endereco: {
-        // Posições 033-062: Logradouro
-        logradouro: linha.substring(32, 62).trim(),
-
-        // Posições 063-067: Número
-        numero: linha.substring(62, 67).trim(),
-
-        // Posições 068-082: Complemento
-        complemento: linha.substring(67, 82).trim(),
-
-        // Posições 083-097: Bairro
-        bairro: linha.substring(82, 97).trim(),
-
-        // Posições 098-117: Cidade
-        cidade: linha.substring(97, 117).trim(),
-
-        // Posições 118-122: CEP
-        cep: linha.substring(117, 122).trim(),
-
-        // Posições 123-125: Complemento do CEP
-        complementoCep: linha.substring(122, 125).trim(),
-
-        // Posições 126-127: Estado
-        estado: linha.substring(125, 127).trim()
+        logradouro,
+        numero: numeroEndereco,
+        complemento,
+        bairro,
+        cidade,
+        cep,
+        complementoCep: '', // Não usado no Python
+        estado: uf
       },
+
+      // ✅ PYTHON COMPATIBILITY: Estrutura similar ao objeto Python
+      cnpj_favorecido: cnpjFavorecido,
+      endereco_completo: enderecoCompleto,
+      numero_endereco: numeroEndereco,
 
       // Posições 128-198: Informações complementares ou dados adicionais
       informacoesComplementares: linha.substring(127, 198).trim(),
@@ -317,6 +354,20 @@ export class SegmentoBParser {
       usoFEBRABAN: linha.substring(198, 240).trim(),
 
       // Tipo: endereço tradicional
+      tipo: 'endereco_tradicional',
+
+      // Metadados
+      _metadata: {
+        tipo: '3',
+        descricao: 'Segmento B - Dados complementares (Python Enhanced)',
+        categoria: 'endereco',
+        segmento: 'B',
+        subtipo: 'TRADICIONAL',
+        parser: 'SegmentoBParser.parseTradicional',
+        pythonCompatible: true,
+        linhaOriginal: linha
+      },
+
       tipoSegmentoB: 'endereco_tradicional',
 
       // Não é PIX
@@ -376,21 +427,21 @@ export class SegmentoBParser {
 
       // Validações específicas por subtipo
       switch (dados.subtipo) {
-      case 'B01':
-        this.validateB01(dados, erros);
-        break;
-      case 'B02':
-        this.validateB02(dados, erros);
-        break;
-      case 'B03':
-        this.validateB03(dados, erros);
-        break;
-      case 'B04':
-        this.validateB04(dados, erros);
-        break;
-      case 'TRADICIONAL':
-        this.validateTradicional(dados, erros);
-        break;
+        case 'B01':
+          this.validateB01(dados, erros);
+          break;
+        case 'B02':
+          this.validateB02(dados, erros);
+          break;
+        case 'B03':
+          this.validateB03(dados, erros);
+          break;
+        case 'B04':
+          this.validateB04(dados, erros);
+          break;
+        case 'TRADICIONAL':
+          this.validateTradicional(dados, erros);
+          break;
       }
 
     } catch (error) {
@@ -544,23 +595,23 @@ export class SegmentoBParser {
 
     // Adicionar chave específica baseada no subtipo
     switch (dados.subtipo) {
-    case 'B01':
-      resumo.chave = dados.telefone ? dados.telefone.completo : '';
-      break;
-    case 'B02':
-      resumo.chave = dados.email || '';
-      break;
-    case 'B03':
-      resumo.chave = dados.numeroInscricao || '';
-      break;
-    case 'B04':
-      resumo.chave = dados.uuidChave || '';
-      break;
-    case 'TRADICIONAL':
-      resumo.chave = dados.endereco ? `${dados.endereco.logradouro}, ${dados.endereco.numero} - ${dados.endereco.cidade}, ${dados.endereco.estado} - ${dados.endereco.cep}` : '';
-      break;
-    default:
-      resumo.chave = dados.chavePix || '';
+      case 'B01':
+        resumo.chave = dados.telefone ? dados.telefone.completo : '';
+        break;
+      case 'B02':
+        resumo.chave = dados.email || '';
+        break;
+      case 'B03':
+        resumo.chave = dados.numeroInscricao || '';
+        break;
+      case 'B04':
+        resumo.chave = dados.uuidChave || '';
+        break;
+      case 'TRADICIONAL':
+        resumo.chave = dados.endereco ? `${dados.endereco.logradouro}, ${dados.endereco.numero} - ${dados.endereco.cidade}, ${dados.endereco.estado} - ${dados.endereco.cep}` : '';
+        break;
+      default:
+        resumo.chave = dados.chavePix || '';
     }
 
     return resumo;
