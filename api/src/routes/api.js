@@ -8,6 +8,7 @@ import universalRoutes from './universal/universalRoutes.js';
 import compatibilityRoutes from './compatibilityRoutes.js';
 import swapRoutes from './swapRoutes.js';
 import cnabSwapRoutes from './cnabSwapRoutes.js';
+import cnabPersistidosRoutes from './cnabPersistidosRoutes.js';
 import metricsRoutes from './metricsRoutes.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
@@ -37,6 +38,9 @@ router.use('/cnab', cnabUnifiedRoutes);
 
 // 🎯 ROTAS DE RESULTADOS (PRD) ✨
 router.use('/cnab/resultados', resultadosRoutes);
+
+// 💾 ROTAS DE DADOS PERSISTIDOS ✨
+router.use('/cnab/persistidos', cnabPersistidosRoutes);
 
 // ✨ NOVAS ROTAS UNIVERSAIS ✨
 router.use('/cnab/universal', universalRoutes);

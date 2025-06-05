@@ -22,7 +22,6 @@ const models = {
   CnabHeader,
   CnabRecord,
   Cnab240File,
-  sequelize,
   Op
 };
 
@@ -289,9 +288,6 @@ export {
   CnabHeader,
   CnabRecord,
   Cnab240File,
-
-  // Instância do Sequelize
-  sequelize,
 
   // Operadores do Sequelize
   Op,
