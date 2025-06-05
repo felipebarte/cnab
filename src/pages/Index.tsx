@@ -6,12 +6,11 @@ import PaymentsTable from "@/components/Payments/PaymentsTable";
 import FileUpload from "@/components/CNAB/FileUpload";
 import ProcessingStatus from "@/components/CNAB/ProcessingStatus";
 import ApprovalList from "@/components/Approval/ApprovalList";
-import CNABPersistenceManager from "@/components/CNAB/CNABPersistenceManager";
 import { useState, useEffect } from "react";
 import { CNABFile, ApprovalBatch, DashboardStats as DashboardStatsType, Payment, PaymentStatus, CNABApiProcessingResponse } from "@/lib/types";
 import { toast } from "sonner";
 //import { createApprovalBatchFromCNAB, verifyCNABForBankSubmission } from "@/lib/api";
-import { listarResultadosCNAB, buscarResultadoCNAB } from "@/lib/api";
+// import { listarResultadosCNAB, buscarResultadoCNAB } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -100,12 +99,12 @@ const Index = () => {
         });
 
         console.log('📡 Resposta da API:', listaResponse);
-
-        // A API retorna dados diretamente, não dados.resultados
-        if (listaResponse.sucesso && listaResponse.dados && Array.isArray(listaResponse.dados) && listaResponse.dados.length > 0) {
+        
+        // Verificar se a resposta da API é válida e contém dados
+        if (listaResponse?.dados && Array.isArray(listaResponse.dados) && listaResponse.dados.length > 0) {
           console.log(`📋 Encontrados ${listaResponse.dados.length} resultados históricos`);
 
-          // Para cada resultado, buscar os detalhes completos
+          // Array para armazenar os resultados detalhados
           const resultadosDetalhados: CNABApiProcessingResponse[] = [];
 
           for (const resultado of listaResponse.dados) {
@@ -475,7 +474,6 @@ const Index = () => {
             <TabsList>
               <TabsTrigger value="payments">Pagamentos</TabsTrigger>
               <TabsTrigger value="cnab">Arquivos CNAB</TabsTrigger>
-              <TabsTrigger value="persistence">Dados Persistidos</TabsTrigger>
               <TabsTrigger value="approvals">Aprovações</TabsTrigger>
             </TabsList>
             <TabsContent value="payments" className="mt-4">
@@ -497,9 +495,6 @@ const Index = () => {
                 <ProcessingStatus />
               </div>
             </TabsContent>
-            <TabsContent value="persistence" className="mt-4">
-              <CNABPersistenceManager />
-            </TabsContent>
             <TabsContent value="approvals" className="mt-4">
               <ApprovalList
                 batches={approvalBatches}
@@ -515,3 +510,7 @@ const Index = () => {
 };
 
 export default Index;
+function listarResultadosCNAB(arg0: { limit: number; sortBy: string; sortOrder: string; }) {
+  throw new Error("Function not implemented.");
+}
+

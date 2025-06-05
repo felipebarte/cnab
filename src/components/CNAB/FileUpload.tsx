@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, X, CheckCircle, AlertCircle, Loader2, Send } from "lucide-react";
 import { useState, useRef } from "react";
-import { processarCNABAutoUpload, processarCNABEEnviarWebhook, CNABUploadResponse } from "@/lib/api";
+// import { processarCNABAutoUpload, processarCNABEEnviarWebhook, CNABUploadResponse } from "@/lib/api";
 import { UploadingFile, CNABApiProcessingResponse, UploadProgress } from "@/lib/types";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -62,11 +62,11 @@ const FileUpload = ({ onFileProcessed, webhookUrl }: FileUploadProps) => {
           )
         );
 
-        let resultado: CNABUploadResponse;
+        let resultado: CNABApiProcessingResponse;
 
         if (webhookUrl) {
           // Processar e enviar webhook
-          resultado = await processarCNABEEnviarWebhook(
+          resultado = await processarCNABComWebhook(
             file,
             webhookUrl,
             {
@@ -326,3 +326,11 @@ const FileUpload = ({ onFileProcessed, webhookUrl }: FileUploadProps) => {
 };
 
 export default FileUpload;
+function processarCNABComWebhook(file: File, webhookUrl: string, arg2: { onUploadProgress: (progressEvent: UploadProgress) => void; }): CNABApiProcessingResponse | PromiseLike<CNABApiProcessingResponse> {
+  throw new Error("Function not implemented.");
+}
+
+function processarCNABAutoUpload(file: File, arg1: { onUploadProgress: (progressEvent: UploadProgress) => void; }): CNABApiProcessingResponse | PromiseLike<CNABApiProcessingResponse> {
+  throw new Error("Function not implemented.");
+}
+
